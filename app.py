@@ -12,9 +12,9 @@ import sqlite3
 from collections import defaultdict
 import threading
 import time
-import re
-import logging
+import json
 import random
+import logging
 
 # إعداد السجلات
 logging.basicConfig(
@@ -174,18 +174,35 @@ def check_rate_limit(user_id, max_messages=20, time_window=60):
 def load_text_file(filename):
     """تحميل محتوى الملفات النصية"""
     try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            lines = [line.strip() for line in f if line.strip()]
-            return lines
+        filepath = os.path.join('games', filename)
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                lines = [line.strip() for line in f if line.strip()]
+                return lines
+        return []
     except Exception as e:
         logger.error(f"❌ خطأ في تحميل {filename}: {e}")
         return []
 
-# تحميل الملفات النصية
+def load_json_file(filename):
+    """تحميل ملفات JSON"""
+    try:
+        filepath = os.path.join('games', filename)
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return None
+    except Exception as e:
+        logger.error(f"❌ خطأ في تحميل {filename}: {e}")
+        return None
+
+# تحميل جميع الملفات
 QUESTIONS = load_text_file('questions.txt')
 CHALLENGES = load_text_file('challenges.txt')
 CONFESSIONS = load_text_file('confessions.txt')
 MORE_QUESTIONS = load_text_file('more_questions.txt')
+PERSONALITY_GAMES = load_json_file('personality_games.json')
+TIPS = load_json_file('tips.json')
 
 def get_user_profile_safe(user_id):
     try:
@@ -195,510 +212,231 @@ def get_user_profile_safe(user_id):
         logger.error(f"❌ خطأ في الملف الشخصي: {e}")
         return "مستخدم"
 
-def get_ios_style_card(title, subtitle, emoji, items):
-    """تصميم بطاقة بأسلوب iOS - ظل خفيف وأنيق"""
-    game_items = []
+def get_permanent_quick_reply():
+    """الأزرار الثابتة الدائمة"""
+    return QuickReply(items=[
+        QuickReplyButton(action=MessageAction(label="▫️انضم", text="انضم")),
+        QuickReplyButton(action=MessageAction(label="▫️نقاطي", text="نقاطي")),
+        QuickReplyButton(action=MessageAction(label="▫️الصدارة", text="الصدارة")),
+        QuickReplyButton(action=MessageAction(label="▫️مساعدة", text="مساعدة")),
+        QuickReplyButton(action=MessageAction(label="▫️أغنية", text="أغنية")),
+        QuickReplyButton(action=MessageAction(label="▫️لعبة", text="لعبة")),
+        QuickReplyButton(action=MessageAction(label="▫️سلسلة", text="سلسلة")),
+        QuickReplyButton(action=MessageAction(label="▫️أسرع", text="أسرع")),
+        QuickReplyButton(action=MessageAction(label="▫️ضد", text="ضد")),
+        QuickReplyButton(action=MessageAction(label="▫️تكوين", text="تكوين")),
+        QuickReplyButton(action=MessageAction(label="▫️اختلاف", text="اختلاف")),
+        QuickReplyButton(action=MessageAction(label="▫️توافق", text="توافق")),
+        QuickReplyButton(action=MessageAction(label="▫️إيقاف", text="إيقاف"))
+    ])
+
+def get_ios_card(title, items, footer_buttons=None):
+    """بطاقة iOS موحدة"""
+    contents = [
+        {
+            "type": "text",
+            "text": title,
+            "size": "xl",
+            "weight": "bold",
+            "color": "#1C1C1E",
+            "align": "center"
+        },
+        {
+            "type": "separator",
+            "margin": "xl",
+            "color": "#E5E5EA"
+        }
+    ]
     
+    # إضافة العناصر
     for item in items:
-        game_items.append({
+        contents.append({
             "type": "box",
-            "layout": "horizontal",
+            "layout": "vertical",
             "contents": [
                 {
                     "type": "text",
-                    "text": item['emoji'],
-                    "size": "xl",
-                    "flex": 0,
-                    "align": "center"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": item['name'],
-                            "size": "md",
-                            "weight": "bold",
-                            "color": "#1C1C1E"
-                        },
-                        {
-                            "type": "text",
-                            "text": item['description'],
-                            "size": "xs",
-                            "color": "#8E8E93",
-                            "margin": "xs"
-                        }
-                    ],
-                    "margin": "md",
-                    "flex": 1
-                },
-                {
-                    "type": "button",
-                    "action": {
-                        "type": "message",
-                        "label": "▶",
-                        "text": item['command']
-                    },
-                    "style": "link",
-                    "height": "sm",
-                    "flex": 0
+                    "text": item.get('text', ''),
+                    "size": item.get('size', 'sm'),
+                    "color": item.get('color', '#1C1C1E'),
+                    "wrap": True,
+                    "align": item.get('align', 'start'),
+                    "weight": item.get('weight', 'regular')
                 }
             ],
             "backgroundColor": "#FFFFFF",
             "cornerRadius": "12px",
             "paddingAll": "16px",
-            "margin": "sm" if game_items else "none",
-            "spacing": "md"
+            "margin": "md"
         })
+    
+    # إضافة أزرار القاع
+    if footer_buttons:
+        button_box = {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [],
+            "spacing": "sm",
+            "margin": "xl"
+        }
+        
+        for btn in footer_buttons:
+            button_box["contents"].append({
+                "type": "button",
+                "action": {
+                    "type": "message",
+                    "label": btn['label'],
+                    "text": btn['text']
+                },
+                "style": btn.get('style', 'secondary'),
+                "color": btn.get('color', '#007AFF'),
+                "height": "sm"
+            })
+        
+        contents.append(button_box)
     
     return {
         "type": "bubble",
-        "size": "mega",
         "body": {
             "type": "box",
             "layout": "vertical",
-            "contents": [
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": emoji,
-                            "size": "3xl",
-                            "flex": 0
-                        },
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": title,
-                                    "size": "xl",
-                                    "weight": "bold",
-                                    "color": "#1C1C1E"
-                                },
-                                {
-                                    "type": "text",
-                                    "text": subtitle,
-                                    "size": "sm",
-                                    "color": "#8E8E93",
-                                    "margin": "xs"
-                                }
-                            ],
-                            "margin": "md"
-                        }
-                    ],
-                    "spacing": "md",
-                    "margin": "none"
-                },
-                {
-                    "type": "separator",
-                    "margin": "xl",
-                    "color": "#E5E5EA"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": game_items,
-                    "margin": "xl",
-                    "spacing": "none"
-                }
-            ],
+            "contents": contents,
             "backgroundColor": "#F2F2F7",
             "paddingAll": "20px"
         }
     }
 
+def get_help_card():
+    """بطاقة المساعدة"""
+    items = [
+        {
+            "text": "الأوامر الأساسية\n\n▫️ انضم - التسجيل في البوت\n▫️ نقاطي - عرض إحصائياتك\n▫️ الصدارة - أفضل اللاعبين\n▫️ إيقاف - إنهاء اللعبة الحالية",
+            "weight": "bold"
+        },
+        {
+            "text": "الألعاب المتاحة\n\n▫️ أغنية - خمن الأغنية\n▫️ لعبة - إنسان حيوان نبات\n▫️ سلسلة - سلسلة الكلمات\n▫️ أسرع - السرعة في الكتابة\n▫️ ضد - الكلمات المعاكسة\n▫️ تكوين - تكوين كلمات\n▫️ اختلاف - لعبة الاختلافات\n▫️ توافق - لعبة التوافق"
+        },
+        {
+            "text": "أوامر إضافية\n\n▫️ سؤال - سؤال عشوائي\n▫️ تحدي - تحدي عشوائي\n▫️ اعتراف - اعتراف عشوائي\n▫️ اكثر - سؤال إضافي\n▫️ نصيحة - نصائح مفيدة"
+        },
+        {
+            "text": "أثناء اللعب\n\n▫️ لمح - الحصول على تلميح\n▫️ جاوب - عرض الإجابة",
+            "color": "#8E8E93"
+        }
+    ]
+    
+    return get_ios_card(
+        "دليل الاستخدام",
+        items,
+        footer_buttons=[
+            {"label": "انضم", "text": "انضم", "style": "primary"},
+            {"label": "الألعاب", "text": "البداية"}
+        ]
+    )
+
 def get_main_menu(display_name):
-    """القائمة الرئيسية بتصميم iOS"""
-    games = [
-        {"emoji": "🎵", "name": "أغنية", "description": "خمن الأغنية", "command": "أغنية"},
-        {"emoji": "🎮", "name": "لعبة", "description": "إنسان حيوان نبات", "command": "لعبة"},
-        {"emoji": "🔗", "name": "سلسلة", "description": "سلسلة الكلمات", "command": "سلسلة"},
-        {"emoji": "⚡", "name": "أسرع", "description": "السرعة في الكتابة", "command": "أسرع"}
+    """القائمة الرئيسية"""
+    items = [
+        {
+            "text": f"مرحباً {display_name}",
+            "size": "md",
+            "color": "#007AFF",
+            "align": "center",
+            "weight": "bold"
+        },
+        {
+            "text": "اختر من الأزرار أدناه أو استخدم الأزرار الثابتة",
+            "size": "xs",
+            "color": "#8E8E93",
+            "align": "center"
+        }
     ]
     
-    return get_ios_style_card(
-        title="منصة الألعاب",
-        subtitle=f"مرحباً {display_name}",
-        emoji="🎯",
-        items=games
-    )
-
-def get_more_games_menu():
-    """المزيد من الألعاب"""
-    games = [
-        {"emoji": "🔄", "name": "ضد", "description": "الكلمات المعاكسة", "command": "ضد"},
-        {"emoji": "✨", "name": "تكوين", "description": "تكوين كلمات", "command": "تكوين"},
-        {"emoji": "🔍", "name": "اختلاف", "description": "لعبة الاختلافات", "command": "اختلاف"},
-        {"emoji": "💖", "name": "توافق", "description": "لعبة التوافق", "command": "توافق"}
-    ]
-    
-    return get_ios_style_card(
-        title="ألعاب إضافية",
-        subtitle="اختر لعبتك المفضلة",
-        emoji="🎲",
-        items=games
-    )
-
-def get_commands_menu():
-    """قائمة الأوامر النصية"""
-    commands = [
-        {"emoji": "❓", "name": "سؤال", "description": "سؤال عشوائي", "command": "سؤال"},
-        {"emoji": "🏆", "name": "تحدي", "description": "تحدي عشوائي", "command": "تحدي"},
-        {"emoji": "💬", "name": "اعتراف", "description": "اعتراف عشوائي", "command": "اعتراف"},
-        {"emoji": "➕", "name": "اكثر", "description": "سؤال إضافي", "command": "اكثر"}
-    ]
-    
-    return get_ios_style_card(
-        title="أوامر إضافية",
-        subtitle="محتوى نصي متنوع",
-        emoji="📝",
-        items=commands
+    return get_ios_card(
+        "منصة الألعاب",
+        items,
+        footer_buttons=[
+            {"label": "انضم", "text": "انضم", "style": "primary"},
+            {"label": "نقاطي", "text": "نقاطي"},
+            {"label": "الصدارة", "text": "الصدارة"},
+            {"label": "مساعدة", "text": "مساعدة"}
+        ]
     )
 
 def get_stats_card(user_id, display_name):
-    """بطاقة الإحصائيات بأسلوب iOS"""
+    """بطاقة الإحصائيات"""
     stats = get_user_stats(user_id)
     
     if not stats:
-        return {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "لم تبدأ بعد",
-                        "size": "xl",
-                        "weight": "bold",
-                        "color": "#1C1C1E",
-                        "align": "center"
-                    },
-                    {
-                        "type": "text",
-                        "text": "ابدأ أول لعبة واجمع النقاط",
-                        "size": "sm",
-                        "color": "#8E8E93",
-                        "align": "center",
-                        "margin": "md",
-                        "wrap": True
-                    },
-                    {
-                        "type": "button",
-                        "action": {
-                            "type": "message",
-                            "label": "انضم الآن",
-                            "text": "انضم"
-                        },
-                        "style": "primary",
-                        "color": "#007AFF",
-                        "margin": "xl"
-                    }
-                ],
-                "backgroundColor": "#F2F2F7",
-                "paddingAll": "30px"
+        items = [
+            {
+                "text": "لم تبدأ بعد",
+                "size": "lg",
+                "align": "center",
+                "weight": "bold"
+            },
+            {
+                "text": "ابدأ أول لعبة واجمع النقاط",
+                "size": "sm",
+                "color": "#8E8E93",
+                "align": "center"
             }
-        }
+        ]
+        return get_ios_card("إحصائياتك", items, [{"label": "انضم الآن", "text": "انضم", "style": "primary"}])
     
     win_rate = (stats['wins'] / stats['games_played'] * 100) if stats['games_played'] > 0 else 0
     
-    return {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "إحصائياتك",
-                    "size": "xl",
-                    "weight": "bold",
-                    "color": "#1C1C1E",
-                    "align": "center"
-                },
-                {
-                    "type": "text",
-                    "text": display_name,
-                    "size": "sm",
-                    "color": "#8E8E93",
-                    "align": "center",
-                    "margin": "sm"
-                },
-                {
-                    "type": "separator",
-                    "margin": "xl",
-                    "color": "#E5E5EA"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": "النقاط",
-                                    "size": "sm",
-                                    "color": "#8E8E93",
-                                    "flex": 1
-                                },
-                                {
-                                    "type": "text",
-                                    "text": str(stats['total_points']),
-                                    "size": "xl",
-                                    "weight": "bold",
-                                    "color": "#007AFF",
-                                    "align": "end",
-                                    "flex": 1
-                                }
-                            ],
-                            "backgroundColor": "#FFFFFF",
-                            "cornerRadius": "12px",
-                            "paddingAll": "16px"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {
-                                    "type": "box",
-                                    "layout": "vertical",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": str(stats['games_played']),
-                                            "size": "lg",
-                                            "weight": "bold",
-                                            "color": "#1C1C1E",
-                                            "align": "center"
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "ألعاب",
-                                            "size": "xs",
-                                            "color": "#8E8E93",
-                                            "align": "center",
-                                            "margin": "xs"
-                                        }
-                                    ],
-                                    "backgroundColor": "#FFFFFF",
-                                    "cornerRadius": "12px",
-                                    "paddingAll": "16px",
-                                    "flex": 1
-                                },
-                                {
-                                    "type": "box",
-                                    "layout": "vertical",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": str(stats['wins']),
-                                            "size": "lg",
-                                            "weight": "bold",
-                                            "color": "#34C759",
-                                            "align": "center"
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "فوز",
-                                            "size": "xs",
-                                            "color": "#8E8E93",
-                                            "align": "center",
-                                            "margin": "xs"
-                                        }
-                                    ],
-                                    "backgroundColor": "#FFFFFF",
-                                    "cornerRadius": "12px",
-                                    "paddingAll": "16px",
-                                    "flex": 1
-                                },
-                                {
-                                    "type": "box",
-                                    "layout": "vertical",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": f"{win_rate:.0f}%",
-                                            "size": "lg",
-                                            "weight": "bold",
-                                            "color": "#FF9500",
-                                            "align": "center"
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "معدل",
-                                            "size": "xs",
-                                            "color": "#8E8E93",
-                                            "align": "center",
-                                            "margin": "xs"
-                                        }
-                                    ],
-                                    "backgroundColor": "#FFFFFF",
-                                    "cornerRadius": "12px",
-                                    "paddingAll": "16px",
-                                    "flex": 1
-                                }
-                            ],
-                            "spacing": "sm",
-                            "margin": "sm"
-                        }
-                    ],
-                    "margin": "xl",
-                    "spacing": "none"
-                }
-            ],
-            "backgroundColor": "#F2F2F7",
-            "paddingAll": "20px"
+    items = [
+        {
+            "text": display_name,
+            "size": "md",
+            "color": "#007AFF",
+            "align": "center",
+            "weight": "bold"
+        },
+        {
+            "text": f"النقاط: {stats['total_points']}\nالألعاب: {stats['games_played']}\nالفوز: {stats['wins']}\nمعدل الفوز: {win_rate:.1f}%",
+            "size": "sm",
+            "weight": "bold"
         }
-    }
+    ]
+    
+    return get_ios_card("إحصائياتك", items, [{"label": "الصدارة", "text": "الصدارة"}])
 
 def get_leaderboard_card():
-    """لوحة الصدارة بأسلوب iOS"""
+    """لوحة الصدارة"""
     leaders = get_leaderboard()
     
     if not leaders:
-        return {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "لا توجد بيانات",
-                        "size": "xl",
-                        "weight": "bold",
-                        "color": "#1C1C1E",
-                        "align": "center"
-                    }
-                ],
-                "backgroundColor": "#F2F2F7",
-                "paddingAll": "30px"
-            }
-        }
+        items = [{"text": "لا توجد بيانات بعد", "align": "center"}]
+        return get_ios_card("لوحة الصدارة", items)
     
-    player_items = []
+    items = []
     for i, leader in enumerate(leaders, 1):
-        if i == 1:
-            medal = "🥇"
-            bg_color = "#FFD700"
-            text_color = "#1C1C1E"
-        elif i == 2:
-            medal = "🥈"
-            bg_color = "#C0C0C0"
-            text_color = "#1C1C1E"
-        elif i == 3:
-            medal = "🥉"
-            bg_color = "#CD7F32"
-            text_color = "#FFFFFF"
-        else:
-            medal = f"{i}"
-            bg_color = "#FFFFFF"
-            text_color = "#1C1C1E"
-        
-        player_items.append({
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": medal if i > 3 else medal,
-                    "size": "md" if i > 3 else "xl",
-                    "weight": "bold",
-                    "color": text_color if i <= 3 else "#8E8E93",
-                    "flex": 0,
-                    "align": "center"
-                },
-                {
-                    "type": "text",
-                    "text": leader['display_name'],
-                    "size": "sm",
-                    "weight": "bold" if i <= 3 else "regular",
-                    "color": text_color if i <= 3 else "#1C1C1E",
-                    "flex": 3,
-                    "margin": "md"
-                },
-                {
-                    "type": "text",
-                    "text": str(leader['total_points']),
-                    "size": "sm",
-                    "weight": "bold",
-                    "color": text_color if i <= 3 else "#007AFF",
-                    "flex": 1,
-                    "align": "end"
-                }
-            ],
-            "backgroundColor": bg_color,
-            "cornerRadius": "12px",
-            "paddingAll": "14px",
-            "margin": "sm" if i > 1 else "none",
-            "spacing": "md"
+        medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+        items.append({
+            "text": f"{medal} {leader['display_name']} - {leader['total_points']} نقطة",
+            "size": "sm",
+            "weight": "bold" if i <= 3 else "regular"
         })
     
-    return {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "🏆",
-                            "size": "3xl",
-                            "flex": 0
-                        },
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": "لوحة الصدارة",
-                                    "size": "xl",
-                                    "weight": "bold",
-                                    "color": "#1C1C1E"
-                                },
-                                {
-                                    "type": "text",
-                                    "text": "أفضل اللاعبين",
-                                    "size": "sm",
-                                    "color": "#8E8E93",
-                                    "margin": "xs"
-                                }
-                            ],
-                            "margin": "md"
-                        }
-                    ],
-                    "spacing": "md"
-                },
-                {
-                    "type": "separator",
-                    "margin": "xl",
-                    "color": "#E5E5EA"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": player_items,
-                    "margin": "xl",
-                    "spacing": "none"
-                }
-            ],
-            "backgroundColor": "#F2F2F7",
-            "paddingAll": "20px"
+    return get_ios_card("لوحة الصدارة", items, [{"label": "نقاطي", "text": "نقاطي"}])
+
+def get_text_content_card(title, content, command):
+    """بطاقة للمحتوى النصي"""
+    items = [
+        {
+            "text": content,
+            "size": "sm",
+            "align": "center"
         }
-    }
+    ]
+    
+    return get_ios_card(
+        title,
+        items,
+        footer_buttons=[{"label": f"{title} آخر", "text": command}]
+    )
 
 def start_game(game_id, game_class, game_type, user_id, event):
     """بدء لعبة جديدة"""
@@ -718,6 +456,11 @@ def start_game(game_id, game_class, game_type, user_id, event):
             }
         
         response = game.start_game()
+        
+        # إضافة الأزرار الثابتة
+        if isinstance(response, TextSendMessage):
+            response.quick_reply = get_permanent_quick_reply()
+        
         line_bot_api.reply_message(event.reply_token, response)
         logger.info(f"✅ بدأت لعبة {game_type}")
         return True
@@ -725,7 +468,10 @@ def start_game(game_id, game_class, game_type, user_id, event):
         logger.error(f"❌ خطأ في بدء {game_type}: {e}")
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=f"❌ حدث خطأ في بدء اللعبة")
+            TextSendMessage(
+                text=f"❌ حدث خطأ في بدء اللعبة",
+                quick_reply=get_permanent_quick_reply()
+            )
         )
         return False
 
@@ -739,7 +485,7 @@ def home():
             <style>
                 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
                 body {{ 
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     min-height: 100vh;
                     display: flex;
@@ -756,12 +502,7 @@ def home():
                     width: 100%;
                     text-align: center;
                 }}
-                h1 {{ 
-                    color: #1C1C1E;
-                    font-size: 2em;
-                    margin-bottom: 10px;
-                }}
-                .emoji {{ font-size: 3em; margin: 20px 0; }}
+                h1 {{ color: #1C1C1E; font-size: 2em; margin-bottom: 10px; }}
                 .status {{
                     background: #F2F2F7;
                     border-radius: 12px;
@@ -781,13 +522,12 @@ def home():
         </head>
         <body>
             <div class="container">
-                <div class="emoji">🎮</div>
                 <h1>منصة الألعاب</h1>
                 <p style="color: #8E8E93; margin: 10px 0;">LINE Bot Game Platform</p>
                 <div class="status">
                     <div class="status-item">
                         <span class="label">حالة الخادم</span>
-                        <span class="value">✅ يعمل</span>
+                        <span class="value">يعمل</span>
                     </div>
                     <div class="status-item">
                         <span class="label">عدد الألعاب</span>
@@ -835,7 +575,10 @@ def handle_message(event):
         if not check_rate_limit(user_id):
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="⚠️ عدد كبير من الرسائل! انتظر قليلاً.")
+                TextSendMessage(
+                    text="⚠️ عدد كبير من الرسائل! انتظر قليلاً.",
+                    quick_reply=get_permanent_quick_reply()
+                )
             )
             return
         
@@ -844,162 +587,94 @@ def handle_message(event):
         
         logger.info(f"💬 {display_name}: {text}")
         
-        # ═══════════════════════════════════════════
         # الأوامر الأساسية
-        # ═══════════════════════════════════════════
-        
-        if text in ['البداية', 'ابدأ', 'start', 'قائمة', 'البوت', 'مرحبا', 'السلام عليكم']:
+        if text in ['البداية', 'ابدأ', 'start', 'قائمة', 'البوت', 'مرحبا']:
             line_bot_api.reply_message(
                 event.reply_token,
                 FlexSendMessage(
                     alt_text="منصة الألعاب",
-                    contents=get_main_menu(display_name)
+                    contents=get_main_menu(display_name),
+                    quick_reply=get_permanent_quick_reply()
                 )
             )
             return
         
-        elif text in ['المزيد', 'أكثر', 'more', 'مزيد']:
+        elif text in ['مساعدة', 'help', 'ساعدني', 'الأوامر']:
             line_bot_api.reply_message(
                 event.reply_token,
                 FlexSendMessage(
-                    alt_text="ألعاب إضافية",
-                    contents=get_more_games_menu()
+                    alt_text="المساعدة",
+                    contents=get_help_card(),
+                    quick_reply=get_permanent_quick_reply()
                 )
             )
             return
         
-        elif text in ['أوامر', 'الأوامر', 'commands']:
-            line_bot_api.reply_message(
-                event.reply_token,
-                FlexSendMessage(
-                    alt_text="الأوامر",
-                    contents=get_commands_menu()
-                )
-            )
-            return
-        
-        elif text in ['نقاطي', 'إحصائياتي', 'stats', 'النقاط']:
+        elif text in ['نقاطي', 'إحصائياتي', 'stats']:
             line_bot_api.reply_message(
                 event.reply_token,
                 FlexSendMessage(
                     alt_text="إحصائياتك",
-                    contents=get_stats_card(user_id, display_name)
+                    contents=get_stats_card(user_id, display_name),
+                    quick_reply=get_permanent_quick_reply()
                 )
             )
             return
         
-        elif text in ['الصدارة', 'المتصدرين', 'leaderboard', 'top']:
+        elif text in ['الصدارة', 'المتصدرين', 'leaderboard']:
             line_bot_api.reply_message(
                 event.reply_token,
                 FlexSendMessage(
                     alt_text="لوحة الصدارة",
-                    contents=get_leaderboard_card()
+                    contents=get_leaderboard_card(),
+                    quick_reply=get_permanent_quick_reply()
                 )
             )
             return
         
-        elif text in ['إيقاف', 'ايقاف', 'stop', 'انهاء']:
+        elif text in ['إيقاف', 'ايقاف', 'stop']:
             with games_lock:
                 if game_id in active_games:
                     game_type = active_games[game_id]['type']
                     del active_games[game_id]
                     
-                    card = {
-                        "type": "bubble",
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": "تم الإيقاف",
-                                    "size": "xl",
-                                    "weight": "bold",
-                                    "color": "#1C1C1E",
-                                    "align": "center"
-                                },
-                                {
-                                    "type": "text",
-                                    "text": f"تم إيقاف لعبة {game_type}",
-                                    "size": "sm",
-                                    "color": "#8E8E93",
-                                    "align": "center",
-                                    "margin": "md"
-                                },
-                                {
-                                    "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "ابدأ لعبة جديدة",
-                                        "text": "البداية"
-                                    },
-                                    "style": "primary",
-                                    "color": "#007AFF",
-                                    "margin": "xl"
-                                }
-                            ],
-                            "backgroundColor": "#F2F2F7",
-                            "paddingAll": "30px"
-                        }
-                    }
+                    items = [
+                        {"text": f"تم إيقاف لعبة {game_type}", "align": "center"}
+                    ]
                     
                     line_bot_api.reply_message(
                         event.reply_token,
-                        FlexSendMessage(alt_text="تم الإيقاف", contents=card)
+                        FlexSendMessage(
+                            alt_text="تم الإيقاف",
+                            contents=get_ios_card("تم الإيقاف", items, [{"label": "لعبة جديدة", "text": "البداية", "style": "primary"}]),
+                            quick_reply=get_permanent_quick_reply()
+                        )
                     )
                 else:
                     line_bot_api.reply_message(
                         event.reply_token,
-                        TextSendMessage(text="لا توجد لعبة نشطة حالياً")
+                        TextSendMessage(
+                            text="لا توجد لعبة نشطة حالياً",
+                            quick_reply=get_permanent_quick_reply()
+                        )
                     )
             return
         
-        elif text in ['انضم', 'تسجيل', 'join', 'سجل']:
+        elif text in ['انضم', 'تسجيل', 'join']:
             with players_lock:
                 if user_id in registered_players:
-                    card = {
-                        "type": "bubble",
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": "أنت مسجل بالفعل",
-                                    "size": "xl",
-                                    "weight": "bold",
-                                    "color": "#34C759",
-                                    "align": "center"
-                                },
-                                {
-                                    "type": "text",
-                                    "text": f"مرحباً {display_name}\nيمكنك اللعب في جميع الألعاب",
-                                    "size": "sm",
-                                    "color": "#8E8E93",
-                                    "align": "center",
-                                    "margin": "md",
-                                    "wrap": True
-                                },
-                                {
-                                    "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "اختر لعبة",
-                                        "text": "البداية"
-                                    },
-                                    "style": "primary",
-                                    "color": "#007AFF",
-                                    "margin": "xl"
-                                }
-                            ],
-                            "backgroundColor": "#F2F2F7",
-                            "paddingAll": "30px"
-                        }
-                    }
+                    items = [
+                        {"text": f"مرحباً {display_name}", "align": "center", "weight": "bold"},
+                        {"text": "أنت مسجل بالفعل\nيمكنك اللعب في جميع الألعاب", "align": "center", "color": "#8E8E93"}
+                    ]
                     
                     line_bot_api.reply_message(
                         event.reply_token,
-                        FlexSendMessage(alt_text="مسجل", contents=card)
+                        FlexSendMessage(
+                            alt_text="مسجل",
+                            contents=get_ios_card("أنت مسجل", items, [{"label": "اختر لعبة", "text": "البداية", "style": "primary"}]),
+                            quick_reply=get_permanent_quick_reply()
+                        )
                     )
                 else:
                     registered_players.add(user_id)
@@ -1010,74 +685,24 @@ def handle_message(event):
                                 game_data['participants'] = set()
                             game_data['participants'].add(user_id)
                     
-                    card = {
-                        "type": "bubble",
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": "🎉",
-                                    "size": "3xl",
-                                    "align": "center"
-                                },
-                                {
-                                    "type": "text",
-                                    "text": "تم التسجيل بنجاح",
-                                    "size": "xl",
-                                    "weight": "bold",
-                                    "color": "#1C1C1E",
-                                    "align": "center",
-                                    "margin": "md"
-                                },
-                                {
-                                    "type": "text",
-                                    "text": f"مرحباً بك {display_name}",
-                                    "size": "md",
-                                    "color": "#007AFF",
-                                    "align": "center",
-                                    "margin": "sm"
-                                },
-                                {
-                                    "type": "separator",
-                                    "margin": "xl",
-                                    "color": "#E5E5EA"
-                                },
-                                {
-                                    "type": "text",
-                                    "text": "يمكنك الآن:\n• اللعب في جميع الألعاب\n• جمع النقاط\n• المنافسة على الصدارة",
-                                    "size": "sm",
-                                    "color": "#8E8E93",
-                                    "align": "center",
-                                    "wrap": True,
-                                    "margin": "xl"
-                                },
-                                {
-                                    "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "ابدأ اللعب الآن",
-                                        "text": "البداية"
-                                    },
-                                    "style": "primary",
-                                    "color": "#007AFF",
-                                    "margin": "xl"
-                                }
-                            ],
-                            "backgroundColor": "#F2F2F7",
-                            "paddingAll": "30px"
-                        }
-                    }
+                    items = [
+                        {"text": f"مرحباً {display_name}", "align": "center", "size": "lg", "weight": "bold", "color": "#007AFF"},
+                        {"text": "تم تسجيلك بنجاح", "align": "center", "weight": "bold"},
+                        {"text": "يمكنك الآن اللعب وجمع النقاط", "align": "center", "color": "#8E8E93"}
+                    ]
                     
                     line_bot_api.reply_message(
                         event.reply_token,
-                        FlexSendMessage(alt_text="تم التسجيل", contents=card)
+                        FlexSendMessage(
+                            alt_text="تم التسجيل",
+                            contents=get_ios_card("تم التسجيل", items, [{"label": "ابدأ اللعب", "text": "البداية", "style": "primary"}]),
+                            quick_reply=get_permanent_quick_reply()
+                        )
                     )
                     logger.info(f"✅ انضم: {display_name}")
             return
         
-        elif text in ['انسحب', 'خروج', 'leave', 'إلغاء']:
+        elif text in ['انسحب', 'خروج', 'leave']:
             with players_lock:
                 if user_id in registered_players:
                     registered_players.remove(user_id)
@@ -1087,324 +712,145 @@ def handle_message(event):
                             if 'participants' in game_data and user_id in game_data['participants']:
                                 game_data['participants'].remove(user_id)
                     
-                    card = {
-                        "type": "bubble",
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": "تم الانسحاب",
-                                    "size": "xl",
-                                    "weight": "bold",
-                                    "color": "#FF3B30",
-                                    "align": "center"
-                                },
-                                {
-                                    "type": "text",
-                                    "text": f"إلى اللقاء {display_name}",
-                                    "size": "sm",
-                                    "color": "#8E8E93",
-                                    "align": "center",
-                                    "margin": "md"
-                                },
-                                {
-                                    "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "انضم مجدداً",
-                                        "text": "انضم"
-                                    },
-                                    "style": "secondary",
-                                    "margin": "xl"
-                                }
-                            ],
-                            "backgroundColor": "#F2F2F7",
-                            "paddingAll": "30px"
-                        }
-                    }
+                    items = [
+                        {"text": f"إلى اللقاء {display_name}", "align": "center"}
+                    ]
                     
                     line_bot_api.reply_message(
                         event.reply_token,
-                        FlexSendMessage(alt_text="تم الانسحاب", contents=card)
+                        FlexSendMessage(
+                            alt_text="تم الانسحاب",
+                            contents=get_ios_card("تم الانسحاب", items, [{"label": "انضم مجدداً", "text": "انضم"}]),
+                            quick_reply=get_permanent_quick_reply()
+                        )
                     )
                     logger.info(f"❌ انسحب: {display_name}")
                 else:
                     line_bot_api.reply_message(
                         event.reply_token,
-                        TextSendMessage(text="أنت غير مسجل\n\nاكتب 'انضم' للتسجيل")
+                        TextSendMessage(
+                            text="أنت غير مسجل\n\nاكتب 'انضم' للتسجيل",
+                            quick_reply=get_permanent_quick_reply()
+                        )
                     )
             return
         
-        # ═══════════════════════════════════════════
-        # الأوامر النصية (من الملفات)
-        # ═══════════════════════════════════════════
-        
+        # الأوامر النصية
         elif text in ['سؤال', 'سوال']:
             if QUESTIONS:
                 question = random.choice(QUESTIONS)
-                card = {
-                    "type": "bubble",
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "❓",
-                                "size": "3xl",
-                                "align": "center"
-                            },
-                            {
-                                "type": "text",
-                                "text": "سؤال عشوائي",
-                                "size": "md",
-                                "weight": "bold",
-                                "color": "#1C1C1E",
-                                "align": "center",
-                                "margin": "md"
-                            },
-                            {
-                                "type": "separator",
-                                "margin": "xl",
-                                "color": "#E5E5EA"
-                            },
-                            {
-                                "type": "text",
-                                "text": question,
-                                "size": "sm",
-                                "color": "#1C1C1E",
-                                "wrap": True,
-                                "margin": "xl",
-                                "align": "center"
-                            },
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "message",
-                                    "label": "سؤال آخر",
-                                    "text": "سؤال"
-                                },
-                                "style": "primary",
-                                "color": "#007AFF",
-                                "margin": "xl"
-                            }
-                        ],
-                        "backgroundColor": "#F2F2F7",
-                        "paddingAll": "30px"
-                    }
-                }
                 line_bot_api.reply_message(
                     event.reply_token,
-                    FlexSendMessage(alt_text="سؤال", contents=card)
+                    FlexSendMessage(
+                        alt_text="سؤال",
+                        contents=get_text_content_card("سؤال عشوائي", question, "سؤال"),
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
             else:
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ ملف الأسئلة غير متوفر")
+                    TextSendMessage(
+                        text="❌ ملف الأسئلة غير متوفر",
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
             return
         
         elif text in ['تحدي', 'challenge']:
             if CHALLENGES:
                 challenge = random.choice(CHALLENGES)
-                card = {
-                    "type": "bubble",
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "🏆",
-                                "size": "3xl",
-                                "align": "center"
-                            },
-                            {
-                                "type": "text",
-                                "text": "تحدي جديد",
-                                "size": "md",
-                                "weight": "bold",
-                                "color": "#1C1C1E",
-                                "align": "center",
-                                "margin": "md"
-                            },
-                            {
-                                "type": "separator",
-                                "margin": "xl",
-                                "color": "#E5E5EA"
-                            },
-                            {
-                                "type": "text",
-                                "text": challenge,
-                                "size": "sm",
-                                "color": "#1C1C1E",
-                                "wrap": True,
-                                "margin": "xl",
-                                "align": "center"
-                            },
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "message",
-                                    "label": "تحدي آخر",
-                                    "text": "تحدي"
-                                },
-                                "style": "primary",
-                                "color": "#FF9500",
-                                "margin": "xl"
-                            }
-                        ],
-                        "backgroundColor": "#F2F2F7",
-                        "paddingAll": "30px"
-                    }
-                }
                 line_bot_api.reply_message(
                     event.reply_token,
-                    FlexSendMessage(alt_text="تحدي", contents=card)
+                    FlexSendMessage(
+                        alt_text="تحدي",
+                        contents=get_text_content_card("تحدي جديد", challenge, "تحدي"),
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
             else:
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ ملف التحديات غير متوفر")
+                    TextSendMessage(
+                        text="❌ ملف التحديات غير متوفر",
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
             return
         
         elif text in ['اعتراف', 'confession']:
             if CONFESSIONS:
                 confession = random.choice(CONFESSIONS)
-                card = {
-                    "type": "bubble",
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "💬",
-                                "size": "3xl",
-                                "align": "center"
-                            },
-                            {
-                                "type": "text",
-                                "text": "اعتراف",
-                                "size": "md",
-                                "weight": "bold",
-                                "color": "#1C1C1E",
-                                "align": "center",
-                                "margin": "md"
-                            },
-                            {
-                                "type": "separator",
-                                "margin": "xl",
-                                "color": "#E5E5EA"
-                            },
-                            {
-                                "type": "text",
-                                "text": confession,
-                                "size": "sm",
-                                "color": "#1C1C1E",
-                                "wrap": True,
-                                "margin": "xl",
-                                "align": "center"
-                            },
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "message",
-                                    "label": "اعتراف آخر",
-                                    "text": "اعتراف"
-                                },
-                                "style": "primary",
-                                "color": "#34C759",
-                                "margin": "xl"
-                            }
-                        ],
-                        "backgroundColor": "#F2F2F7",
-                        "paddingAll": "30px"
-                    }
-                }
                 line_bot_api.reply_message(
                     event.reply_token,
-                    FlexSendMessage(alt_text="اعتراف", contents=card)
+                    FlexSendMessage(
+                        alt_text="اعتراف",
+                        contents=get_text_content_card("اعتراف", confession, "اعتراف"),
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
             else:
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ ملف الاعترافات غير متوفر")
+                    TextSendMessage(
+                        text="❌ ملف الاعترافات غير متوفر",
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
             return
         
         elif text in ['اكثر', 'أكثر', 'more']:
             if MORE_QUESTIONS:
                 more_q = random.choice(MORE_QUESTIONS)
-                card = {
-                    "type": "bubble",
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "➕",
-                                "size": "3xl",
-                                "align": "center"
-                            },
-                            {
-                                "type": "text",
-                                "text": "سؤال إضافي",
-                                "size": "md",
-                                "weight": "bold",
-                                "color": "#1C1C1E",
-                                "align": "center",
-                                "margin": "md"
-                            },
-                            {
-                                "type": "separator",
-                                "margin": "xl",
-                                "color": "#E5E5EA"
-                            },
-                            {
-                                "type": "text",
-                                "text": more_q,
-                                "size": "sm",
-                                "color": "#1C1C1E",
-                                "wrap": True,
-                                "margin": "xl",
-                                "align": "center"
-                            },
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "message",
-                                    "label": "سؤال آخر",
-                                    "text": "اكثر"
-                                },
-                                "style": "primary",
-                                "color": "#5856D6",
-                                "margin": "xl"
-                            }
-                        ],
-                        "backgroundColor": "#F2F2F7",
-                        "paddingAll": "30px"
-                    }
-                }
                 line_bot_api.reply_message(
                     event.reply_token,
-                    FlexSendMessage(alt_text="سؤال إضافي", contents=card)
+                    FlexSendMessage(
+                        alt_text="سؤال إضافي",
+                        contents=get_text_content_card("سؤال إضافي", more_q, "اكثر"),
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
             else:
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ ملف الأسئلة الإضافية غير متوفر")
+                    TextSendMessage(
+                        text="❌ ملف الأسئلة الإضافية غير متوفر",
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
             return
         
-        # ═══════════════════════════════════════════
-        # بدء الألعاب
-        # ═══════════════════════════════════════════
+        elif text in ['نصيحة', 'tip', 'نصائح']:
+            if TIPS:
+                # اختيار فئة عشوائية من النصائح
+                categories = list(TIPS.keys())
+                category = random.choice(categories)
+                tip = random.choice(TIPS[category])
+                
+                items = [
+                    {"text": f"فئة: {category}", "size": "xs", "color": "#8E8E93", "align": "center"},
+                    {"text": tip, "size": "sm", "align": "center"}
+                ]
+                
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    FlexSendMessage(
+                        alt_text="نصيحة",
+                        contents=get_ios_card("نصيحة مفيدة", items, [{"label": "نصيحة أخرى", "text": "نصيحة"}]),
+                        quick_reply=get_permanent_quick_reply()
+                    )
+                )
+            else:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(
+                        text="❌ ملف النصائح غير متوفر",
+                        quick_reply=get_permanent_quick_reply()
+                    )
+                )
+            return
         
+        # بدء الألعاب
         games_map = {
             'أغنية': (SongGame, 'أغنية'),
             'لعبة': (HumanAnimalPlantGame, 'لعبة'),
@@ -1434,77 +880,25 @@ def handle_message(event):
                         'participants': participants
                     }
                 
-                card = {
-                    "type": "bubble",
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "💖",
-                                "size": "3xl",
-                                "align": "center"
-                            },
-                            {
-                                "type": "text",
-                                "text": "لعبة التوافق",
-                                "size": "xl",
-                                "weight": "bold",
-                                "color": "#1C1C1E",
-                                "align": "center",
-                                "margin": "md"
-                            },
-                            {
-                                "type": "separator",
-                                "margin": "xl",
-                                "color": "#E5E5EA"
-                            },
-                            {
-                                "type": "text",
-                                "text": "اكتب اسمين مفصولين بمسافة",
-                                "size": "sm",
-                                "color": "#8E8E93",
-                                "align": "center",
-                                "margin": "xl",
-                                "wrap": True
-                            },
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "مثال: أحمد فاطمة",
-                                        "size": "xs",
-                                        "color": "#007AFF",
-                                        "align": "center"
-                                    }
-                                ],
-                                "backgroundColor": "#FFFFFF",
-                                "cornerRadius": "8px",
-                                "paddingAll": "12px",
-                                "margin": "lg"
-                            }
-                        ],
-                        "backgroundColor": "#F2F2F7",
-                        "paddingAll": "30px"
-                    }
-                }
+                items = [
+                    {"text": "اكتب اسمين مفصولين بمسافة", "align": "center"},
+                    {"text": "مثال: أحمد فاطمة", "size": "xs", "color": "#007AFF", "align": "center"}
+                ]
                 
                 line_bot_api.reply_message(
                     event.reply_token,
-                    FlexSendMessage(alt_text="لعبة التوافق", contents=card)
+                    FlexSendMessage(
+                        alt_text="لعبة التوافق",
+                        contents=get_ios_card("لعبة التوافق", items),
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
                 return
             
             start_game(game_id, game_class, game_type, user_id, event)
             return
         
-        # ═══════════════════════════════════════════
         # معالجة إجابات الألعاب النشطة
-        # ═══════════════════════════════════════════
-        
         if game_id in active_games:
             game_data = active_games[game_id]
             
@@ -1532,6 +926,11 @@ def handle_message(event):
                                 del active_games[game_id]
                     
                     response = result.get('response', TextSendMessage(text=result.get('message', '')))
+                    
+                    # إضافة الأزرار الثابتة
+                    if isinstance(response, TextSendMessage):
+                        response.quick_reply = get_permanent_quick_reply()
+                    
                     line_bot_api.reply_message(event.reply_token, response)
                 return
                 
@@ -1539,12 +938,37 @@ def handle_message(event):
                 logger.error(f"❌ خطأ في معالجة اللعبة: {e}")
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ حدث خطأ. حاول مرة أخرى.")
+                    TextSendMessage(
+                        text="❌ حدث خطأ. حاول مرة أخرى.",
+                        quick_reply=get_permanent_quick_reply()
+                    )
                 )
                 return
     
     except Exception as e:
         logger.error(f"❌ خطأ في معالجة الرسالة: {e}")
+
+# تنظيف الألعاب القديمة
+def cleanup_old_games():
+    while True:
+        try:
+            time.sleep(300)  # كل 5 دقائق
+            now = datetime.now()
+            to_delete = []
+            
+            with games_lock:
+                for game_id, game_data in active_games.items():
+                    if now - game_data.get('created_at', now) > timedelta(minutes=10):
+                        to_delete.append(game_id)
+                
+                for game_id in to_delete:
+                    del active_games[game_id]
+                    logger.info(f"🗑️ تم حذف لعبة قديمة: {game_id}")
+        except Exception as e:
+            logger.error(f"❌ خطأ في التنظيف: {e}")
+
+cleanup_thread = threading.Thread(target=cleanup_old_games, daemon=True)
+cleanup_thread.start()
 
 @app.errorhandler(Exception)
 def handle_error(error):
