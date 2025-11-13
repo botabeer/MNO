@@ -1,116 +1,206 @@
+"""
+ملف مكونات واجهة المستخدم - تصميم أنيق ومريح للعين
+الألوان: أسود، أبيض، رمادي
+"""
 from linebot.models import (
     FlexSendMessage, BubbleContainer, BoxComponent, TextComponent,
-    ButtonComponent, URIAction, QuickReply, QuickReplyButton
+    QuickReply, QuickReplyButton, MessageAction, SeparatorComponent
 )
 
-# 🎨 ألوان أساسية
-COLOR_BG = "#F5F5F5"        # خلفية رمادية فاتحة
-COLOR_PRIMARY = "#000000"   # أسود للنصوص
-COLOR_SECONDARY = "#888888" # رمادي للنصوص الثانوية
-COLOR_ACCENT = "#FFFFFF"    # أبيض للتباين
+# ========== نظام الألوان الأنيق ==========
+COLOR_PRIMARY = "#000000"      # أسود نقي للعناوين
+COLOR_SECONDARY = "#6B6B6B"    # رمادي متوسط للنصوص الثانوية
+COLOR_ACCENT = "#9E9E9E"       # رمادي فاتح للتفاصيل
+COLOR_BG = "#FFFFFF"           # خلفية بيضاء نقية
+COLOR_BORDER = "#E0E0E0"       # حدود رمادية فاتحة جداً
+COLOR_SUCCESS = "#2C2C2C"      # أسود داكن للنجاح
+COLOR_ERROR = "#4A4A4A"        # رمادي داكن للأخطاء
 
-# ⚙️ الأزرار الثابتة للألعاب
+# ========== الأزرار الثابتة ==========
 def get_fixed_quick_reply():
-    """إرجاع الأزرار الثابتة للألعاب والأوامر الخاصة"""
+    """إرجاع الأزرار الثابتة بتصميم منظم"""
     return QuickReply(items=[
-        QuickReplyButton(action=URIAction(label="أغنية", uri="line://app/أغنية")),
-        QuickReplyButton(action=URIAction(label="لعبة", uri="line://app/لعبة")),
-        QuickReplyButton(action=URIAction(label="سلسلة", uri="line://app/سلسلة")),
-        QuickReplyButton(action=URIAction(label="أسرع", uri="line://app/أسرع")),
-        QuickReplyButton(action=URIAction(label="ضد", uri="line://app/ضد")),
-        QuickReplyButton(action=URIAction(label="ترتيب", uri="line://app/ترتيب")),
-        QuickReplyButton(action=URIAction(label="كوّن", uri="line://app/كوّن")),
-        QuickReplyButton(action=URIAction(label="اختلاف", uri="line://app/اختلاف")),
-        QuickReplyButton(action=URIAction(label="سؤال", uri="line://app/سؤال")),
-        QuickReplyButton(action=URIAction(label="تحدي", uri="line://app/تحدي")),
-        QuickReplyButton(action=URIAction(label="اعتراف", uri="line://app/اعتراف")),
-        QuickReplyButton(action=URIAction(label="اكثر", uri="line://app/اكثر"))
+        QuickReplyButton(action=MessageAction(label="🎵 أغنية", text="أغنية")),
+        QuickReplyButton(action=MessageAction(label="🎮 لعبة", text="لعبة")),
+        QuickReplyButton(action=MessageAction(label="⛓️ سلسلة", text="سلسلة")),
+        QuickReplyButton(action=MessageAction(label="⚡ أسرع", text="أسرع")),
+        QuickReplyButton(action=MessageAction(label="🔄 ضد", text="ضد")),
+        QuickReplyButton(action=MessageAction(label="📝 ترتيب", text="ترتيب")),
+        QuickReplyButton(action=MessageAction(label="🔤 كوّن", text="كوّن")),
+        QuickReplyButton(action=MessageAction(label="🔍 اختلاف", text="اختلاف")),
+        QuickReplyButton(action=MessageAction(label="💞 توافق", text="توافق")),
+        QuickReplyButton(action=MessageAction(label="❓ سؤال", text="سؤال")),
+        QuickReplyButton(action=MessageAction(label="🎯 تحدي", text="تحدي")),
+        QuickReplyButton(action=MessageAction(label="💭 اعتراف", text="اعتراف")),
+        QuickReplyButton(action=MessageAction(label="➕ اكثر", text="اكثر"))
     ])
 
-# 🧩 إنشاء رسائل Flex موحدة التصميم
-def create_flex_text_message(title, body):
-    """إنشاء رسالة Flex أنيقة باللونين الأسود والرمادي"""
+# ========== إنشاء رسائل Flex أنيقة ==========
+def create_elegant_flex_message(title, body, emoji="", show_separator=True):
+    """
+    إنشاء رسالة Flex بتصميم أنيق واحترافي
+    
+    Args:
+        title: عنوان الرسالة
+        body: محتوى الرسالة
+        emoji: إيموجي اختياري للعنوان
+        show_separator: إظهار خط فاصل
+    """
+    contents = [
+        TextComponent(
+            text=f"{emoji} {title}" if emoji else title,
+            weight="bold",
+            size="xl",
+            color=COLOR_PRIMARY,
+            wrap=True
+        )
+    ]
+    
+    if show_separator:
+        contents.append(
+            SeparatorComponent(margin="md", color=COLOR_BORDER)
+        )
+    
+    contents.append(
+        TextComponent(
+            text=body,
+            wrap=True,
+            color=COLOR_SECONDARY,
+            size="md",
+            margin="md",
+            line_height="1.6"
+        )
+    )
+    
     bubble = BubbleContainer(
         direction="ltr",
         body=BoxComponent(
             layout="vertical",
-            spacing="md",
-            contents=[
-                TextComponent(text=title, weight="bold", size="lg", color=COLOR_PRIMARY),
-                TextComponent(text=body, wrap=True, color=COLOR_SECONDARY, size="md")
-            ],
+            spacing="sm",
+            contents=contents,
             background_color=COLOR_BG,
-            padding_all="12px",
-            corner_radius="10px"
+            padding_all="16px"
         )
     )
-    return FlexSendMessage(alt_text=title, contents=bubble)
+    
+    return FlexSendMessage(
+        alt_text=title,
+        contents=bubble,
+        quick_reply=get_fixed_quick_reply()
+    )
 
-# 👋 رسالة الترحيب
+# ========== رسائل الترحيب ==========
 def get_welcome_message(display_name):
-    title = f"مرحباً {display_name} 👋"
-    body = "اختر اللعبة التي تريد لعبها من الأزرار أدناه أو استعرض الأوامر."
-    return create_flex_text_message(title, body)
-
-# 📜 رسالة المساعدة
-def get_help_message():
-    title = "📜 قائمة الأوامر المتاحة"
+    """رسالة ترحيب أنيقة للمستخدمين الجدد"""
+    title = f"مرحباً {display_name}"
     body = (
-        "- مساعدة: عرض قائمة الأوامر\n"
-        "- انضم: الانضمام للعب\n"
-        "- انسحب: الخروج من اللعبة\n"
-        "- إيقاف: إيقاف اللعبة الحالية\n"
-        "- نقاطي: عرض نقاطك\n"
-        "- الصدارة: عرض قائمة الصدارة\n"
-        "- الألعاب: استخدم الأزرار الثابتة لبدء أي لعبة"
+        "أهلاً بك في عالم الألعاب المميز! 🎮\n\n"
+        "استخدم الأزرار أدناه للبدء في أي لعبة، "
+        "أو اكتب 'مساعدة' لعرض جميع الأوامر المتاحة.\n\n"
+        "استمتع بوقتك! ✨"
     )
-    return create_flex_text_message(title, body)
+    return create_elegant_flex_message(title, body, emoji="👋", show_separator=True)
 
-# ✅ عند الانضمام
+# ========== رسائل المساعدة ==========
+def get_help_message():
+    """رسالة المساعدة الشاملة"""
+    title = "دليل الاستخدام"
+    body = (
+        "═══ الأوامر الأساسية ═══\n\n"
+        "• مساعدة - عرض هذه القائمة\n"
+        "• انضم - التسجيل للعب\n"
+        "• انسحب - الخروج من اللعبة\n"
+        "• إيقاف - إنهاء اللعبة الحالية\n\n"
+        "═══ أوامر المعلومات ═══\n\n"
+        "• نقاطي - عرض نقاطك\n"
+        "• الصدارة - قائمة أفضل اللاعبين\n\n"
+        "═══ الألعاب المتاحة ═══\n\n"
+        "استخدم الأزرار الثابتة أدناه لبدء أي لعبة:\n"
+        "🎵 أغنية • 🎮 لعبة • ⛓️ سلسلة\n"
+        "⚡ أسرع • 🔄 ضد • 📝 ترتيب\n"
+        "🔤 كوّن • 🔍 اختلاف • 💞 توافق\n\n"
+        "═══ أوامر إضافية ═══\n\n"
+        "❓ سؤال • 🎯 تحدي • 💭 اعتراف • ➕ اكثر"
+    )
+    return create_elegant_flex_message(title, body, emoji="📖", show_separator=True)
+
+# ========== رسالة الانضمام ==========
 def get_join_message(display_name):
-    title = f"✅ {display_name} تم تسجيلك"
-    body = "الآن أنت جاهز للعب، اختر اللعبة من الأزرار أدناه."
-    return create_flex_text_message(title, body)
-
-# 📊 إحصائيات المستخدم
-def get_stats_message(user_stats):
-    title = "📊 إحصائياتك"
-    body = f"عدد الألعاب: {user_stats.get('games_played', 0)}\nالنقاط: {user_stats.get('points', 0)}"
-    return create_flex_text_message(title, body)
-
-# 🏆 قائمة الصدارة
-def get_leaderboard_message(leaderboard):
-    title = "🏆 قائمة الصدارة"
-    body_lines = [f"{idx+1}. {user['name']} - {user['points']} نقطة" for idx, user in enumerate(leaderboard)]
-    body = "\n".join(body_lines)
-    return create_flex_text_message(title, body)
-
-# 💞 توافق الأسماء
-def get_name_compatibility_message(name1, name2, percentage):
-    """إنشاء رسالة توافق بين اسمين بتصميم أنيق"""
-    if percentage >= 80:
-        desc = "❤️ توافق رائع جدًا!"
-    elif percentage >= 60:
-        desc = "💞 توافق جميل ومبشر!"
-    elif percentage >= 40:
-        desc = "🤍 التفاهم ممكن ببعض الجهد."
-    else:
-        desc = "💔 التوافق ضعيف.. لكن لا شيء مستحيل!"
-
-    bubble = BubbleContainer(
-        direction='ltr',
-        body=BoxComponent(
-            layout='vertical',
-            spacing='md',
-            contents=[
-                TextComponent(text="🔮 توافق الأسماء", weight='bold', size='lg', color=COLOR_PRIMARY),
-                TextComponent(text=f"{name1} 💞 {name2}", size='md', weight='bold', color=COLOR_SECONDARY),
-                TextComponent(text=f"نسبة التوافق: {percentage}%", size='sm', color=COLOR_PRIMARY),
-                TextComponent(text=desc, size='sm', color=COLOR_SECONDARY)
-            ],
-            background_color=COLOR_BG,
-            padding_all="12px",
-            corner_radius="10px"
-        )
+    """رسالة تأكيد الانضمام"""
+    title = "تم التسجيل بنجاح"
+    body = (
+        f"مرحباً {display_name}! ✨\n\n"
+        "لقد تم تسجيلك بنجاح في نظام الألعاب.\n\n"
+        "الآن يمكنك المشاركة في جميع الألعاب المتاحة "
+        "باستخدام الأزرار أدناه.\n\n"
+        "نتمنى لك أوقاتاً ممتعة! 🎮"
     )
-    return FlexSendMessage(alt_text="توافق الأسماء", contents=bubble)
+    return create_elegant_flex_message(title, body, emoji="✅", show_separator=True)
+
+# ========== رسالة الانسحاب ==========
+def get_withdrawal_message(display_name):
+    """رسالة تأكيد الانسحاب"""
+    title = "تم الانسحاب"
+    body = (
+        f"وداعاً {display_name}! 👋\n\n"
+        "لقد تم انسحابك من اللعبة الحالية.\n\n"
+        "يمكنك الانضمام مجدداً في أي وقت "
+        "باستخدام زر 'انضم'.\n\n"
+        "نتطلع لرؤيتك قريباً!"
+    )
+    return create_elegant_flex_message(title, body, emoji="👋", show_separator=True)
+
+# ========== رسائل الأخطاء ==========
+def get_error_message(error_text):
+    """رسالة خطأ أنيقة"""
+    title = "تنبيه"
+    return create_elegant_flex_message(title, error_text, emoji="⚠️", show_separator=True)
+
+# ========== رسائل النجاح ==========
+def get_success_message(success_text):
+    """رسالة نجاح أنيقة"""
+    title = "عمل رائع"
+    return create_elegant_flex_message(title, success_text, emoji="🎉", show_separator=True)
+
+# ========== رسالة قائمة الصدارة ==========
+def get_leaderboard_message(top_players):
+    """
+    رسالة قائمة الصدارة
+    
+    Args:
+        top_players: قائمة بالمستخدمين وأعلى النقاط [(name, score), ...]
+    """
+    title = "قائمة الصدارة"
+    
+    if not top_players:
+        body = "لا توجد نقاط مسجلة بعد.\nكن أول من يسجل نقاطاً! 🏆"
+    else:
+        medals = ["🥇", "🥈", "🥉"]
+        body = "═══ أفضل اللاعبين ═══\n\n"
+        
+        for idx, (name, score) in enumerate(top_players[:10], 1):
+            medal = medals[idx-1] if idx <= 3 else f"{idx}."
+            body += f"{medal} {name} - {score} نقطة\n"
+    
+    return create_elegant_flex_message(title, body, emoji="🏆", show_separator=True)
+
+# ========== رسالة النقاط الشخصية ==========
+def get_personal_score_message(display_name, score, rank=None):
+    """
+    رسالة عرض النقاط الشخصية
+    
+    Args:
+        display_name: اسم اللاعب
+        score: النقاط
+        rank: الترتيب (اختياري)
+    """
+    title = "نقاطك الشخصية"
+    
+    rank_text = f"\nترتيبك: #{rank}" if rank else ""
+    body = (
+        f"اللاعب: {display_name}\n"
+        f"النقاط: {score} نقطة{rank_text}\n\n"
+        "استمر في اللعب لزيادة نقاطك! 💪"
+    )
+    
+    return create_elegant_flex_message(title, body, emoji="📊", show_separator=True)
