@@ -91,7 +91,6 @@ GAMES_MAP = {
     'سلسلة': (ChainWordsGame, 'سلسلة الكلمات', False),
     'أسرع': (FastTypingGame, 'أسرع كتابة', False),
     'ضد': (OppositeGame, 'لعبة الأضداد', False),
-    'كوّن': (LettersWordsGame, 'تكوين الكلمات', True),
     'تكوين': (LettersWordsGame, 'تكوين الكلمات', True),
     'اختلاف': (DifferencesGame, 'إيجاد الاختلافات', False),
     'توافق': (CompatibilityGame, 'لعبة التوافق', False)
