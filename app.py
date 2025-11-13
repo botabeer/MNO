@@ -11,8 +11,8 @@ import logging
 # استيراد الوظائف المساعدة
 from utils.helpers import get_user_profile_safe, normalize_text, check_rate_limit, cleanup_old_games
 from utils.database import init_db
-from utils.ui_components import get_quick_reply, get_help_message, get_welcome_message, get_join_message
-from utils.gemini_config import USE_AI
+from utils.ui_components import get_help_message, get_welcome_message, get_join_message
+from utils.gemini_config import get_gemini_api_key, switch_gemini_key, USE_AI
 
 # استيراد الألعاب
 from games.chain_words_game import ChainWordsGame
@@ -37,20 +37,6 @@ LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET', 'YOUR_CHANNEL_SECRET')
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
-
-# مفاتيح Gemini
-GEMINI_KEYS = [
-    os.getenv("GEMINI_API_KEY_1"),
-    os.getenv("GEMINI_API_KEY_2"),
-    os.getenv("GEMINI_API_KEY_3")
-]
-
-def get_gemini_api_key():
-    for key in GEMINI_KEYS:
-        if key:
-            return key
-    logger.warning("⚠️ لا يوجد مفتاح Gemini صالح، سيتم استخدام أي مفتاح موجود بالفعل.")
-    return None
 
 # تخزين البيانات
 active_games = {}
@@ -84,57 +70,35 @@ GAMES_MAP = {
     'اختلاف': (DifferencesGame, 'اختلاف')
 }
 
+# أوامر البوت الأساسية
 SPECIAL_COMMANDS = ['سؤال', 'تحدي', 'اعتراف', 'اكثر']
-BOT_COMMANDS = ['مساعدة', 'انضم', 'انسحب', 'إيقاف', 'لمح', 'جاوب'] + list(GAMES_MAP.keys()) + SPECIAL_COMMANDS
+BOT_COMMANDS = ['مساعدة', 'انضم', 'انسحب', 'إيقاف'] + list(GAMES_MAP.keys()) + SPECIAL_COMMANDS
 
-# قائمة الأزرار الثابتة
+# قائمة الأزرار الثابتة لكل الألعاب
 FIXED_QUICK_REPLIES = [
-    {"type": "action", "action": {"type": "message", "label": label, "text": label}}
-    for label in ['أغنية','لعبة','سلسلة','أسرع','ضد','ترتيب','كوّن','اختلاف','سؤال','تحدي','اعتراف','اكثر']
+    {"type": "action", "action": {"type": "message", "label": "أغنية", "text": "أغنية"}},
+    {"type": "action", "action": {"type": "message", "label": "لعبة", "text": "لعبة"}},
+    {"type": "action", "action": {"type": "message", "label": "سلسلة", "text": "سلسلة"}},
+    {"type": "action", "action": {"type": "message", "label": "أسرع", "text": "أسرع"}},
+    {"type": "action", "action": {"type": "message", "label": "ضد", "text": "ضد"}},
+    {"type": "action", "action": {"type": "message", "label": "ترتيب", "text": "ترتيب"}},
+    {"type": "action", "action": {"type": "message", "label": "كوّن", "text": "كوّن"}},
+    {"type": "action", "action": {"type": "message", "label": "اختلاف", "text": "اختلاف"}},
+    {"type": "action", "action": {"type": "message", "label": "سؤال", "text": "سؤال"}},
+    {"type": "action", "action": {"type": "message", "label": "تحدي", "text": "تحدي"}},
+    {"type": "action", "action": {"type": "message", "label": "اعتراف", "text": "اعتراف"}},
+    {"type": "action", "action": {"type": "message", "label": "اكثر", "text": "اكثر"}}
 ]
 
 def get_fixed_quick_reply():
     return {"items": FIXED_QUICK_REPLIES}
 
-def create_game_flex(game_data, show_answer=False, show_hint=False):
-    game_type = game_data['type']
-    game = game_data['game']
-    question_text = getattr(game, 'current_question', 'السؤال غير متوفر')
-    hint_text = getattr(game, 'get_hint', lambda: 'لا يوجد تلميح')() if show_hint else ''
-    answer_text = getattr(game, 'get_answer', lambda: 'لا يوجد إجابة')() if show_answer else ''
-    
-    bubble = {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "md",
-            "contents": [
-                {"type": "text", "text": f"🎮 {game_type}", "weight": "bold", "size": "lg", "color": "#000000"},
-                {"type": "text", "text": f"❓ السؤال: {question_text}", "wrap": True, "color": "#333333"},
-            ]
-        },
-        "footer": {"type": "box", "layout": "vertical", "spacing": "sm", "contents": []}
-    }
-    if show_hint:
-        bubble["body"]["contents"].append({"type": "text", "text": f"💡 تلميح: {hint_text}", "wrap": True, "color": "#555555"})
-    if show_answer:
-        bubble["body"]["contents"].append({"type": "text", "text": f"✅ الإجابة: {answer_text}", "wrap": True, "color": "#000000"})
-    
-    for quick in FIXED_QUICK_REPLIES:
-        bubble["footer"]["contents"].append({
-            "type": "button",
-            "style": "primary",
-            "color": "#888888",
-            "action": quick["action"]
-        })
-    return bubble
-
+# بدء اللعبة
 def start_game(game_id, game_class, game_type, user_id, event):
     try:
         with games_lock:
             if game_class in [HumanAnimalPlantGame, ChainWordsGame]:
-                game = game_class(line_bot_api, use_ai=USE_AI, get_api_key=get_gemini_api_key)
+                game = game_class(line_bot_api, use_ai=USE_AI, get_api_key=get_gemini_api_key, switch_key=switch_gemini_key)
             else:
                 game = game_class(line_bot_api)
             
@@ -152,10 +116,11 @@ def start_game(game_id, game_class, game_type, user_id, event):
                 'player_scores': defaultdict(int)
             }
         
-        flex_message = create_game_flex(active_games[game_id])
-        line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text=f"لعبة {game_type}", contents=flex_message))
+        response = game.start_game()
+        line_bot_api.reply_message(event.reply_token, response)
         logger.info(f"بدأت لعبة {game_type} في {game_id}")
         return True
+        
     except Exception as e:
         logger.error(f"خطأ في بدء اللعبة {game_type}: {e}", exc_info=True)
         line_bot_api.reply_message(
@@ -168,12 +133,16 @@ def start_game(game_id, game_class, game_type, user_id, event):
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
+    logger.info(f"📩 استلمنا webhook: {body}")
+    
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
+        logger.error("❌ توقيع غير صالح")
         return 'Invalid signature', 400
     except Exception as e:
         logger.error(f"❌ خطأ في معالجة webhook: {e}", exc_info=True)
+    
     return 'OK'
 
 @handler.add(MessageEvent, message=TextMessage)
@@ -182,12 +151,14 @@ def handle_message(event):
         user_id = event.source.user_id
         text = event.message.text.strip()
         text_normalized = normalize_text(text)
-        game_id = event.source.group_id if hasattr(event.source, 'group_id') else user_id
         
+        # تجاهل أي رسالة ليست من أوامر البوت
         if text_normalized not in [normalize_text(cmd) for cmd in BOT_COMMANDS]:
+            logger.info(f"📌 تجاهل الرسالة: {text}")
             return
         
         display_name = get_user_profile_safe(user_id, line_bot_api)
+        game_id = event.source.group_id if hasattr(event.source, 'group_id') else user_id
         
         if not check_rate_limit(user_id, user_message_count):
             line_bot_api.reply_message(
@@ -196,6 +167,7 @@ def handle_message(event):
             )
             return
         
+        # مساعدة
         if text_normalized == 'مساعدة':
             help_message = get_help_message()
             line_bot_api.reply_message(
@@ -204,63 +176,83 @@ def handle_message(event):
             )
             return
         
+        # الانضمام
         if text_normalized in ['انضم', 'تسجيل', 'join']:
             with players_lock:
                 if user_id not in registered_players:
                     registered_players.add(user_id)
+                    with games_lock:
+                        for gid, game_data in active_games.items():
+                            if 'participants' not in game_data:
+                                game_data['participants'] = set()
+                            game_data['participants'].add(user_id)
                     join_message = get_join_message(display_name)
-                    line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text="تم التسجيل", contents=join_message, quick_reply=get_fixed_quick_reply()))
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        FlexSendMessage(alt_text="تم التسجيل", contents=join_message, quick_reply=get_fixed_quick_reply())
+                    )
+                    logger.info(f"انضم لاعب جديد: {display_name}")
                 else:
-                    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"أنت مسجل بالفعل يا {display_name}", quick_reply=get_fixed_quick_reply()))
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=f"أنت مسجل بالفعل يا {display_name}", quick_reply=get_fixed_quick_reply())
+                    )
             return
         
+        # الانسحاب
         if text_normalized in ['انسحب', 'خروج', 'leave']:
             with players_lock:
                 if user_id in registered_players:
                     registered_players.remove(user_id)
-                    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"تم انسحابك يا {display_name}", quick_reply=get_fixed_quick_reply()))
+                    with games_lock:
+                        for gid, game_data in active_games.items():
+                            if 'participants' in game_data and user_id in game_data['participants']:
+                                game_data['participants'].remove(user_id)
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=f"تم انسحابك يا {display_name}", quick_reply=get_fixed_quick_reply())
+                    )
                 else:
-                    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="أنت غير مسجل", quick_reply=get_fixed_quick_reply()))
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="أنت غير مسجل", quick_reply=get_fixed_quick_reply())
+                    )
             return
         
+        # إيقاف اللعبة
         if text_normalized in ['إيقاف', 'ايقاف']:
             with games_lock:
                 if game_id in active_games:
                     game_type = active_games[game_id]['type']
                     del active_games[game_id]
-                    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"تم إيقاف لعبة {game_type}", quick_reply=get_fixed_quick_reply()))
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=f"تم إيقاف لعبة {game_type}", quick_reply=get_fixed_quick_reply())
+                    )
             return
         
+        # تشغيل الألعاب
         if text_normalized in [normalize_text(cmd) for cmd in GAMES_MAP.keys()]:
             for cmd, (game_class, game_type) in GAMES_MAP.items():
                 if text_normalized == normalize_text(cmd):
                     start_game(game_id, game_class, game_type, user_id, event)
             return
         
+        # أوامر خاصة (سؤال، تحدي، اعتراف، اكثر)
         if text_normalized in [normalize_text(cmd) for cmd in SPECIAL_COMMANDS]:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"لقد اخترت: {text}", quick_reply=get_fixed_quick_reply()))
-            return
-        
-        if text_normalized in ['لمح', 'جاوب']:
-            with games_lock:
-                if game_id in active_games:
-                    game_data = active_games[game_id]
-                    game_type = game_data['type']
-                    if game_type not in SPECIAL_COMMANDS:
-                        show_hint = text_normalized == 'لمح'
-                        show_answer = text_normalized == 'جاوب'
-                        flex_message = create_game_flex(game_data, show_answer=show_answer, show_hint=show_hint)
-                        line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text=f"لعبة {game_type}", contents=flex_message))
-                    else:
-                        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ هذا الأمر غير متاح لسؤال/تحدي/اعتراف/اكثر.", quick_reply=get_fixed_quick_reply()))
-                else:
-                    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ لا توجد لعبة نشطة حالياً.", quick_reply=get_fixed_quick_reply()))
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"لقد اخترت: {text}", quick_reply=get_fixed_quick_reply())
+            )
             return
 
     except Exception as e:
         logger.error(f"❌ خطأ في معالجة الرسالة: {e}", exc_info=True)
         try:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"❌ حدث خطأ غير متوقع: {e}", quick_reply=get_fixed_quick_reply()))
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"❌ حدث خطأ غير متوقع: {e}", quick_reply=get_fixed_quick_reply())
+            )
         except Exception as inner_e:
             logger.error(f"❌ فشل إرسال رسالة الخطأ: {inner_e}", exc_info=True)
 
