@@ -1,63 +1,40 @@
 """
-Gemini AI Configuration
-إعدادات وتكوين Gemini AI
+ملف إعدادات Gemini AI (اختياري)
+يمكن استخدامه للألعاب الذكية مثل إنسان حيوان نبات والسلسلة
 """
-
 import os
-import logging
 
-logger = logging.getLogger(__name__)
+# هل نستخدم AI في الألعاب؟
+USE_AI = os.getenv("USE_AI", "false").lower() == "true"
 
-# إعدادات Gemini AI (دعم متعدد المفاتيح)
-GEMINI_API_KEYS = [
-    os.getenv('GEMINI_API_KEY_1', ''),
-    os.getenv('GEMINI_API_KEY_2', ''),
-    os.getenv('GEMINI_API_KEY_3', '')
+# مفاتيح Gemini
+GEMINI_KEYS = [
+    os.getenv("GEMINI_API_KEY_1"),
+    os.getenv("GEMINI_API_KEY_2"),
+    os.getenv("GEMINI_API_KEY_3")
 ]
 
-# تنقية المفاتيح الفارغة
-GEMINI_API_KEYS = [key.strip() for key in GEMINI_API_KEYS if key and key.strip()]
+# تصفية المفاتيح الفارغة
+GEMINI_KEYS = [key for key in GEMINI_KEYS if key]
 
-# المتغيرات العامة
-current_gemini_key_index = 0
-USE_AI = bool(GEMINI_API_KEYS)
-
-# طباعة معلومات التكوين
-logger.info(f"📊 عدد مفاتيح Gemini المتاحة: {len(GEMINI_API_KEYS)}")
-logger.info(f"🤖 استخدام AI: {'نعم' if USE_AI else 'لا'}")
+# إعدادات Gemini
+GEMINI_MODEL = "gemini-pro"
+GEMINI_TEMPERATURE = 0.7
+GEMINI_MAX_TOKENS = 500
 
 def get_gemini_api_key():
-    """
-    الحصول على مفتاح Gemini API الحالي
-    
-    Returns:
-        str or None: المفتاح الحالي أو None إذا لم يكن متوفراً
-    """
-    global current_gemini_key_index
-    if GEMINI_API_KEYS:
-        return GEMINI_API_KEYS[current_gemini_key_index]
-    logger.warning("⚠️ لا توجد مفاتيح Gemini API متاحة")
-    return None
+    """الحصول على أول مفتاح متاح"""
+    return GEMINI_KEYS[0] if GEMINI_KEYS else None
 
-def switch_gemini_key():
-    """
-    التبديل إلى المفتاح التالي في حالة نفاد الحصة
+def switch_gemini_key(current_key):
+    """التبديل إلى المفتاح التالي"""
+    if not GEMINI_KEYS or current_key not in GEMINI_KEYS:
+        return get_gemini_api_key()
     
-    Returns:
-        bool: True إذا تم التبديل بنجاح، False إذا لم يكن هناك مفاتيح أخرى
-    """
-    global current_gemini_key_index
-    
-    if len(GEMINI_API_KEYS) > 1:
-        current_gemini_key_index = (current_gemini_key_index + 1) % len(GEMINI_API_KEYS)
-        logger.info(f"🔄 تم التبديل إلى مفتاح Gemini رقم: {current_gemini_key_index + 1}")
-        return True
-    
-    logger.warning("⚠️ لا توجد مفاتيح إضافية للتبديل")
-    return False
+    current_idx = GEMINI_KEYS.index(current_key)
+    next_idx = (current_idx + 1) % len(GEMINI_KEYS)
+    return GEMINI_KEYS[next_idx]
 
-def reset_gemini_key():
-    """إعادة تعيين المفتاح إلى الأول"""
-    global current_gemini_key_index
-    current_gemini_key_index = 0
-    logger.info("🔄 تم إعادة تعيين مفتاح Gemini إلى الأول")
+def is_ai_enabled():
+    """هل AI مفعّل؟"""
+    return USE_AI and bool(GEMINI_KEYS)
