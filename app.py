@@ -1,7 +1,3 @@
-"""
-تطبيق LINE Bot للألعاب - نسخة احترافية محسّنة
-التصميم: أنيق ومريح للعين - أسود، أبيض، رمادي
-"""
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -20,14 +16,7 @@ from utils.ui_components import (
 
 # استيراد الألعاب
 from games.compatibility_game import CompatibilityGame
-from games.chain_words_game import ChainWordsGame
-from games.differences_game import DifferencesGame
-from games.fast_typing_game import FastTypingGame
-from games.human_animal_plant_game import HumanAnimalPlantGame
-from games.letters_words_game import LettersWordsGame
-from games.make_words import MakeWordsGame
-from games.opposite_game import OppositeGame
-from games.song_game import SongGame
+from games.song_game import SongGame  # مثال إذا أردت إضافة اللعبة
 
 # ========== إعداد السجلات ==========
 logging.basicConfig(
@@ -61,26 +50,13 @@ players_lock = threading.Lock()
 
 # ========== تهيئة الألعاب ==========
 compatibility_game = CompatibilityGame(line_bot_api)
-chain_game = ChainWordsGame(line_bot_api)
-differences_game = DifferencesGame(line_bot_api)
-fast_typing_game = FastTypingGame(line_bot_api)
-human_animal_plant_game = HumanAnimalPlantGame(line_bot_api)
-letters_words_game = LettersWordsGame(line_bot_api)
-make_words_game = MakeWordsGame(line_bot_api)
-opposite_game = OppositeGame(line_bot_api)
-song_game = SongGame(line_bot_api)
+song_game = SongGame(line_bot_api)  # مثال لإضافة لعبة الأغاني
 
-# خريطة الألعاب
+# خريطة الألعاب المتاحة
 GAMES_MAP = {
     "توافق": compatibility_game,
-    "سلسلة": chain_game,
-    "اختلاف": differences_game,
-    "أسرع": fast_typing_game,
-    "حيوان/نبات/إنسان": human_animal_plant_game,
-    "كوّن": letters_words_game,
-    "كلمة": make_words_game,
-    "ضد": opposite_game,
-    "أغنية": song_game
+    "أغنية": song_game,
+    # يمكن إضافة المزيد من الألعاب هنا
 }
 
 # ========== الأوامر المتاحة ==========
@@ -111,6 +87,7 @@ def cleanup_old_games():
         except Exception as e:
             logger.error(f"❌ خطأ في التنظيف: {e}")
 
+
 # بدء خيط التنظيف
 cleanup_thread = threading.Thread(target=cleanup_old_games, daemon=True)
 cleanup_thread.start()
@@ -140,14 +117,12 @@ def handle_message(event):
         user_text = event.message.text.strip()
         user_id = event.source.user_id
         
-        # تجاهل الرسائل الفارغة
         if not user_text:
             return
         
         logger.info(f"📨 رسالة من {user_id}: {user_text}")
         
-        # ========== معالجة الأوامر الأساسية ==========
-        
+        # ========== أوامر أساسية ==========
         if user_text == "مساعدة":
             line_bot_api.reply_message(event.reply_token, get_help_message())
             logger.info("✅ تم إرسال رسالة المساعدة")
@@ -167,8 +142,7 @@ def handle_message(event):
         
         if user_text == "انسحب":
             with players_lock:
-                if user_id in registered_players:
-                    registered_players.remove(user_id)
+                registered_players.discard(user_id)
             try:
                 profile = line_bot_api.get_profile(user_id)
                 username = profile.display_name
@@ -239,16 +213,22 @@ def handle_message(event):
             logger.info(f"🎮 بدأت لعبة {user_text} - {game_id}")
             return
         
-        # ========== إدخال اللعبة ==========
+        # ========== معالجة مدخلات اللعبة ==========
         with games_lock:
             user_game = None
             for game_id, game_data in active_games.items():
                 if user_id in game_data.get("participants", set()):
                     user_game = game_data
                     break
-        if user_game and user_game["type"] in GAMES_MAP:
-            user_game["game"].process_input(event)
-            return
+        
+        if user_game:
+            if hasattr(user_game["game"], "process_input"):
+                try:
+                    user_game["game"].process_input(event)
+                except Exception as e:
+                    logger.error(f"❌ خطأ في process_input للعبة {user_game['type']}: {e}", exc_info=True)
+            else:
+                logger.info(f"ℹ️ اللعبة {user_game['type']} لا تدعم process_input، تم تجاهل الرسالة.")
         
         # ========== أوامر خاصة ==========
         if user_text in SPECIAL_COMMANDS:
