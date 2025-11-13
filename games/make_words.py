@@ -1,26 +1,38 @@
+from linebot.models import TextSendMessage
 import random
-from itertools import permutations
 
-USE_AI = False
-AI_MODEL = None
+class MakeWordsGame:
+    def __init__(self, line_bot_api):
+        self.line_bot_api = line_bot_api
+        self.active_games = {}
 
-class LettersWordsGame:
-    def __init__(self, ai_model=None):
-        global USE_AI, AI_MODEL
-        if ai_model:
-            USE_AI = True
-            AI_MODEL = ai_model
+    def start(self, event):
+        """بدء لعبة تكوين الكلمات"""
+        user_id = event.source.user_id
+        letters = random.choice([
+            ["ك", "ت", "ا", "ب"],
+            ["ل", "ع", "ب", "ة"],
+            ["س", "م", "ا", "ء"],
+            ["و", "ر", "د"],
+            ["ح", "ي", "ا", "ة"],
+            ["ح", "ب", "ر"]
+        ])
+        self.active_games[user_id] = {"letters": letters}
+        shuffled = " ".join(random.sample(letters, len(letters)))
+        msg = f"🔠 كوّن كلمة من الحروف التالية:\n{shuffled}"
+        self.line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
 
-        self.letters = ["ت", "ف", "ا", "ح", "ب", "ك", "ل", "م", "ر", "ش"]
-        self.current_question = None
-        self.tries = 3
-
-    def generate_question(self):
-        selected_letters = random.sample(self.letters, 5)
-        self.current_question = {"question": f"كوّن كلمة باستخدام هذه الحروف: {' '.join(selected_letters)}", "answer": "أي كلمة ممكنة"}
-        return self.current_question['question']
-
-    def check_answer(self, answer):
-        correct = True
-        message = f"إجابة مقبولة: {answer}" if correct else "إجابة خاطئة"
-        return {"correct": correct, "message": message, "points": 10}
+    def check_answer(self, event):
+        """التحقق من إجابة المستخدم"""
+        user_id = event.source.user_id
+        text = event.message.text.strip()
+        game = self.active_games.get(user_id)
+        if not game:
+            return
+        correct_word = "".join(game["letters"])
+        if text == correct_word:
+            msg = f"🎉 أحسنت! الكلمة الصحيحة هي: {correct_word}"
+        else:
+            msg = f"❌ خطأ! حاول مرة أخرى."
+        self.line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+        del self.active_games[user_id]
