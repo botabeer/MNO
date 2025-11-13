@@ -14,44 +14,32 @@ class DifferencesGame:
         # قائمة الألغاز (كل لغز له صورة ولها حل)
         self.puzzles = [
             {
-                'puzzle': 'https://up6.cc/2025/10/176300269322041.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300269324622.jpeg'
+                'puzzle': 'https://mrkzgulfup.com/uploads/176303338682671.jpeg',
+                'solution': 'https://mrkzgulfup.com/uploads/176303338684742.jpeg'
             },
             {
-                'puzzle': 'https://up6.cc/2025/10/176300269325883.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300269328574.jpeg'
+                'puzzle': 'https://mrkzgulfup.com/uploads/176303338686833.jpeg',
+                'solution': 'https://mrkzgulfup.com/uploads/176303338695684.jpeg'
             },
             {
-                'puzzle': 'https://up6.cc/2025/10/176300269333045.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300292845955.jpeg'
+                'puzzle': 'https://mrkzgulfup.com/uploads/176303338705925.jpeg',
+                'solution': 'https://mrkzgulfup.com/uploads/176303338714356.jpeg'
             },
             {
-                'puzzle': 'https://up6.cc/2025/10/176300292842534.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300292839723.jpeg'
+                'puzzle': 'https://mrkzgulfup.com/uploads/176303338715787.jpeg',
+                'solution': 'https://mrkzgulfup.com/uploads/176303338717158.jpeg'
             },
             {
-                'puzzle': 'https://up6.cc/2025/10/176300292838272.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300292836241.jpeg'
+                'puzzle': 'https://mrkzgulfup.com/uploads/176303338718499.jpeg',
+                'solution': 'https://mrkzgulfup.com/uploads/1763033387254610.jpeg'
             },
             {
-                'puzzle': 'https://up6.cc/2025/10/176300308283581.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300308285072.jpeg'
+                'puzzle': 'https://mrkzgulfup.com/uploads/1763033387269511.jpeg',
+                'solution': 'https://mrkzgulfup.com/uploads/1763033387284912.jpeg'
             },
             {
-                'puzzle': 'https://up6.cc/2025/10/176300308289583.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300308292614.jpeg'
-            },
-            {
-                'puzzle': 'https://up6.cc/2025/10/176300308294345.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300322419141.jpeg'
-            },
-            {
-                'puzzle': 'https://up6.cc/2025/10/176300322424732.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300322426263.jpeg'
-            },
-            {
-                'puzzle': 'https://up6.cc/2025/10/176300322433374.jpeg',
-                'solution': 'https://up6.cc/2025/10/176300322435875.jpeg'
+                'puzzle': 'https://mrkzgulfup.com/uploads/1763033387350313.jpeg',
+                'solution': 'https://mrkzgulfup.com/uploads/176303338737714.jpeg'
             },
         ]
 
