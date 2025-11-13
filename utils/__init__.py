@@ -27,7 +27,8 @@ from .ui_components import (
     create_stats_bubble,
     create_leaderboard_bubble,
     create_game_result_bubble,
-    get_quick_reply_buttons
+    get_quick_reply_buttons,
+    create_help_bubble  # تمت إضافة create_help_bubble هنا
 )
 
 from .gemini_config import (
@@ -59,6 +60,7 @@ __all__ = [
     'create_leaderboard_bubble',
     'create_game_result_bubble',
     'get_quick_reply_buttons',
+    'create_help_bubble',  # تمت إضافة create_help_bubble هنا
     
     # Gemini Config
     'get_gemini_api_key',
@@ -66,4 +68,4 @@ __all__ = [
     'is_ai_available'
 ]
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'  # تحديث الإصدار بعد التعديل
