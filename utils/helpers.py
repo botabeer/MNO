@@ -1,269 +1,314 @@
 """
-ملف الدوال المساعدة للبوت
+Helpers Module - وظائف مساعدة
+==============================
+مجموعة من الوظائف المساعدة للبوت
 """
-import os
-import random
-import unicodedata
+
+import re
 import logging
+from datetime import datetime, timedelta
+from typing import Dict, Optional
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
+# تخزين معدل الرسائل للمستخدمين
+user_message_count: Dict[str, Dict] = defaultdict(lambda: {
+    'count': 0,
+    'reset_time': datetime.now()
+})
 
-def normalize_text(text):
+def get_user_profile_safe(line_bot_api, user_id: str) -> str:
     """
-    تطبيع النص العربي وإزالة المسافات الزائدة
-    
-    Args:
-        text: النص المراد تطبيعه
-        
-    Returns:
-        str: النص المطبّع
-    """
-    if not text:
-        return ""
-    
-    # إزالة المسافات من البداية والنهاية
-    text = text.strip()
-    
-    # تطبيع الأحرف العربية
-    text = unicodedata.normalize('NFKC', text)
-    
-    return text
-
-
-def load_lines_from_file(filename):
-    """
-    قراءة الأسطر من ملف نصي
-    
-    Args:
-        filename: مسار الملف
-        
-    Returns:
-        list: قائمة بالأسطر
-    """
-    if not os.path.exists(filename):
-        logger.warning(f"⚠️ الملف غير موجود: {filename}")
-        return []
-    
-    try:
-        with open(filename, "r", encoding="utf-8") as f:
-            lines = [line.strip() for line in f if line.strip()]
-            logger.info(f"✅ تم قراءة {len(lines)} سطر من {filename}")
-            return lines
-    except Exception as e:
-        logger.error(f"❌ خطأ في قراءة الملف {filename}: {e}")
-        return []
-
-
-def get_random_line(filename):
-    """
-    الحصول على سطر عشوائي من ملف
-    
-    Args:
-        filename: مسار الملف
-        
-    Returns:
-        str: سطر عشوائي أو رسالة خطأ
-    """
-    lines = load_lines_from_file(filename)
-    if not lines:
-        return "لا توجد بيانات متاحة"
-    
-    return random.choice(lines)
-
-
-def get_user_profile_safe(line_bot_api, user_id):
-    """
-    الحصول على معلومات المستخدم بشكل آمن
+    الحصول على اسم المستخدم بشكل آمن
     
     Args:
         line_bot_api: واجهة LINE Bot API
         user_id: معرف المستخدم
         
     Returns:
-        Profile object أو None
+        اسم المستخدم أو "مستخدم" في حالة الفشل
     """
     try:
         profile = line_bot_api.get_profile(user_id)
-        return profile
+        return profile.display_name
     except Exception as e:
-        logger.error(f"❌ خطأ في الحصول على معلومات المستخدم {user_id}: {e}")
-        return None
+        logger.error(f"❌ خطأ في الحصول على الملف الشخصي لـ {user_id}: {e}")
+        return "مستخدم"
 
-
-def format_time_remaining(seconds):
+def check_rate_limit(
+    user_id: str,
+    max_messages: int = 20,
+    time_window: int = 60
+) -> bool:
     """
-    تنسيق الوقت المتبقي
-    
-    Args:
-        seconds: عدد الثواني
-        
-    Returns:
-        str: وقت منسق
-    """
-    if seconds < 60:
-        return f"{seconds} ثانية"
-    elif seconds < 3600:
-        minutes = seconds // 60
-        return f"{minutes} دقيقة"
-    else:
-        hours = seconds // 3600
-        return f"{hours} ساعة"
-
-
-def validate_arabic_text(text, min_length=1, max_length=100):
-    """
-    التحقق من صحة النص العربي
-    
-    Args:
-        text: النص المراد التحقق منه
-        min_length: الحد الأدنى للطول
-        max_length: الحد الأقصى للطول
-        
-    Returns:
-        tuple: (bool: صحيح/خطأ, str: رسالة الخطأ إن وجدت)
-    """
-    if not text:
-        return False, "النص فارغ"
-    
-    text = text.strip()
-    
-    if len(text) < min_length:
-        return False, f"النص قصير جداً (الحد الأدنى {min_length} حرف)"
-    
-    if len(text) > max_length:
-        return False, f"النص طويل جداً (الحد الأقصى {max_length} حرف)"
-    
-    return True, ""
-
-
-def check_rate_limit(user_id, user_message_count, max_messages=30, time_window=3600):
-    """
-    التحقق من حد الرسائل للمستخدم
+    التحقق من معدل الرسائل لمنع الإزعاج
     
     Args:
         user_id: معرف المستخدم
-        user_message_count: قاموس عدد الرسائل
-        max_messages: الحد الأقصى للرسائل
+        max_messages: أقصى عدد رسائل مسموح
         time_window: نافذة الوقت بالثواني
         
     Returns:
-        bool: True إذا كان ضمن الحد، False إذا تجاوز
+        True إذا كان المستخدم ضمن الحد المسموح
     """
-    from datetime import datetime, timedelta
-    
-    current_time = datetime.now()
-    
-    if user_id not in user_message_count:
-        user_message_count[user_id] = {
-            "count": 1,
-            "reset_time": current_time + timedelta(seconds=time_window)
-        }
-        return True
-    
+    now = datetime.now()
     user_data = user_message_count[user_id]
     
     # إعادة تعيين العداد إذا انتهت النافذة الزمنية
-    if current_time >= user_data["reset_time"]:
-        user_data["count"] = 1
-        user_data["reset_time"] = current_time + timedelta(seconds=time_window)
-        return True
+    if now - user_data['reset_time'] > timedelta(seconds=time_window):
+        user_data['count'] = 0
+        user_data['reset_time'] = now
     
-    # زيادة العداد
-    user_data["count"] += 1
+    # التحقق من الحد الأقصى
+    if user_data['count'] >= max_messages:
+        logger.warning(f"⚠️ {user_id} تجاوز حد الرسائل")
+        return False
     
-    # التحقق من تجاوز الحد
-    if user_data["count"] > max_messages:
+    user_data['count'] += 1
+    return True
+
+def sanitize_text(text: str) -> str:
+    """
+    تنظيف النص من المحارف الخاصة
+    
+    Args:
+        text: النص المراد تنظيفه
+        
+    Returns:
+        النص المنظف
+    """
+    if not text:
+        return ""
+    
+    # إزالة المسافات الزائدة
+    text = ' '.join(text.split())
+    
+    # إزالة الرموز الخطرة
+    text = re.sub(r'[<>\"\'`]', '', text)
+    
+    return text.strip()
+
+def format_number(number: int) -> str:
+    """
+    تنسيق الأرقام بفواصل
+    
+    Args:
+        number: الرقم المراد تنسيقه
+        
+    Returns:
+        الرقم المنسق (مثال: 1,000)
+    """
+    return "{:,}".format(number)
+
+def get_time_greeting() -> str:
+    """
+    الحصول على تحية حسب الوقت
+    
+    Returns:
+        التحية المناسبة
+    """
+    hour = datetime.now().hour
+    
+    if 5 <= hour < 12:
+        return "صباح الخير ☀️"
+    elif 12 <= hour < 17:
+        return "مساء الخير 🌤️"
+    elif 17 <= hour < 21:
+        return "مساء الخير 🌆"
+    else:
+        return "مساء الخير 🌙"
+
+def calculate_win_rate(wins: int, games_played: int) -> float:
+    """
+    حساب نسبة الفوز
+    
+    Args:
+        wins: عدد الانتصارات
+        games_played: عدد الألعاب
+        
+    Returns:
+        نسبة الفوز (0-100)
+    """
+    if games_played == 0:
+        return 0.0
+    return round((wins / games_played) * 100, 1)
+
+def get_level_info(total_points: int) -> Dict[str, any]:
+    """
+    الحصول على معلومات المستوى بناءً على النقاط
+    
+    Args:
+        total_points: إجمالي النقاط
+        
+    Returns:
+        معلومات المستوى (level, title, emoji, next_level_points)
+    """
+    levels = [
+        (0, "مبتدئ", "🌱", 100),
+        (100, "هاوي", "🌿", 250),
+        (250, "محترف", "⭐", 500),
+        (500, "خبير", "💎", 1000),
+        (1000, "أسطورة", "👑", 2000),
+        (2000, "بطل", "🏆", 5000),
+        (5000, "إمبراطور", "⚡", 10000),
+        (10000, "إله", "🌟", float('inf'))
+    ]
+    
+    for i, (points, title, emoji, next_points) in enumerate(levels):
+        if total_points < next_points:
+            return {
+                'level': i + 1,
+                'title': title,
+                'emoji': emoji,
+                'points_needed': next_points - total_points,
+                'next_level_points': next_points
+            }
+    
+    # المستوى الأقصى
+    return {
+        'level': len(levels),
+        'title': levels[-1][1],
+        'emoji': levels[-1][2],
+        'points_needed': 0,
+        'next_level_points': float('inf')
+    }
+
+def format_duration(seconds: int) -> str:
+    """
+    تنسيق المدة الزمنية
+    
+    Args:
+        seconds: المدة بالثواني
+        
+    Returns:
+        المدة المنسقة (مثال: 2د 30ث)
+    """
+    if seconds < 60:
+        return f"{seconds}ث"
+    
+    minutes = seconds // 60
+    remaining_seconds = seconds % 60
+    
+    if minutes < 60:
+        if remaining_seconds > 0:
+            return f"{minutes}د {remaining_seconds}ث"
+        return f"{minutes}د"
+    
+    hours = minutes // 60
+    remaining_minutes = minutes % 60
+    
+    if remaining_minutes > 0:
+        return f"{hours}س {remaining_minutes}د"
+    return f"{hours}س"
+
+def get_achievement_emoji(achievement_type: str) -> str:
+    """
+    الحصول على إيموجي الإنجاز
+    
+    Args:
+        achievement_type: نوع الإنجاز
+        
+    Returns:
+        الإيموجي المناسب
+    """
+    achievements = {
+        'first_win': '🎯',
+        'win_streak_5': '🔥',
+        'win_streak_10': '⚡',
+        'games_played_10': '🎮',
+        'games_played_50': '🏅',
+        'games_played_100': '🏆',
+        'points_1000': '💎',
+        'points_5000': '👑',
+        'perfect_score': '⭐',
+        'speed_master': '⏱️',
+        'comeback_king': '🦸'
+    }
+    return achievements.get(achievement_type, '🎖️')
+
+def validate_player_name(name: str) -> bool:
+    """
+    التحقق من صحة اسم اللاعب
+    
+    Args:
+        name: اسم اللاعب
+        
+    Returns:
+        True إذا كان الاسم صحيحاً
+    """
+    if not name or len(name.strip()) == 0:
+        return False
+    
+    if len(name) > 50:
+        return False
+    
+    # التحقق من عدم وجود محارف خطرة
+    dangerous_chars = ['<', '>', '"', "'", '`', '\\', '/', ';']
+    if any(char in name for char in dangerous_chars):
         return False
     
     return True
 
-
-def cleanup_old_games(active_games, games_lock, max_age=3600):
+def parse_compatibility_names(text: str) -> Optional[tuple]:
     """
-    تنظيف الألعاب القديمة
+    تحليل أسماء لعبة التوافق
     
     Args:
-        active_games: قاموس الألعاب النشطة
-        games_lock: قفل للحماية من التزامن
-        max_age: العمر الأقصى بالثواني (افتراضي: ساعة)
-    """
-    import time
-    from datetime import datetime
-    
-    while True:
-        try:
-            time.sleep(1800)  # 30 دقيقة
-            current_time = datetime.now()
-            
-            with games_lock:
-                expired_games = []
-                
-                for game_id, game_data in active_games.items():
-                    age = (current_time - game_data["created_at"]).seconds
-                    if age > max_age:
-                        expired_games.append(game_id)
-                
-                for game_id in expired_games:
-                    del active_games[game_id]
-                    logger.info(f"🧹 تم حذف اللعبة المنتهية: {game_id}")
-                
-                if expired_games:
-                    logger.info(f"🧹 تم تنظيف {len(expired_games)} لعبة منتهية")
-                    
-        except Exception as e:
-            logger.error(f"❌ خطأ في عملية التنظيف: {e}")
-
-
-def create_game_id(user_id, game_type):
-    """
-    إنشاء معرف فريد للعبة
-    
-    Args:
-        user_id: معرف المستخدم
-        game_type: نوع اللعبة
+        text: النص المدخل
         
     Returns:
-        str: معرف فريد
+        (name1, name2) أو None
     """
-    from datetime import datetime
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    return f"{game_type}_{user_id}_{timestamp}"
+    parts = text.strip().split()
+    
+    if len(parts) < 2:
+        return None
+    
+    # إذا كان هناك أكثر من اسمين، نأخذ الأول والثاني
+    name1 = parts[0].strip()
+    name2 = parts[1].strip()
+    
+    if not validate_player_name(name1) or not validate_player_name(name2):
+        return None
+    
+    return (name1, name2)
 
-
-def get_random_emoji(category="positive"):
+def get_random_emoji() -> str:
     """
     الحصول على إيموجي عشوائي
     
-    Args:
-        category: فئة الإيموجي (positive, negative, neutral, game)
-        
     Returns:
-        str: إيموجي عشوائي
+        إيموجي عشوائي
     """
-    emojis = {
-        "positive": ["🎉", "✨", "🌟", "💫", "🎊", "🏆", "👏", "💪", "🔥", "⭐"],
-        "negative": ["😔", "💔", "😢", "😞", "😕", "😟", "😥", "😰", "😓"],
-        "neutral": ["🤔", "🧐", "🤨", "😐", "😑", "🙂", "😊", "☺️"],
-        "game": ["🎮", "🎯", "🎲", "🃏", "🎰", "🎪", "🎭", "🎨", "🎬", "🎤"]
-    }
-    
-    return random.choice(emojis.get(category, emojis["neutral"]))
+    import random
+    emojis = ['😊', '😎', '🎮', '🎯', '⭐', '💎', '🏆', '👑', '🔥', '⚡']
+    return random.choice(emojis)
 
-
-def truncate_text(text, max_length=100, suffix="..."):
+def truncate_text(text: str, max_length: int = 100) -> str:
     """
-    اختصار النص الطويل
+    اختصار النص إذا كان طويلاً
     
     Args:
         text: النص
         max_length: الطول الأقصى
-        suffix: اللاحقة (...)
         
     Returns:
-        str: النص المختصر
+        النص المختصر
     """
     if len(text) <= max_length:
         return text
+    return text[:max_length-3] + "..."
+
+def is_arabic_text(text: str) -> bool:
+    """
+    التحقق من أن النص عربي
     
-    return text[:max_length - len(suffix)].strip() + suffix
+    Args:
+        text: النص المراد فحصه
+        
+    Returns:
+        True إذا كان النص يحتوي على أحرف عربية
+    """
+    arabic_pattern = re.compile(r'[\u0600-\u06FF]')
+    return bool(arabic_pattern.search(text))
