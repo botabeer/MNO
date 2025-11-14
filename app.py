@@ -1,12 +1,3 @@
-import logging
-
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger("game-bot")
-
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -24,61 +15,10 @@ import time
 import json
 import random
 import re
+import logging
 
-# إعداد Gemini AI
-try:
-    import google.generativeai as genai
-    GEMINI_API_KEYS = [
-        os.getenv('GEMINI_API_KEY_1', ''),
-        os.getenv('GEMINI_API_KEY_2', ''),
-        os.getenv('GEMINI_API_KEY_3', '')
-    ]
-    GEMINI_API_KEYS = [key for key in GEMINI_API_KEYS if key]
-    current_gemini_key_index = 0
-    USE_AI = bool(GEMINI_API_KEYS)
-    
-    if USE_AI:
-        genai.configure(api_key=GEMINI_API_KEYS[0])
-        model = genai.GenerativeModel('gemini-pro')
-        logger.info(f"✅ Gemini AI جاهز - {len(GEMINI_API_KEYS)} مفاتيح")
-except Exception as e:
-    USE_AI = False
-    logger.error(f"❌ خطأ في تحميل Gemini: {e}")
-
-def get_gemini_api_key():
-    """الحصول على مفتاح Gemini API الحالي"""
-    global current_gemini_key_index
-    if GEMINI_API_KEYS:
-        return GEMINI_API_KEYS[current_gemini_key_index]
-    return None
-
-def switch_gemini_key():
-    """التبديل إلى المفتاح التالي"""
-    global current_gemini_key_index, model
-    if len(GEMINI_API_KEYS) > 1:
-        current_gemini_key_index = (current_gemini_key_index + 1) % len(GEMINI_API_KEYS)
-        genai.configure(api_key=GEMINI_API_KEYS[current_gemini_key_index])
-        model = genai.GenerativeModel('gemini-pro')
-        logger.info(f"تم التبديل إلى مفتاح Gemini رقم: {current_gemini_key_index + 1}")
-        return True
-    return False
-
-def ask_gemini(prompt, max_retries=2):
-    """سؤال Gemini AI مع إعادة المحاولة"""
-    if not USE_AI:
-        return None
-    
-    for attempt in range(max_retries):
-        try:
-            response = model.generate_content(prompt)
-            return response.text.strip()
-        except Exception as e:
-            logger.error(f"خطأ في Gemini (محاولة {attempt + 1}): {e}")
-            if attempt < max_retries - 1:
-                switch_gemini_key()
-            else:
-                return None
-    return None
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # استيراد الألعاب
 try:
@@ -111,15 +51,20 @@ players_lock = threading.Lock()
 
 DB_NAME = 'game_scores.db'
 
+# دالة تطبيع النص
 def normalize_text(text):
     """تطبيع النص لقبول جميع أشكال الحروف"""
     if not text:
         return ""
     text = text.strip().lower()
+    # توحيد الهمزات
     text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
     text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
+    # توحيد التاء والياء
     text = text.replace('ة', 'ه').replace('ى', 'ي')
+    # إزالة الحركات
     text = re.sub(r'[\u064B-\u065F]', '', text)
+    # إزالة المسافات الزائدة
     text = re.sub(r'\s+', '', text)
     return text
 
@@ -255,7 +200,7 @@ def get_quick_reply():
     ])
 
 def get_help_card():
-    """بطاقة المساعدة مع حقوق"""
+    """بطاقة المساعدة - Flex Message"""
     return {
         "type": "bubble",
         "body": {
@@ -326,14 +271,6 @@ def get_help_card():
                     "cornerRadius": "10px",
                     "paddingAll": "16px",
                     "margin": "md"
-                },
-                {
-                    "type": "text",
-                    "text": "بوت الحُوت",
-                    "size": "xs",
-                    "color": "#999999",
-                    "align": "center",
-                    "margin": "xl"
                 }
             ],
             "backgroundColor": "#FFFFFF",
@@ -370,7 +307,7 @@ def get_help_card():
     }
 
 def get_stats_card(user_id, display_name):
-    """بطاقة الإحصائيات"""
+    """بطاقة الإحصائيات - Flex Message"""
     stats = get_user_stats(user_id)
     if not stats:
         return {
@@ -513,7 +450,7 @@ def get_stats_card(user_id, display_name):
     }
 
 def get_leaderboard_card():
-    """لوحة الصدارة"""
+    """لوحة الصدارة - Flex Message"""
     leaders = get_leaderboard()
     if not leaders:
         return {
@@ -617,7 +554,7 @@ def get_leaderboard_card():
     }
 
 def get_winner_card(winner_name, winner_score, all_scores):
-    """بطاقة الفائز"""
+    """بطاقة الفائز - Flex Message"""
     score_items = []
     for i, (name, score) in enumerate(all_scores, 1):
         score_items.append({
@@ -711,12 +648,7 @@ def start_game(game_id, game_class, game_type, user_id, event):
     """بدء لعبة جديدة"""
     try:
         with games_lock:
-            # تمرير دوال AI للألعاب
-            if game_class in [SongGame, HumanAnimalPlantGame, LettersWordsGame]:
-                game = game_class(line_bot_api, use_ai=USE_AI, ask_ai=ask_gemini)
-            else:
-                game = game_class(line_bot_api)
-            
+            game = game_class(line_bot_api)
             with players_lock:
                 participants = registered_players.copy()
                 participants.add(user_id)
@@ -789,20 +721,15 @@ def home():
             .status-item:last-child {{ border-bottom: none; }}
             .label {{ color: #666; }}
             .value {{ color: #000; font-weight: bold; }}
-            .footer {{ text-align: center; margin-top: 20px; color: #999; font-size: 0.8em; }}
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>بوت الحُوت</h1>
+            <h1>منصة الألعاب</h1>
             <div class="status">
                 <div class="status-item">
                     <span class="label">حالة الخادم</span>
                     <span class="value">▪️ يعمل</span>
-                </div>
-                <div class="status-item">
-                    <span class="label">AI Status</span>
-                    <span class="value">{'✅ مفعّل' if USE_AI else '❌ معطّل'}</span>
                 </div>
                 <div class="status-item">
                     <span class="label">اللاعبون</span>
@@ -813,7 +740,6 @@ def home():
                     <span class="value">▫️ {len(active_games)}</span>
                 </div>
             </div>
-            <div class="footer">بوت الحُوت - منصة ألعاب تفاعلية</div>
         </div>
     </body>
     </html>
@@ -825,8 +751,7 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "active_games": len(active_games),
-        "registered_players": len(registered_players),
-        "ai_enabled": USE_AI
+        "registered_players": len(registered_players)
     }, 200
 
 @app.route("/callback", methods=['POST'])
@@ -995,7 +920,7 @@ def handle_message(event):
                         'answered_users': set()
                     }
                 line_bot_api.reply_message(event.reply_token,
-                    TextSendMessage(text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: أحمد فاطمة",
+                    TextSendMessage(text="لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: أحمد فاطمة",
                         quick_reply=get_quick_reply()))
                 return
             
@@ -1009,9 +934,11 @@ def handle_message(event):
             with players_lock:
                 is_registered = user_id in registered_players
             
+            # السماح فقط للمسجلين بالإجابة
             if not is_registered:
                 return
             
+            # التحقق من أن المستخدم لم يجب على هذا السؤال
             if 'answered_users' in game_data and user_id in game_data['answered_users']:
                 return
             
@@ -1021,6 +948,7 @@ def handle_message(event):
             try:
                 result = game.check_answer(text, user_id, display_name)
                 if result:
+                    # إذا كانت الإجابة صحيحة، إضافة المستخدم للقائمة
                     if result.get('correct', False):
                         if 'answered_users' not in game_data:
                             game_data['answered_users'] = set()
@@ -1031,7 +959,9 @@ def handle_message(event):
                         update_user_points(user_id, display_name, points,
                             result.get('won', False), game_type)
                     
+                    # الانتقال للسؤال التالي
                     if result.get('next_question', False):
+                        # إعادة تعيين المستخدمين الذين أجابوا
                         game_data['answered_users'] = set()
                         next_q = game.next_question()
                         if isinstance(next_q, TextSendMessage):
@@ -1044,6 +974,7 @@ def handle_message(event):
                             if game_id in active_games:
                                 del active_games[game_id]
                         
+                        # عرض بطاقة الفائز إذا كانت متوفرة
                         if result.get('winner_card'):
                             line_bot_api.reply_message(event.reply_token,
                                 FlexSendMessage(alt_text="الفائز", 
@@ -1105,8 +1036,7 @@ def bad_request(error):
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
-    logger.info(f"🚀 بوت الحُوت - المنفذ {port}")
-    logger.info(f"🤖 AI: {'مفعّل' if USE_AI else 'معطّل'}")
+    logger.info(f"🚀 الخادم على المنفذ {port}")
     logger.info(f"📊 اللاعبون: {len(registered_players)}")
     logger.info(f"🎮 الألعاب النشطة: {len(active_games)}")
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
