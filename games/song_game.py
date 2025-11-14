@@ -14,25 +14,24 @@ def normalize_text(text):
     return text
 
 class SongGame:
-    def __init__(self, line_bot_api):
+    def __init__(self, line_bot_api, use_ai=False, ask_ai=None):
         self.line_bot_api = line_bot_api
+        self.use_ai = use_ai
+        self.ask_ai = ask_ai
+        
         self.all_songs = [
-            {"hint": "أغنية لعبدالمجيد عبدالله", "answer": "أحبك موت", "artist": "عبدالمجيد عبدالله"},
-            {"hint": "أغنية لمحمد عبده", "answer": "الأماكن", "artist": "محمد عبده"},
-            {"hint": "أغنية لراشد الماجد", "answer": "يا بعد عمري", "artist": "راشد الماجد"},
-            {"hint": "أغنية لماجد المهندس", "answer": "بعثر خاطري", "artist": "ماجد المهندس"},
-            {"hint": "أغنية لنوال الكويتية", "answer": "متعب عمري", "artist": "نوال الكويتية"},
-            {"hint": "أغنية لعبدالله الرويشد", "answer": "خلاص سكرنا", "artist": "عبدالله الرويشد"},
-            {"hint": "أغنية لنبيل شعيل", "answer": "حبيبي مجنني", "artist": "نبيل شعيل"},
-            {"hint": "أغنية لكاظم الساهر", "answer": "زدني عشقاً", "artist": "كاظم الساهر"},
-            {"hint": "أغنية لأصالة", "answer": "يا مغرور", "artist": "أصالة"},
-            {"hint": "أغنية لإليسا", "answer": "عكس اللي شايفينها", "artist": "إليسا"},
-            {"hint": "أغنية لعمرو دياب", "answer": "تملي معاك", "artist": "عمرو دياب"},
-            {"hint": "أغنية لشيرين", "answer": "مشاعر", "artist": "شيرين"},
-            {"hint": "أغنية لتامر حسني", "answer": "ناسيني ليه", "artist": "تامر حسني"},
-            {"hint": "أغنية لوائل كفوري", "answer": "شو حلو", "artist": "وائل كفوري"},
-            {"hint": "أغنية لنانسي عجرم", "answer": "آخ يا ألبي", "artist": "نانسي عجرم"}
+            {"lyrics": "يا بعد عمري وروحي وكل شي أملكه", "singer": "راشد الماجد"},
+            {"lyrics": "الأماكن ما تنسى تبقى في البال", "singer": "محمد عبده"},
+            {"lyrics": "أحبك موت أحبك موت يا غالي", "singer": "عبدالمجيد عبدالله"},
+            {"lyrics": "بعثر خاطري وبعثر أفكاري", "singer": "ماجد المهندس"},
+            {"lyrics": "متعب عمري الغلا وانت ما فيك غلا", "singer": "نوال الكويتية"},
+            {"lyrics": "خلاص سكرنا الموضوع وانتهينا", "singer": "عبدالله الرويشد"},
+            {"lyrics": "حبيبي مجنني وذبحني وشفته", "singer": "نبيل شعيل"},
+            {"lyrics": "زدني عشقاً زدني عشقاً زدني جنوناً", "singer": "كاظم الساهر"},
+            {"lyrics": "يا مغرور جرحني غرورك", "singer": "أصالة"},
+            {"lyrics": "عكس اللي شايفينها الحب مش سهل", "singer": "إليسا"}
         ]
+        
         self.questions = []
         self.current_song = None
         self.hints_used = 0
@@ -41,17 +40,48 @@ class SongGame:
         self.player_scores = {}
     
     def start_game(self):
-        self.questions = random.sample(self.all_songs, self.total_questions)
+        if self.use_ai and self.ask_ai:
+            self._generate_ai_songs()
+        
+        self.questions = random.sample(self.all_songs, min(self.total_questions, len(self.all_songs)))
         self.question_number = 0
         self.player_scores = {}
         return self._next_question()
+    
+    def _generate_ai_songs(self):
+        """توليد أسئلة بواسطة AI"""
+        try:
+            prompt = """اعطني 10 مقاطع من أغاني عربية مشهورة مع اسم المغني.
+الصيغة:
+مقطع الأغنية | اسم المغني
+
+مثال:
+يا بعد عمري وروحي | راشد الماجد"""
+            
+            response = self.ask_ai(prompt)
+            if response:
+                lines = response.strip().split('\n')
+                new_songs = []
+                for line in lines:
+                    if '|' in line:
+                        parts = line.split('|')
+                        if len(parts) == 2:
+                            new_songs.append({
+                                'lyrics': parts[0].strip(),
+                                'singer': parts[1].strip()
+                            })
+                
+                if new_songs:
+                    self.all_songs = new_songs
+        except Exception as e:
+            pass
     
     def _next_question(self):
         self.question_number += 1
         self.current_song = self.questions[self.question_number - 1]
         self.hints_used = 0
         return TextSendMessage(
-            text=f"▪️ لعبة الأغاني\n\nسؤال {self.question_number} من {self.total_questions}\n\n{self.current_song['hint']}\n\nخمن اسم الأغنية\n\n▫️ لمح - للحصول على تلميح\n▫️ جاوب - لعرض الإجابة"
+            text=f"▪️ لعبة الأغاني\n\nسؤال {self.question_number} من {self.total_questions}\n\n{self.current_song['lyrics']}\n\nمن المغني؟\n\n▫️ لمح - للحصول على تلميح\n▫️ جاوب - لعرض الإجابة"
         )
     
     def next_question(self):
@@ -65,10 +95,15 @@ class SongGame:
         
         answer_lower = answer.strip().lower()
         
-        # التلميح
         if answer_lower in ['لمح', 'تلميح', 'hint']:
             if self.hints_used == 0:
-                hint = f"▫️ الفنان: {self.current_song['artist']}"
+                singer_name = self.current_song['singer']
+                first_letter = singer_name[0]
+                name_length = len(singer_name.replace(' ', ''))
+                words = singer_name.split()
+                word_info = f"{len(words)} كلمة" if len(words) > 1 else "كلمة واحدة"
+                
+                hint = f"▫️ يبدأ بحرف: {first_letter}\n▫️ عدد الحروف: {name_length}\n▫️ {word_info}"
                 self.hints_used += 1
                 return {
                     'response': TextSendMessage(text=hint),
@@ -86,9 +121,8 @@ class SongGame:
                     'game_over': False
                 }
         
-        # عرض الإجابة
         if answer_lower in ['جاوب', 'الجواب', 'answer']:
-            response_text = f"▪️ الإجابة: {self.current_song['answer']}\n▫️ الفنان: {self.current_song['artist']}"
+            response_text = f"▪️ الإجابة: {self.current_song['singer']}"
             
             if self.question_number < self.total_questions:
                 return {
@@ -102,8 +136,7 @@ class SongGame:
             else:
                 return self._end_game()
         
-        # التحقق من الإجابة
-        if normalize_text(answer) == normalize_text(self.current_song['answer']):
+        if normalize_text(answer) == normalize_text(self.current_song['singer']):
             points = 20 - (self.hints_used * 5)
             
             if user_id not in self.player_scores:
@@ -111,7 +144,7 @@ class SongGame:
             self.player_scores[user_id]['score'] += points
             
             if self.question_number < self.total_questions:
-                response_text = f"▪️ صحيح {display_name}\n\n{self.current_song['answer']}\n{self.current_song['artist']}\n\n▫️ النقاط: {points}"
+                response_text = f"▪️ صحيح {display_name}\n\nالمغني: {self.current_song['singer']}\n\n▫️ النقاط: {points}"
                 return {
                     'response': TextSendMessage(text=response_text),
                     'points': points,
@@ -121,7 +154,6 @@ class SongGame:
                     'next_question': True
                 }
             else:
-                self.player_scores[user_id]['score'] += points
                 return self._end_game()
         
         return None
@@ -130,7 +162,6 @@ class SongGame:
         if self.player_scores:
             sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
             winner = sorted_players[0][1]
-            
             all_scores = [(data['name'], data['score']) for uid, data in sorted_players]
             
             from app import get_winner_card
