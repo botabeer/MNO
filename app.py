@@ -4,7 +4,7 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
     QuickReply, QuickReplyButton, MessageAction,
-    FlexSendMessage
+    FlexSendMessage, ImageSendMessage
 )
 import os
 from datetime import datetime, timedelta
@@ -14,6 +14,7 @@ import threading
 import time
 import json
 import random
+import re
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -49,6 +50,23 @@ games_lock = threading.Lock()
 players_lock = threading.Lock()
 
 DB_NAME = 'game_scores.db'
+
+# دالة تطبيع النص
+def normalize_text(text):
+    """تطبيع النص لقبول جميع أشكال الحروف"""
+    if not text:
+        return ""
+    text = text.strip().lower()
+    # توحيد الهمزات
+    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+    text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
+    # توحيد التاء والياء
+    text = text.replace('ة', 'ه').replace('ى', 'ي')
+    # إزالة الحركات
+    text = re.sub(r'[\u064B-\u065F]', '', text)
+    # إزالة المسافات الزائدة
+    text = re.sub(r'\s+', '', text)
+    return text
 
 def get_db_connection():
     conn = sqlite3.connect(DB_NAME, check_same_thread=False)
@@ -130,7 +148,7 @@ def get_leaderboard(limit=10):
     except:
         return []
 
-def check_rate_limit(user_id, max_messages=20, time_window=60):
+def check_rate_limit(user_id, max_messages=30, time_window=60):
     now = datetime.now()
     user_data = user_message_count[user_id]
     if now - user_data['reset_time'] > timedelta(seconds=time_window):
@@ -151,21 +169,10 @@ def load_text_file(filename):
     except:
         return []
 
-def load_json_file(filename):
-    try:
-        filepath = os.path.join('games', filename)
-        if os.path.exists(filepath):
-            with open(filepath, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return None
-    except:
-        return None
-
 QUESTIONS = load_text_file('questions.txt')
 CHALLENGES = load_text_file('challenges.txt')
 CONFESSIONS = load_text_file('confessions.txt')
 MORE_QUESTIONS = load_text_file('more_questions.txt')
-TIPS = load_json_file('tips.json')
 
 def get_user_profile_safe(user_id):
     try:
@@ -185,15 +192,15 @@ def get_quick_reply():
         QuickReplyButton(action=MessageAction(label="▫️تكوين", text="تكوين")),
         QuickReplyButton(action=MessageAction(label="▫️اختلاف", text="اختلاف")),
         QuickReplyButton(action=MessageAction(label="▫️توافق", text="توافق")),
-        QuickReplyButton(action=MessageAction(label="▫️سؤال", text="سؤال")),
-        QuickReplyButton(action=MessageAction(label="▫️تحدي", text="تحدي")),
-        QuickReplyButton(action=MessageAction(label="▫️اعتراف", text="اعتراف")),
-        QuickReplyButton(action=MessageAction(label="▫️اكثر", text="اكثر")),
-        QuickReplyButton(action=MessageAction(label="▫️مساعدة", text="مساعدة"))
+        QuickReplyButton(action=MessageAction(label="▪️سؤال", text="سؤال")),
+        QuickReplyButton(action=MessageAction(label="▪️تحدي", text="تحدي")),
+        QuickReplyButton(action=MessageAction(label="▪️اعتراف", text="اعتراف")),
+        QuickReplyButton(action=MessageAction(label="▪️اكثر", text="اكثر")),
+        QuickReplyButton(action=MessageAction(label="▪️مساعدة", text="مساعدة"))
     ])
 
 def get_help_card():
-    """بطاقة المساعدة"""
+    """بطاقة المساعدة - Flex Message"""
     return {
         "type": "bubble",
         "body": {
@@ -227,7 +234,7 @@ def get_help_card():
                         },
                         {
                             "type": "text",
-                            "text": "▫️ انضم - التسجيل في البوت\n▫️ انسحب - إلغاء التسجيل\n▫️ نقاطي - عرض إحصائياتك\n▫️ الصدارة - أفضل اللاعبين\n▫️ إيقاف - إنهاء اللعبة الحالية\n▫️ مساعدة - عرض هذا الدليل",
+                            "text": "▫️ انضم - التسجيل في البوت\n▫️ انسحب - إلغاء التسجيل\n▫️ نقاطي - عرض إحصائياتك\n▫️ الصدارة - أفضل اللاعبين\n▫️ إيقاف - إنهاء اللعبة\n▫️ مساعدة - عرض هذا الدليل",
                             "size": "sm",
                             "color": "#333333",
                             "wrap": True,
@@ -253,7 +260,7 @@ def get_help_card():
                         },
                         {
                             "type": "text",
-                            "text": "▫️ لمح - الحصول على تلميح\n▫️ جاوب - عرض الإجابة والانتقال للسؤال التالي",
+                            "text": "▫️ لمح - الحصول على تلميح\n▫️ جاوب - عرض الإجابة",
                             "size": "sm",
                             "color": "#333333",
                             "wrap": True,
@@ -268,54 +275,39 @@ def get_help_card():
             ],
             "backgroundColor": "#FFFFFF",
             "paddingAll": "20px"
-        }
-    }
-
-def get_main_menu(display_name):
-    """القائمة الرئيسية"""
-    return {
-        "type": "bubble",
-        "body": {
+        },
+        "footer": {
             "type": "box",
-            "layout": "vertical",
+            "layout": "horizontal",
             "contents": [
                 {
-                    "type": "text",
-                    "text": "منصة الألعاب",
-                    "size": "xl",
-                    "weight": "bold",
+                    "type": "button",
+                    "action": {"type": "message", "label": "انضم", "text": "انضم"},
+                    "style": "primary",
                     "color": "#000000",
-                    "align": "center"
+                    "height": "sm"
                 },
                 {
-                    "type": "text",
-                    "text": f"مرحباً {display_name}",
-                    "size": "md",
-                    "color": "#666666",
-                    "align": "center",
-                    "margin": "sm"
+                    "type": "button",
+                    "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
+                    "style": "secondary",
+                    "height": "sm"
                 },
                 {
-                    "type": "separator",
-                    "margin": "xl",
-                    "color": "#CCCCCC"
-                },
-                {
-                    "type": "text",
-                    "text": "استخدم الأزرار أدناه",
-                    "size": "sm",
-                    "color": "#999999",
-                    "align": "center",
-                    "margin": "lg"
+                    "type": "button",
+                    "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
+                    "style": "secondary",
+                    "height": "sm"
                 }
             ],
-            "backgroundColor": "#FFFFFF",
-            "paddingAll": "24px"
+            "spacing": "sm",
+            "backgroundColor": "#F5F5F5",
+            "paddingAll": "16px"
         }
     }
 
 def get_stats_card(user_id, display_name):
-    """بطاقة الإحصائيات"""
+    """بطاقة الإحصائيات - Flex Message"""
     stats = get_user_stats(user_id)
     if not stats:
         return {
@@ -343,6 +335,13 @@ def get_stats_card(user_id, display_name):
                         "size": "md",
                         "color": "#666666",
                         "align": "center",
+                        "margin": "xl"
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "ابدأ الآن", "text": "انضم"},
+                        "style": "primary",
+                        "color": "#000000",
                         "margin": "xl"
                     }
                 ],
@@ -389,24 +388,29 @@ def get_stats_card(user_id, display_name):
                             "layout": "horizontal",
                             "contents": [
                                 {"type": "text", "text": "النقاط", "size": "sm", "color": "#666666", "flex": 1},
-                                {"type": "text", "text": str(stats['total_points']), "size": "lg", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
+                                {"type": "text", "text": str(stats['total_points']), "size": "xxl", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
                             ]
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": "#E5E5E5"
                         },
                         {
                             "type": "box",
                             "layout": "horizontal",
                             "contents": [
                                 {"type": "text", "text": "الألعاب", "size": "sm", "color": "#666666", "flex": 1},
-                                {"type": "text", "text": str(stats['games_played']), "size": "sm", "color": "#000000", "flex": 1, "align": "end"}
+                                {"type": "text", "text": str(stats['games_played']), "size": "md", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
                             ],
-                            "margin": "md"
+                            "margin": "lg"
                         },
                         {
                             "type": "box",
                             "layout": "horizontal",
                             "contents": [
                                 {"type": "text", "text": "الفوز", "size": "sm", "color": "#666666", "flex": 1},
-                                {"type": "text", "text": str(stats['wins']), "size": "sm", "color": "#000000", "flex": 1, "align": "end"}
+                                {"type": "text", "text": str(stats['wins']), "size": "md", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
                             ],
                             "margin": "md"
                         },
@@ -415,7 +419,7 @@ def get_stats_card(user_id, display_name):
                             "layout": "horizontal",
                             "contents": [
                                 {"type": "text", "text": "معدل الفوز", "size": "sm", "color": "#666666", "flex": 1},
-                                {"type": "text", "text": f"{win_rate:.1f}%", "size": "sm", "color": "#000000", "flex": 1, "align": "end"}
+                                {"type": "text", "text": f"{win_rate:.0f}%", "size": "md", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
                             ],
                             "margin": "md"
                         }
@@ -428,11 +432,25 @@ def get_stats_card(user_id, display_name):
             ],
             "backgroundColor": "#FFFFFF",
             "paddingAll": "20px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
+                    "style": "secondary",
+                    "height": "sm"
+                }
+            ],
+            "backgroundColor": "#F5F5F5",
+            "paddingAll": "12px"
         }
     }
 
 def get_leaderboard_card():
-    """لوحة الصدارة"""
+    """لوحة الصدارة - Flex Message"""
     leaders = get_leaderboard()
     if not leaders:
         return {
@@ -465,15 +483,29 @@ def get_leaderboard_card():
     
     player_items = []
     for i, leader in enumerate(leaders, 1):
-        bg_color = "#000000" if i == 1 else "#333333" if i == 2 else "#666666" if i == 3 else "#F5F5F5"
-        text_color = "#FFFFFF" if i <= 3 else "#000000"
+        if i == 1:
+            bg_color = "#000000"
+            text_color = "#FFFFFF"
+            rank = "▪️"
+        elif i == 2:
+            bg_color = "#333333"
+            text_color = "#FFFFFF"
+            rank = "▪️"
+        elif i == 3:
+            bg_color = "#666666"
+            text_color = "#FFFFFF"
+            rank = "▪️"
+        else:
+            bg_color = "#F5F5F5"
+            text_color = "#000000"
+            rank = "▫️"
         
         player_items.append({
             "type": "box",
             "layout": "horizontal",
             "contents": [
-                {"type": "text", "text": str(i), "size": "sm", "color": text_color, "flex": 0, "weight": "bold"},
-                {"type": "text", "text": leader['display_name'], "size": "sm", "color": text_color, "flex": 3, "margin": "md"},
+                {"type": "text", "text": f"{rank} {i}", "size": "sm", "color": text_color, "flex": 0, "weight": "bold"},
+                {"type": "text", "text": leader['display_name'], "size": "sm", "color": text_color, "flex": 3, "margin": "md", "wrap": True},
                 {"type": "text", "text": str(leader['total_points']), "size": "sm", "color": text_color, "flex": 1, "align": "end", "weight": "bold"}
             ],
             "backgroundColor": bg_color,
@@ -497,6 +529,14 @@ def get_leaderboard_card():
                     "align": "center"
                 },
                 {
+                    "type": "text",
+                    "text": "أفضل اللاعبين",
+                    "size": "sm",
+                    "color": "#666666",
+                    "align": "center",
+                    "margin": "sm"
+                },
+                {
                     "type": "separator",
                     "margin": "xl",
                     "color": "#CCCCCC"
@@ -506,6 +546,97 @@ def get_leaderboard_card():
                     "layout": "vertical",
                     "contents": player_items,
                     "margin": "lg"
+                }
+            ],
+            "backgroundColor": "#FFFFFF",
+            "paddingAll": "20px"
+        }
+    }
+
+def get_winner_card(winner_name, winner_score, all_scores):
+    """بطاقة الفائز - Flex Message"""
+    score_items = []
+    for i, (name, score) in enumerate(all_scores, 1):
+        score_items.append({
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {"type": "text", "text": f"▫️ {i}", "size": "sm", "color": "#666666", "flex": 0},
+                {"type": "text", "text": name, "size": "sm", "color": "#333333", "flex": 3, "margin": "md"},
+                {"type": "text", "text": f"{score} نقطة", "size": "sm", "color": "#000000", "flex": 2, "align": "end", "weight": "bold"}
+            ],
+            "margin": "md" if i > 1 else "none"
+        })
+    
+    return {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "انتهت اللعبة",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": "#000000",
+                    "align": "center"
+                },
+                {
+                    "type": "separator",
+                    "margin": "xl",
+                    "color": "#CCCCCC"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "الفائز",
+                            "size": "sm",
+                            "color": "#666666",
+                            "align": "center"
+                        },
+                        {
+                            "type": "text",
+                            "text": winner_name,
+                            "size": "xxl",
+                            "weight": "bold",
+                            "color": "#000000",
+                            "align": "center",
+                            "margin": "sm"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"{winner_score} نقطة",
+                            "size": "lg",
+                            "color": "#666666",
+                            "align": "center",
+                            "margin": "sm"
+                        }
+                    ],
+                    "backgroundColor": "#F5F5F5",
+                    "cornerRadius": "10px",
+                    "paddingAll": "20px",
+                    "margin": "xl"
+                },
+                {
+                    "type": "text",
+                    "text": "النتائج النهائية",
+                    "size": "md",
+                    "weight": "bold",
+                    "color": "#000000",
+                    "margin": "xl"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": score_items,
+                    "backgroundColor": "#FAFAFA",
+                    "cornerRadius": "8px",
+                    "paddingAll": "12px",
+                    "margin": "md"
                 }
             ],
             "backgroundColor": "#FFFFFF",
@@ -525,12 +656,17 @@ def start_game(game_id, game_class, game_type, user_id, event):
                 'game': game,
                 'type': game_type,
                 'created_at': datetime.now(),
-                'participants': participants
+                'participants': participants,
+                'answered_users': set()
             }
         
         response = game.start_game()
         if isinstance(response, TextSendMessage):
             response.quick_reply = get_quick_reply()
+        elif isinstance(response, list):
+            for r in response:
+                if isinstance(r, TextSendMessage):
+                    r.quick_reply = get_quick_reply()
         line_bot_api.reply_message(event.reply_token, response)
         logger.info(f"✅ بدأت لعبة {game_type}")
         return True
@@ -593,21 +729,30 @@ def home():
             <div class="status">
                 <div class="status-item">
                     <span class="label">حالة الخادم</span>
-                    <span class="value">يعمل</span>
+                    <span class="value">▪️ يعمل</span>
                 </div>
                 <div class="status-item">
                     <span class="label">اللاعبون</span>
-                    <span class="value">{len(registered_players)}</span>
+                    <span class="value">▫️ {len(registered_players)}</span>
                 </div>
                 <div class="status-item">
                     <span class="label">ألعاب نشطة</span>
-                    <span class="value">{len(active_games)}</span>
+                    <span class="value">▫️ {len(active_games)}</span>
                 </div>
             </div>
         </div>
     </body>
     </html>
     """
+
+@app.route("/health", methods=['GET'])
+def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "active_games": len(active_games),
+        "registered_players": len(registered_players)
+    }, 200
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -617,7 +762,15 @@ def callback():
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
+    except Exception as e:
+        logger.error(f"❌ خطأ webhook: {e}")
     return 'OK'
+
+@app.before_request
+def validate_request():
+    if request.path == '/callback' and request.method == 'POST':
+        if not request.headers.get('X-Line-Signature'):
+            abort(400)
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -637,8 +790,8 @@ def handle_message(event):
         # الأوامر الأساسية
         if text in ['البداية', 'ابدأ', 'start', 'البوت']:
             line_bot_api.reply_message(event.reply_token,
-                FlexSendMessage(alt_text="منصة الألعاب", 
-                    contents=get_main_menu(display_name), quick_reply=get_quick_reply()))
+                TextSendMessage(text=f"مرحباً {display_name}\n\nاستخدم الأزرار أدناه",
+                    quick_reply=get_quick_reply()))
             return
         
         elif text in ['مساعدة', 'help']:
@@ -664,7 +817,7 @@ def handle_message(event):
                 if game_id in active_games:
                     del active_games[game_id]
                     line_bot_api.reply_message(event.reply_token,
-                        TextSendMessage(text="تم إيقاف اللعبة", quick_reply=get_quick_reply()))
+                        TextSendMessage(text="▪️ تم إيقاف اللعبة", quick_reply=get_quick_reply()))
                 else:
                     line_bot_api.reply_message(event.reply_token,
                         TextSendMessage(text="لا توجد لعبة نشطة", quick_reply=get_quick_reply()))
@@ -674,7 +827,7 @@ def handle_message(event):
             with players_lock:
                 if user_id in registered_players:
                     line_bot_api.reply_message(event.reply_token,
-                        TextSendMessage(text=f"أنت مسجل بالفعل يا {display_name}",
+                        TextSendMessage(text=f"▪️ أنت مسجل بالفعل يا {display_name}",
                             quick_reply=get_quick_reply()))
                 else:
                     registered_players.add(user_id)
@@ -684,7 +837,7 @@ def handle_message(event):
                                 game_data['participants'] = set()
                             game_data['participants'].add(user_id)
                     line_bot_api.reply_message(event.reply_token,
-                        TextSendMessage(text=f"تم تسجيلك بنجاح يا {display_name}",
+                        TextSendMessage(text=f"▪️ تم تسجيلك بنجاح يا {display_name}",
                             quick_reply=get_quick_reply()))
                     logger.info(f"✅ انضم: {display_name}")
             return
@@ -694,14 +847,14 @@ def handle_message(event):
                 if user_id in registered_players:
                     registered_players.remove(user_id)
                     line_bot_api.reply_message(event.reply_token,
-                        TextSendMessage(text=f"تم انسحابك يا {display_name}",
+                        TextSendMessage(text=f"▫️ تم انسحابك يا {display_name}",
                             quick_reply=get_quick_reply()))
                 else:
                     line_bot_api.reply_message(event.reply_token,
                         TextSendMessage(text="أنت غير مسجل", quick_reply=get_quick_reply()))
             return
         
-        # الأوامر النصية - بدون إيموجي
+        # الأوامر النصية
         elif text in ['سؤال', 'سوال']:
             if QUESTIONS:
                 line_bot_api.reply_message(event.reply_token,
@@ -763,7 +916,8 @@ def handle_message(event):
                         'game': game,
                         'type': 'توافق',
                         'created_at': datetime.now(),
-                        'participants': participants
+                        'participants': participants,
+                        'answered_users': set()
                     }
                 line_bot_api.reply_message(event.reply_token,
                     TextSendMessage(text="لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: أحمد فاطمة",
@@ -776,10 +930,16 @@ def handle_message(event):
         # معالجة إجابات الألعاب
         if game_id in active_games:
             game_data = active_games[game_id]
+            
             with players_lock:
                 is_registered = user_id in registered_players
             
-            if not is_registered and 'participants' in game_data and user_id not in game_data['participants']:
+            # السماح فقط للمسجلين بالإجابة
+            if not is_registered:
+                return
+            
+            # التحقق من أن المستخدم لم يجب على هذا السؤال
+            if 'answered_users' in game_data and user_id in game_data['answered_users']:
                 return
             
             game = game_data['game']
@@ -788,40 +948,69 @@ def handle_message(event):
             try:
                 result = game.check_answer(text, user_id, display_name)
                 if result:
+                    # إذا كانت الإجابة صحيحة، إضافة المستخدم للقائمة
+                    if result.get('correct', False):
+                        if 'answered_users' not in game_data:
+                            game_data['answered_users'] = set()
+                        game_data['answered_users'].add(user_id)
+                    
                     points = result.get('points', 0)
                     if points > 0:
                         update_user_points(user_id, display_name, points,
                             result.get('won', False), game_type)
                     
+                    # الانتقال للسؤال التالي
+                    if result.get('next_question', False):
+                        # إعادة تعيين المستخدمين الذين أجابوا
+                        game_data['answered_users'] = set()
+                        next_q = game.next_question()
+                        if isinstance(next_q, TextSendMessage):
+                            next_q.quick_reply = get_quick_reply()
+                        line_bot_api.reply_message(event.reply_token, next_q)
+                        return
+                    
                     if result.get('game_over', False):
                         with games_lock:
                             if game_id in active_games:
                                 del active_games[game_id]
+                        
+                        # عرض بطاقة الفائز إذا كانت متوفرة
+                        if result.get('winner_card'):
+                            line_bot_api.reply_message(event.reply_token,
+                                FlexSendMessage(alt_text="الفائز", 
+                                    contents=result['winner_card'], quick_reply=get_quick_reply()))
+                        else:
+                            response = result.get('response', TextSendMessage(text=result.get('message', '')))
+                            if isinstance(response, TextSendMessage):
+                                response.quick_reply = get_quick_reply()
+                            line_bot_api.reply_message(event.reply_token, response)
+                        return
                     
                     response = result.get('response', TextSendMessage(text=result.get('message', '')))
                     if isinstance(response, TextSendMessage):
                         response.quick_reply = get_quick_reply()
+                    elif isinstance(response, list):
+                        for r in response:
+                            if isinstance(r, TextSendMessage):
+                                r.quick_reply = get_quick_reply()
                     line_bot_api.reply_message(event.reply_token, response)
                 return
             except Exception as e:
                 logger.error(f"❌ خطأ معالجة اللعبة: {e}")
-                line_bot_api.reply_message(event.reply_token,
-                    TextSendMessage(text="حدث خطأ", quick_reply=get_quick_reply()))
                 return
     
     except Exception as e:
         logger.error(f"❌ خطأ: {e}")
 
-# تنظيف الألعاب القديمة
 def cleanup_old_games():
     while True:
         try:
-            time.sleep(300)  # كل 5 دقائق
+            time.sleep(300)
             now = datetime.now()
             to_delete = []
             with games_lock:
                 for game_id, game_data in active_games.items():
-                    if now - game_data.get('created_at', now) > timedelta(minutes=10):
+                    if now - game_data.get('created_at', now) > timedelta(minutes=15):
                         to_delete.append(game_id)
                 for game_id in to_delete:
                     del active_games[game_id]
@@ -844,23 +1033,6 @@ def not_found(error):
 @app.errorhandler(400)
 def bad_request(error):
     return 'Bad Request', 400
-
-# Health check endpoint
-@app.route("/health", methods=['GET'])
-def health_check():
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "active_games": len(active_games),
-        "registered_players": len(registered_players)
-    }, 200
-
-# Webhook validation
-@app.before_request
-def validate_request():
-    if request.path == '/callback' and request.method == 'POST':
-        if not request.headers.get('X-Line-Signature'):
-            abort(400)
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
