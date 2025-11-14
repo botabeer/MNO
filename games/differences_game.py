@@ -6,40 +6,36 @@ class DifferencesGame:
         self.line_bot_api = line_bot_api
         self.image_pairs = [
             {
-                "original": "https://mrkzgulfup.com/uploads/176303338682671.jpeg",
+                "original": "https://up6.cc/2025/10/176308448198881.jpeg",
                 "solution": "https://mrkzgulfup.com/uploads/176303338684742.jpeg",
                 "differences": 5
             },
             {
-                "original": "https://mrkzgulfup.com/uploads/176303338686833.jpeg",
+                "original": "https://up6.cc/2025/10/176308448205332.jpeg",
                 "solution": "https://mrkzgulfup.com/uploads/176303338695684.jpeg",
                 "differences": 5
             },
             {
-                "original": "https://mrkzgulfup.com/uploads/176303338705925.jpeg",
+                "original": "https://up6.cc/2025/10/176308448209753.jpeg",
                 "solution": "https://mrkzgulfup.com/uploads/176303338714356.jpeg",
                 "differences": 5
             },
             {
-                "original": "https://mrkzgulfup.com/uploads/176303338715787.jpeg",
+                "original": "https://up6.cc/2025/10/17630844821154.jpeg",
                 "solution": "https://mrkzgulfup.com/uploads/176303338717158.jpeg",
                 "differences": 5
             },
             {
-                "original": "https://mrkzgulfup.com/uploads/176303338718499.jpeg",
+                "original": "https://up6.cc/2025/10/17630844821154.jpeg",
                 "solution": "https://mrkzgulfup.com/uploads/1763033387254610.jpeg",
                 "differences": 5
             },
             {
-                "original": "https://mrkzgulfup.com/uploads/1763033387269511.jpeg",
+                "original": "https://up6.cc/2025/10/176308448213085.jpeg",
                 "solution": "https://mrkzgulfup.com/uploads/1763033387284912.jpeg",
                 "differences": 5
             },
             {
-                "original": "https://mrkzgulfup.com/uploads/1763033387350313.jpeg",
-                "solution": "https://mrkzgulfup.com/uploads/176303338737714.jpeg",
-                "differences": 5
-            }
         ]
         self.current_pair = None
         self.showed_solution = False
