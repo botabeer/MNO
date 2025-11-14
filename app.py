@@ -17,10 +17,13 @@ import re
 import logging
 import sys
 
-# ✅ إعداد Logger
+# ✅ إعداد Logger المحسّن
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 logger = logging.getLogger("game-bot")
 
@@ -272,7 +275,7 @@ def get_user_profile_safe(user_id):
         return "مستخدم"
 
 def get_quick_reply():
-    """الأزرار الثابتة - محدثة"""
+    """الأزرار الثابتة"""
     return QuickReply(items=[
         QuickReplyButton(action=MessageAction(label="▪️سؤال", text="سؤال")),
         QuickReplyButton(action=MessageAction(label="▪️تحدي", text="تحدي")),
@@ -289,7 +292,7 @@ def get_quick_reply():
     ])
 
 def get_simple_registration_card(display_name):
-    """بطاقة تم التسجيل - متوسطة"""
+    """بطاقة تم التسجيل"""
     return {
         "type": "bubble",
         "body": {
@@ -364,7 +367,7 @@ def get_simple_registration_card(display_name):
     }
 
 def get_simple_withdrawal_card(display_name):
-    """بطاقة الانسحاب - متوسطة"""
+    """بطاقة الانسحاب"""
     return {
         "type": "bubble",
         "body": {
@@ -423,7 +426,7 @@ def get_simple_withdrawal_card(display_name):
     }
 
 def get_simple_welcome_card(display_name):
-    """بطاقة البداية - متوسطة"""
+    """بطاقة البداية"""
     return {
         "type": "bubble",
         "body": {
@@ -867,7 +870,7 @@ def get_leaderboard_card():
     }
 
 def get_winner_card(winner_name, winner_score, all_scores):
-    """بطاقة الفائز - ستايل البوت"""
+    """بطاقة الفائز"""
     score_items = []
     for i, (name, score) in enumerate(all_scores, 1):
         if i == 1:
@@ -1213,28 +1216,48 @@ def health_check():
         }
     }, 200
 
+# ==========================================
+# ✅ معالج Webhook المحسّن
+# ==========================================
+
 @app.route("/callback", methods=['POST'])
 def callback():
-    signature = request.headers.get('X-Line-Signature', '')
-    body = request.get_data(as_text=True)
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        logger.error("❌ توقيع غير صالح")
+    """
+    معالج Webhook محسّن - يُرجع 200 دائماً ما لم يكن التوقيع خاطئاً
+    """
+    # 1. التحقق من وجود التوقيع
+    signature = request.headers.get('X-Line-Signature')
+    if not signature:
+        logger.warning("⚠️ طلب بدون توقيع - رفض")
         abort(400)
+    
+    # 2. قراءة محتوى الطلب
+    body = request.get_data(as_text=True)
+    
+    # 3. تسجيل الطلب الوارد
+    logger.info(f"📥 استلام webhook - الطول: {len(body)} بايت")
+    
+    try:
+        # 4. معالجة الحدث
+        handler.handle(body, signature)
+        logger.info("✅ تم معالجة الحدث بنجاح")
+    
+    except InvalidSignatureError:
+        # 5. توقيع غير صالح - رفض الطلب
+        logger.error("❌ توقيع غير صالح - رفض الطلب")
+        abort(400)
+    
     except Exception as e:
-        logger.error(f"❌ خطأ webhook: {e}")
-    return 'OK'
-
-@app.before_request
-def validate_request():
-    if request.path == '/callback' and request.method == 'POST':
-        if not request.headers.get('X-Line-Signature'):
-            abort(400)
+        # 6. أي خطأ آخر - نسجله لكن نُرجع 200
+        logger.error(f"❌ خطأ في معالجة الحدث: {e}", exc_info=True)
+        # ⚠️ مهم: نُرجع 200 حتى لا يعيد LINE إرسال الحدث
+    
+    # 7. إرجاع استجابة ناجحة
+    return 'OK', 200
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    """معالج الرسائل الرئيسي"""
+    """معالج الرسائل الرئيسي مع حماية من الأخطاء"""
     try:
         user_id = event.source.user_id
         text = event.message.text.strip()
@@ -1248,7 +1271,7 @@ def handle_message(event):
             return
         
         display_name = get_user_profile_safe(user_id)
-        game_id = event.source.group_id if hasattr(event.source, 'group_id') else user_id
+        game_id = getattr(event.source, 'group_id', user_id)
         
         logger.info(f"📨 {display_name}: {text}")
         
@@ -1395,7 +1418,7 @@ def handle_message(event):
                         'created_at': datetime.now(),
                         'participants': participants,
                         'answered_users': set(),
-                        'last_game': text  # حفظ نوع اللعبة
+                        'last_game': text
                     }
                 line_bot_api.reply_message(event.reply_token,
                     TextSendMessage(text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: ميش عبير",
@@ -1450,13 +1473,11 @@ def handle_message(event):
                     
                     if result.get('game_over', False):
                         with games_lock:
-                            # حفظ نوع اللعبة قبل الحذف
                             last_game_type = active_games[game_id].get('last_game', 'أغنية')
                             if game_id in active_games:
                                 del active_games[game_id]
                         
                         if result.get('winner_card'):
-                            # تعديل زر "لعب مرة أخرى" ليعيد نفس اللعبة
                             winner_card = result['winner_card']
                             if 'footer' in winner_card and 'contents' in winner_card['footer']:
                                 for button in winner_card['footer']['contents']:
@@ -1487,7 +1508,18 @@ def handle_message(event):
                 return
     
     except Exception as e:
-        logger.error(f"❌ خطأ معالجة الرسالة: {e}")
+        logger.error(f"❌ خطأ في handle_message: {e}", exc_info=True)
+        # محاولة إرسال رد للمستخدم
+        try:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(
+                    text="▫️ حدث خطأ مؤقت. حاول مرة أخرى.",
+                    quick_reply=get_quick_reply()
+                )
+            )
+        except:
+            pass
 
 def cleanup_old_games():
     """تنظيف الألعاب القديمة"""
@@ -1510,18 +1542,50 @@ def cleanup_old_games():
 cleanup_thread = threading.Thread(target=cleanup_old_games, daemon=True)
 cleanup_thread.start()
 
-@app.errorhandler(Exception)
-def handle_error(error):
-    logger.error(f"❌ خطأ غير متوقع: {error}", exc_info=True)
-    return 'Internal Server Error', 500
+# ==========================================
+# ✅ معالجات الأخطاء المحسّنة
+# ==========================================
 
-@app.errorhandler(404)
-def not_found(error):
-    return 'Not Found', 404
+@app.errorhandler(InvalidSignatureError)
+def handle_invalid_signature(error):
+    """معالج خاص للتوقيع غير الصالح"""
+    logger.error(f"❌ توقيع غير صالح: {error}")
+    return 'Invalid Signature', 400
 
 @app.errorhandler(400)
 def bad_request(error):
+    """معالج طلبات 400"""
+    logger.warning(f"⚠️ طلب غير صالح: {error}")
     return 'Bad Request', 400
+
+@app.errorhandler(404)
+def not_found(error):
+    """معالج صفحات غير موجودة"""
+    return 'Not Found', 404
+
+@app.errorhandler(Exception)
+def handle_error(error):
+    """معالج الأخطاء العام - لا يؤثر على webhook"""
+    logger.error(f"❌ خطأ غير متوقع: {error}", exc_info=True)
+    # إرجاع 200 للحفاظ على عمل webhook
+    if request.path == '/callback':
+        return 'OK', 200
+    return 'Internal Server Error', 500
+
+# ==========================================
+# ✅ Endpoint للاختبار
+# ==========================================
+
+@app.route("/webhook-test", methods=['GET', 'POST'])
+def webhook_test():
+    """اختبار بسيط للـ webhook"""
+    if request.method == 'POST':
+        logger.info(f"🧪 طلب POST تجريبي:")
+        logger.info(f"   Headers: {dict(request.headers)}")
+        body = request.get_data(as_text=True)
+        logger.info(f"   Body: {body[:200] if len(body) > 200 else body}")
+        return {'status': 'ok', 'method': 'POST', 'body_length': len(body)}, 200
+    return {'status': 'ok', 'method': 'GET', 'message': 'Webhook is working'}, 200
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
@@ -1545,4 +1609,5 @@ if __name__ == "__main__":
     
     logger.info(f"🎯 الألعاب المتوفرة ({len(games_loaded)}/8): {', '.join(games_loaded)}")
     logger.info("="*50)
+    
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
