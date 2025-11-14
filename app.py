@@ -267,12 +267,17 @@ CONFESSIONS = load_text_file('confessions.txt')
 MENTION_QUESTIONS = load_text_file('more_questions.txt')
 
 def get_user_profile_safe(user_id):
+    """الحصول على اسم المستخدم بطريقة آمنة"""
     try:
         profile = line_bot_api.get_profile(user_id)
-        return profile.display_name
+        display_name = profile.display_name
+        if display_name and display_name.strip():
+            return display_name.strip()
+        return f"لاعب_{user_id[-4:]}"  # آخر 4 أرقام من user_id
     except Exception as e:
-        logger.error(f"❌ خطأ الملف الشخصي: {e}")
-        return "مستخدم"
+        logger.error(f"❌ خطأ الملف الشخصي ({user_id}): {e}")
+        # استخدام آخر 4 أرقام من user_id كبديل
+        return f"لاعب_{user_id[-4:] if user_id else 'xxxx'}"
 
 def get_quick_reply():
     """الأزرار الثابتة"""
@@ -1418,10 +1423,11 @@ def handle_message(event):
                         'created_at': datetime.now(),
                         'participants': participants,
                         'answered_users': set(),
-                        'last_game': text
+                        'last_game': text,
+                        'waiting_for_names': True  # ✅ إضافة علم
                     }
                 line_bot_api.reply_message(event.reply_token,
-                    TextSendMessage(text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: ميش عبير",
+                    TextSendMessage(text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\n⚠️ نص فقط بدون @ أو رموز\n\nمثال: ميش عبير",
                         quick_reply=get_quick_reply()))
                 logger.info(f"✅ بدأت لعبة توافق")
                 return
@@ -1433,7 +1439,69 @@ def handle_message(event):
             start_game(game_id, game_class, game_type, user_id, event)
             return
         
-        # معالجة إجابات الألعاب النشطة
+        # ✅ معالجة خاصة للعبة التوافق - قبل معالجة الإجابات العادية
+        if game_id in active_games:
+            game_data = active_games[game_id]
+            
+            # إذا كانت لعبة توافق وفي انتظار الأسماء
+            if game_data.get('type') == 'توافق' and game_data.get('waiting_for_names'):
+                # تنظيف النص من @ والرموز
+                cleaned_text = text.replace('@', '').strip()
+                
+                # التحقق من عدم وجود رموز أو منشنات
+                if '@' in text:
+                    line_bot_api.reply_message(event.reply_token,
+                        TextSendMessage(text="▫️ اكتب الأسماء بدون @\nمثال: ميش عبير",
+                            quick_reply=get_quick_reply()))
+                    return
+                
+                # فصل الأسماء بالمسافة
+                names = cleaned_text.split()
+                
+                if len(names) < 2:
+                    line_bot_api.reply_message(event.reply_token,
+                        TextSendMessage(text="▫️ يجب كتابة اسمين مفصولين بمسافة\nمثال: ميش عبير",
+                            quick_reply=get_quick_reply()))
+                    return
+                
+                # أخذ أول اسمين فقط
+                name1 = names[0].strip()
+                name2 = names[1].strip()
+                
+                # التحقق من أن الأسماء ليست فارغة
+                if not name1 or not name2:
+                    line_bot_api.reply_message(event.reply_token,
+                        TextSendMessage(text="▫️ الأسماء يجب أن تكون نصوص صحيحة",
+                            quick_reply=get_quick_reply()))
+                    return
+                
+                # استدعاء اللعبة
+                game = game_data['game']
+                try:
+                    result = game.check_answer(f"{name1} {name2}", user_id, display_name)
+                    
+                    # حذف علم الانتظار
+                    game_data['waiting_for_names'] = False
+                    
+                    # حذف اللعبة من القائمة
+                    with games_lock:
+                        if game_id in active_games:
+                            del active_games[game_id]
+                    
+                    if result and result.get('response'):
+                        response = result['response']
+                        if isinstance(response, TextSendMessage):
+                            response.quick_reply = get_quick_reply()
+                        line_bot_api.reply_message(event.reply_token, response)
+                    return
+                except Exception as e:
+                    logger.error(f"❌ خطأ في لعبة التوافق: {e}")
+                    line_bot_api.reply_message(event.reply_token,
+                        TextSendMessage(text="▫️ حدث خطأ. حاول مرة أخرى بكتابة: توافق",
+                            quick_reply=get_quick_reply()))
+                    return
+        
+        # معالجة إجابات الألعاب النشطة (باقي الألعاب)
         if game_id in active_games:
             game_data = active_games[game_id]
             
