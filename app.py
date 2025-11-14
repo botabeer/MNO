@@ -1,6 +1,6 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
+from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
     QuickReply, QuickReplyButton, MessageAction,
@@ -139,9 +139,11 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 active_games = {}
 registered_players = set()
 user_message_count = defaultdict(lambda: {'count': 0, 'reset_time': datetime.now()})
+user_names_cache = {}  # ✅ ذاكرة مؤقتة للأسماء
 
 games_lock = threading.Lock()
 players_lock = threading.Lock()
+names_cache_lock = threading.Lock()  # ✅ قفل للذاكرة المؤقتة
 
 DB_NAME = 'game_scores.db'
 
@@ -186,6 +188,7 @@ def init_db():
 init_db()
 
 def update_user_points(user_id, display_name, points, won=False, game_type=""):
+    """تحديث نقاط المستخدم مع حفظ/تحديث الاسم"""
     try:
         conn = get_db_connection()
         c = conn.cursor()
@@ -193,15 +196,22 @@ def update_user_points(user_id, display_name, points, won=False, game_type=""):
         user = c.fetchone()
         
         if user:
+            # ✅ تحديث النقاط والاسم معاً
             c.execute('''UPDATE users SET total_points = ?, games_played = ?, wins = ?, 
                          last_played = ?, display_name = ? WHERE user_id = ?''',
                       (user['total_points'] + points, user['games_played'] + 1,
                        user['wins'] + (1 if won else 0), datetime.now().isoformat(),
                        display_name, user_id))
+            
+            # تسجيل إذا تغير الاسم
+            if user['display_name'] != display_name:
+                logger.info(f"🔄 تحديث اسم عند حفظ النقاط: {user['display_name']} → {display_name}")
         else:
+            # إضافة مستخدم جديد
             c.execute('''INSERT INTO users (user_id, display_name, total_points, 
                          games_played, wins, last_played) VALUES (?, ?, ?, ?, ?, ?)''',
                       (user_id, display_name, points, 1, 1 if won else 0, datetime.now().isoformat()))
+            logger.info(f"✅ إضافة مستخدم جديد: {display_name}")
         
         if game_type:
             c.execute('''INSERT INTO game_history (user_id, game_type, points, won) 
@@ -267,17 +277,112 @@ CONFESSIONS = load_text_file('confessions.txt')
 MENTION_QUESTIONS = load_text_file('more_questions.txt')
 
 def get_user_profile_safe(user_id):
-    """الحصول على اسم المستخدم بطريقة آمنة"""
+    """
+    الحصول على اسم المستخدم مع:
+    - معالجة 404
+    - تخزين في ذاكرة مؤقتة
+    - تحديث تلقائي في قاعدة البيانات
+    """
+    # ✅ التحقق من الذاكرة المؤقتة أولاً
+    with names_cache_lock:
+        if user_id in user_names_cache:
+            cached_name = user_names_cache[user_id]
+            if cached_name:
+                return cached_name
+    
     try:
         profile = line_bot_api.get_profile(user_id)
         display_name = profile.display_name
+        
         if display_name and display_name.strip():
-            return display_name.strip()
-        return f"لاعب_{user_id[-4:]}"  # آخر 4 أرقام من user_id
+            display_name = display_name.strip()
+            
+            # ✅ حفظ في الذاكرة المؤقتة
+            with names_cache_lock:
+                user_names_cache[user_id] = display_name
+            
+            # ✅ تحديث في قاعدة البيانات
+            try:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute('SELECT display_name FROM users WHERE user_id = ?', (user_id,))
+                result = c.fetchone()
+                
+                if result:
+                    old_name = result['display_name']
+                    # تحديث فقط إذا تغير الاسم
+                    if old_name != display_name:
+                        c.execute('UPDATE users SET display_name = ? WHERE user_id = ?',
+                                  (display_name, user_id))
+                        conn.commit()
+                        logger.info(f"🔄 تحديث اسم: {old_name} → {display_name}")
+                else:
+                    # إضافة مستخدم جديد
+                    c.execute('''INSERT INTO users (user_id, display_name, total_points, 
+                                 games_played, wins) VALUES (?, ?, 0, 0, 0)''',
+                              (user_id, display_name))
+                    conn.commit()
+                    logger.info(f"✅ حفظ اسم جديد: {display_name}")
+                
+                conn.close()
+            except Exception as e:
+                logger.error(f"❌ خطأ في تحديث الاسم بقاعدة البيانات: {e}")
+            
+            logger.info(f"✅ تم جلب اسم المستخدم: {display_name}")
+            return display_name
+        
+        # إذا كان الاسم فارغاً
+        fallback_name = f"لاعب_{user_id[-4:]}"
+        logger.warning(f"⚠️ اسم المستخدم فارغ لـ {user_id[-4:]}")
+        
+        with names_cache_lock:
+            user_names_cache[user_id] = fallback_name
+        
+        return fallback_name
+    
+    except LineBotApiError as e:
+        if e.status_code == 404:
+            # المستخدم لم يبدأ المحادثة
+            fallback_name = f"لاعب_{user_id[-4:] if user_id else 'xxxx'}"
+            logger.warning(f"⚠️ ملف مستخدم غير موجود (404): {user_id[-4:]}")
+            
+            with names_cache_lock:
+                user_names_cache[user_id] = fallback_name
+            
+            # ✅ حفظ الاسم البديل في قاعدة البيانات
+            try:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
+                if not c.fetchone():
+                    c.execute('''INSERT INTO users (user_id, display_name, total_points, 
+                                 games_played, wins) VALUES (?, ?, 0, 0, 0)''',
+                              (user_id, fallback_name))
+                    conn.commit()
+                conn.close()
+            except Exception as db_e:
+                logger.error(f"❌ خطأ في حفظ الاسم البديل: {db_e}")
+            
+            return fallback_name
+        else:
+            # خطأ آخر من LINE API
+            fallback_name = f"لاعب_{user_id[-4:] if user_id else 'xxxx'}"
+            logger.error(f"❌ خطأ LINE API ({e.status_code}): {e.message}")
+            
+            with names_cache_lock:
+                user_names_cache[user_id] = fallback_name
+            
+            return fallback_name
+    
     except Exception as e:
-        logger.error(f"❌ خطأ الملف الشخصي ({user_id}): {e}")
-        # استخدام آخر 4 أرقام من user_id كبديل
-        return f"لاعب_{user_id[-4:] if user_id else 'xxxx'}"
+        # أي خطأ آخر غير متوقع
+        fallback_name = f"لاعب_{user_id[-4:] if user_id else 'xxxx'}"
+        logger.error(f"❌ خطأ غير متوقع في get_profile ({user_id[-4:] if user_id else 'xxxx'}): {e}")
+        
+        with names_cache_lock:
+            user_names_cache[user_id] = fallback_name
+        
+        return fallback_name
 
 def get_quick_reply():
     """الأزرار الثابتة"""
@@ -1190,6 +1295,10 @@ def home():
                     <span class="label">الألعاب المتوفرة</span>
                     <span class="value">▪️ {len(games_status)}/8</span>
                 </div>
+                <div class="status-item">
+                    <span class="label">أسماء محفوظة</span>
+                    <span class="value">▪️ {len(user_names_cache)}</span>
+                </div>
             </div>
             <div class="games-list">
                 <strong>الألعاب الجاهزة:</strong><br>
@@ -1203,11 +1312,13 @@ def home():
 
 @app.route("/health", methods=['GET'])
 def health_check():
+    """فحص صحة البوت مع إحصائيات مفصلة"""
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "active_games": len(active_games),
         "registered_players": len(registered_players),
+        "cached_names": len(user_names_cache),  # ✅ عدد الأسماء المخزنة
         "ai_enabled": USE_AI,
         "games_loaded": {
             "song_game": SongGame is not None,
@@ -1267,6 +1378,29 @@ def handle_message(event):
         user_id = event.source.user_id
         text = event.message.text.strip()
         
+        # ✅ التسجيل التلقائي عند أول رسالة
+        with players_lock:
+            if user_id not in registered_players:
+                # تسجيل المستخدم تلقائياً
+                registered_players.add(user_id)
+                logger.info(f"🆕 تسجيل تلقائي لمستخدم جديد: {user_id[-4:]}")
+                
+                # إضافة المستخدم لقاعدة البيانات
+                display_name = get_user_profile_safe(user_id)
+                try:
+                    conn = get_db_connection()
+                    c = conn.cursor()
+                    c.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
+                    if not c.fetchone():
+                        c.execute('''INSERT INTO users (user_id, display_name, total_points, 
+                                     games_played, wins) VALUES (?, ?, 0, 0, 0)''',
+                                  (user_id, display_name))
+                        conn.commit()
+                        logger.info(f"✅ تم إضافة {display_name} لقاعدة البيانات")
+                    conn.close()
+                except Exception as e:
+                    logger.error(f"❌ خطأ في حفظ المستخدم الجديد: {e}")
+        
         if not check_rate_limit(user_id):
             try:
                 line_bot_api.reply_message(event.reply_token,
@@ -1278,7 +1412,7 @@ def handle_message(event):
         display_name = get_user_profile_safe(user_id)
         game_id = getattr(event.source, 'group_id', user_id)
         
-        logger.info(f"📨 {display_name}: {text}")
+        logger.info(f"📨 {display_name} ({user_id[-4:]}): {text}")
         
         # الأوامر الأساسية
         if text in ['البداية', 'ابدأ', 'start', 'البوت']:
@@ -1590,11 +1724,13 @@ def handle_message(event):
             pass
 
 def cleanup_old_games():
-    """تنظيف الألعاب القديمة"""
+    """تنظيف الألعاب القديمة وتحديث الذاكرة المؤقتة"""
     while True:
         try:
-            time.sleep(300)
+            time.sleep(300)  # كل 5 دقائق
             now = datetime.now()
+            
+            # تنظيف الألعاب القديمة
             to_delete = []
             with games_lock:
                 for game_id, game_data in active_games.items():
@@ -1604,6 +1740,13 @@ def cleanup_old_games():
                     del active_games[game_id]
                 if to_delete:
                     logger.info(f"🗑️ حذف {len(to_delete)} لعبة قديمة")
+            
+            # ✅ تنظيف الذاكرة المؤقتة للأسماء (كل ساعة)
+            with names_cache_lock:
+                if len(user_names_cache) > 1000:  # إذا تجاوز 1000 اسم
+                    logger.info(f"🧹 تنظيف ذاكرة الأسماء: {len(user_names_cache)} → 0")
+                    user_names_cache.clear()
+        
         except Exception as e:
             logger.error(f"❌ خطأ التنظيف: {e}")
 
