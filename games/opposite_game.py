@@ -36,8 +36,14 @@ class OppositeGame:
             {"word": "مظلم", "opposite": "مضيء"},
             {"word": "صادق", "opposite": "كاذب"},
             {"word": "شجاع", "opposite": "جبان"},
-            {"word": "نشيط", "opposite": "كسول"}
+            {"word": "نشيط", "opposite": "كسول"},
+            {"word": "واسع", "opposite": "ضيق"},
+            {"word": "عالي", "opposite": "منخفض"},
+            {"word": "حلو", "opposite": "مر"},
+            {"word": "ناعم", "opposite": "خشن"},
+            {"word": "رطب", "opposite": "جاف"}
         ]
+        
         self.questions = []
         self.current_word = None
         self.hints_used = 0
@@ -72,7 +78,10 @@ class OppositeGame:
         
         if answer_lower in ['لمح', 'تلميح', 'hint']:
             if self.hints_used == 0:
-                hint = f"▫️ يبدأ بحرف: {self.current_word['opposite'][0]}"
+                opposite = self.current_word['opposite']
+                first_letter = opposite[0]
+                word_length = len(opposite)
+                hint = f"▫️ يبدأ بحرف: {first_letter}\n▫️ عدد الحروف: {word_length}"
                 self.hints_used += 1
                 return {
                     'response': TextSendMessage(text=hint),
