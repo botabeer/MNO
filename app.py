@@ -1,11 +1,3 @@
-import logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger("game-bot")
-
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -23,8 +15,19 @@ import time
 import json
 import random
 import re
+import logging
+
+# ✅ إعداد Logger قبل أي شيء
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("game-bot")
 
 # إعداد Gemini AI
+USE_AI = False
+ask_gemini = None
+
 try:
     import google.generativeai as genai
     GEMINI_API_KEYS = [
@@ -40,44 +43,23 @@ try:
         genai.configure(api_key=GEMINI_API_KEYS[0])
         model = genai.GenerativeModel('gemini-pro')
         logger.info(f"✅ Gemini AI جاهز - {len(GEMINI_API_KEYS)} مفاتيح")
+        
+        def ask_gemini(prompt, max_retries=2):
+            """سؤال Gemini AI"""
+            for attempt in range(max_retries):
+                try:
+                    response = model.generate_content(prompt)
+                    return response.text.strip()
+                except Exception as e:
+                    logger.error(f"خطأ في Gemini (محاولة {attempt + 1}): {e}")
+                    if attempt < max_retries - 1 and len(GEMINI_API_KEYS) > 1:
+                        global current_gemini_key_index
+                        current_gemini_key_index = (current_gemini_key_index + 1) % len(GEMINI_API_KEYS)
+                        genai.configure(api_key=GEMINI_API_KEYS[current_gemini_key_index])
+            return None
 except Exception as e:
     USE_AI = False
-    logger.error(f"❌ خطأ في تحميل Gemini: {e}")
-
-def get_gemini_api_key():
-    """الحصول على مفتاح Gemini API الحالي"""
-    global current_gemini_key_index
-    if GEMINI_API_KEYS:
-        return GEMINI_API_KEYS[current_gemini_key_index]
-    return None
-
-def switch_gemini_key():
-    """التبديل إلى المفتاح التالي"""
-    global current_gemini_key_index, model
-    if len(GEMINI_API_KEYS) > 1:
-        current_gemini_key_index = (current_gemini_key_index + 1) % len(GEMINI_API_KEYS)
-        genai.configure(api_key=GEMINI_API_KEYS[current_gemini_key_index])
-        model = genai.GenerativeModel('gemini-pro')
-        logger.info(f"تم التبديل إلى مفتاح Gemini رقم: {current_gemini_key_index + 1}")
-        return True
-    return False
-
-def ask_gemini(prompt, max_retries=2):
-    """سؤال Gemini AI مع إعادة المحاولة"""
-    if not USE_AI:
-        return None
-    
-    for attempt in range(max_retries):
-        try:
-            response = model.generate_content(prompt)
-            return response.text.strip()
-        except Exception as e:
-            logger.error(f"خطأ في Gemini (محاولة {attempt + 1}): {e}")
-            if attempt < max_retries - 1:
-                switch_gemini_key()
-            else:
-                return None
-    return None
+    logger.warning(f"⚠️ Gemini AI غير متوفر: {e}")
 
 # استيراد الألعاب
 try:
@@ -89,7 +71,7 @@ try:
     from games.letters_words_game import LettersWordsGame
     from games.differences_game import DifferencesGame
     from games.compatibility_game import CompatibilityGame
-    logger.info("✅ تم استيراد الألعاب")
+    logger.info("✅ تم استيراد جميع الألعاب")
 except Exception as e:
     logger.error(f"❌ خطأ استيراد الألعاب: {e}")
 
@@ -187,7 +169,8 @@ def get_user_stats(user_id):
         user = c.fetchone()
         conn.close()
         return user
-    except:
+    except Exception as e:
+        logger.error(f"❌ خطأ إحصائيات: {e}")
         return None
 
 def get_leaderboard(limit=10):
@@ -199,7 +182,8 @@ def get_leaderboard(limit=10):
         leaders = c.fetchall()
         conn.close()
         return leaders
-    except:
+    except Exception as e:
+        logger.error(f"❌ خطأ الصدارة: {e}")
         return []
 
 def check_rate_limit(user_id, max_messages=30, time_window=60):
@@ -220,7 +204,8 @@ def load_text_file(filename):
             with open(filepath, 'r', encoding='utf-8') as f:
                 return [line.strip() for line in f if line.strip()]
         return []
-    except:
+    except Exception as e:
+        logger.error(f"❌ خطأ تحميل ملف {filename}: {e}")
         return []
 
 QUESTIONS = load_text_file('questions.txt')
@@ -232,7 +217,8 @@ def get_user_profile_safe(user_id):
     try:
         profile = line_bot_api.get_profile(user_id)
         return profile.display_name
-    except:
+    except Exception as e:
+        logger.error(f"❌ خطأ الملف الشخصي: {e}")
         return "مستخدم"
 
 def get_quick_reply():
@@ -249,12 +235,12 @@ def get_quick_reply():
         QuickReplyButton(action=MessageAction(label="▪️سؤال", text="سؤال")),
         QuickReplyButton(action=MessageAction(label="▪️تحدي", text="تحدي")),
         QuickReplyButton(action=MessageAction(label="▪️اعتراف", text="اعتراف")),
-        QuickReplyButton(action=MessageAction(label="▪️اكثر", text="اكثر")),
+        QuickReplyButton(action=MessageAction(label="▪️صحبه", text="صحبه")),
         QuickReplyButton(action=MessageAction(label="▪️مساعدة", text="مساعدة"))
     ])
 
 def get_help_card():
-    """بطاقة المساعدة مع حقوق"""
+    """بطاقة المساعدة"""
     return {
         "type": "bubble",
         "body": {
@@ -719,6 +705,7 @@ def start_game(game_id, game_class, game_type, user_id, event):
             with players_lock:
                 participants = registered_players.copy()
                 participants.add(user_id)
+            
             active_games[game_id] = {
                 'game': game,
                 'type': game_type,
@@ -734,14 +721,15 @@ def start_game(game_id, game_class, game_type, user_id, event):
             for r in response:
                 if isinstance(r, TextSendMessage):
                     r.quick_reply = get_quick_reply()
+        
         line_bot_api.reply_message(event.reply_token, response)
-        logger.info(f"✅ بدأت لعبة {game_type}")
+        logger.info(f"✅ بدأت لعبة {game_type} للمستخدم {user_id}")
         return True
     except Exception as e:
         logger.error(f"❌ خطأ بدء {game_type}: {e}")
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="حدث خطأ", quick_reply=get_quick_reply())
+            TextSendMessage(text="حدث خطأ في بدء اللعبة", quick_reply=get_quick_reply())
         )
         return False
 
@@ -751,7 +739,7 @@ def home():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>LINE Bot</title>
+        <title>بوت الحُوت</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -801,10 +789,10 @@ def home():
                 </div>
                 <div class="status-item">
                     <span class="label">AI Status</span>
-                    <span class="value">{'✅ مفعّل' if USE_AI else '❌ معطّل'}</span>
+                    <span class="value">{'✅ مفعّل' if USE_AI else '⚠️ معطّل'}</span>
                 </div>
                 <div class="status-item">
-                    <span class="label">اللاعبون</span>
+                    <span class="label">اللاعبون المسجلون</span>
                     <span class="value">▫️ {len(registered_players)}</span>
                 </div>
                 <div class="status-item">
@@ -835,6 +823,7 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
+        logger.error("❌ توقيع غير صالح")
         abort(400)
     except Exception as e:
         logger.error(f"❌ خطأ webhook: {e}")
@@ -848,7 +837,7 @@ def validate_request():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    """معالج الرسائل"""
+    """معالج الرسائل الرئيسي"""
     try:
         user_id = event.source.user_id
         text = event.message.text.strip()
@@ -861,10 +850,12 @@ def handle_message(event):
         display_name = get_user_profile_safe(user_id)
         game_id = event.source.group_id if hasattr(event.source, 'group_id') else user_id
         
+        logger.info(f"📨 رسالة من {display_name}: {text}")
+        
         # الأوامر الأساسية
         if text in ['البداية', 'ابدأ', 'start', 'البوت']:
             line_bot_api.reply_message(event.reply_token,
-                TextSendMessage(text=f"مرحباً {display_name}\n\nاستخدم الأزرار أدناه",
+                TextSendMessage(text=f"▪️ مرحباً {display_name}\n\nاستخدم الأزرار أدناه للعب",
                     quick_reply=get_quick_reply()))
             return
         
@@ -889,9 +880,10 @@ def handle_message(event):
         elif text in ['إيقاف', 'stop']:
             with games_lock:
                 if game_id in active_games:
+                    game_type = active_games[game_id]['type']
                     del active_games[game_id]
                     line_bot_api.reply_message(event.reply_token,
-                        TextSendMessage(text="▪️ تم إيقاف اللعبة", quick_reply=get_quick_reply()))
+                        TextSendMessage(text=f"▪️ تم إيقاف لعبة {game_type}", quick_reply=get_quick_reply()))
                 else:
                     line_bot_api.reply_message(event.reply_token,
                         TextSendMessage(text="لا توجد لعبة نشطة", quick_reply=get_quick_reply()))
@@ -911,7 +903,7 @@ def handle_message(event):
                                 game_data['participants'] = set()
                             game_data['participants'].add(user_id)
                     line_bot_api.reply_message(event.reply_token,
-                        TextSendMessage(text=f"▪️ تم تسجيلك بنجاح يا {display_name}",
+                        TextSendMessage(text=f"▪️ تم تسجيلك بنجاح يا {display_name}\n\nيمكنك الآن اللعب وجمع النقاط",
                             quick_reply=get_quick_reply()))
                     logger.info(f"✅ انضم: {display_name}")
             return
@@ -923,6 +915,7 @@ def handle_message(event):
                     line_bot_api.reply_message(event.reply_token,
                         TextSendMessage(text=f"▫️ تم انسحابك يا {display_name}",
                             quick_reply=get_quick_reply()))
+                    logger.info(f"❌ انسحب: {display_name}")
                 else:
                     line_bot_api.reply_message(event.reply_token,
                         TextSendMessage(text="أنت غير مسجل", quick_reply=get_quick_reply()))
@@ -965,7 +958,7 @@ def handle_message(event):
                     TextSendMessage(text="ملف الأسئلة الإضافية غير متوفر", quick_reply=get_quick_reply()))
             return
         
-        # الألعاب
+        # بدء الألعاب
         games_map = {
             'أغنية': (SongGame, 'أغنية'),
             'لعبة': (HumanAnimalPlantGame, 'لعبة'),
@@ -996,12 +989,13 @@ def handle_message(event):
                 line_bot_api.reply_message(event.reply_token,
                     TextSendMessage(text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: أحمد فاطمة",
                         quick_reply=get_quick_reply()))
+                logger.info(f"✅ بدأت لعبة توافق")
                 return
             
             start_game(game_id, game_class, game_type, user_id, event)
             return
         
-        # معالجة إجابات الألعاب
+        # معالجة إجابات الألعاب النشطة
         if game_id in active_games:
             game_data = active_games[game_id]
             
@@ -1033,9 +1027,10 @@ def handle_message(event):
                     if result.get('next_question', False):
                         game_data['answered_users'] = set()
                         next_q = game.next_question()
-                        if isinstance(next_q, TextSendMessage):
-                            next_q.quick_reply = get_quick_reply()
-                        line_bot_api.reply_message(event.reply_token, next_q)
+                        if next_q:
+                            if isinstance(next_q, TextSendMessage):
+                                next_q.quick_reply = get_quick_reply()
+                            line_bot_api.reply_message(event.reply_token, next_q)
                         return
                     
                     if result.get('game_over', False):
@@ -1064,13 +1059,14 @@ def handle_message(event):
                     line_bot_api.reply_message(event.reply_token, response)
                 return
             except Exception as e:
-                logger.error(f"❌ خطأ معالجة اللعبة: {e}")
+                logger.error(f"❌ خطأ معالجة إجابة اللعبة: {e}")
                 return
     
     except Exception as e:
-        logger.error(f"❌ خطأ: {e}")
+        logger.error(f"❌ خطأ في معالجة الرسالة: {e}")
 
 def cleanup_old_games():
+    """تنظيف الألعاب القديمة"""
     while True:
         try:
             time.sleep(300)
@@ -1091,7 +1087,7 @@ cleanup_thread.start()
 
 @app.errorhandler(Exception)
 def handle_error(error):
-    logger.error(f"❌ خطأ: {error}", exc_info=True)
+    logger.error(f"❌ خطأ غير متوقع: {error}", exc_info=True)
     return 'Internal Server Error', 500
 
 @app.errorhandler(404)
@@ -1104,8 +1100,11 @@ def bad_request(error):
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
-    logger.info(f"🚀 بوت الحُوت - المنفذ {port}")
-    logger.info(f"🤖 AI: {'مفعّل' if USE_AI else 'معطّل'}")
-    logger.info(f"📊 اللاعبون: {len(registered_players)}")
+    logger.info("="*50)
+    logger.info("🚀 بوت الحُوت - بدء التشغيل")
+    logger.info(f"🔌 المنفذ: {port}")
+    logger.info(f"🤖 AI: {'✅ مفعّل' if USE_AI else '⚠️ معطّل'}")
+    logger.info(f"📊 اللاعبون المسجلون: {len(registered_players)}")
     logger.info(f"🎮 الألعاب النشطة: {len(active_games)}")
+    logger.info("="*50)
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
