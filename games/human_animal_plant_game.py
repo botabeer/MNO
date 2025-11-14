@@ -14,9 +14,12 @@ def normalize_text(text):
     return text
 
 class HumanAnimalPlantGame:
-    def __init__(self, line_bot_api):
+    def __init__(self, line_bot_api, use_ai=False, ask_ai=None):
         self.line_bot_api = line_bot_api
-        self.all_letters = ['ا', 'ب', 'ت', 'ج', 'ح', 'خ', 'د', 'ر', 'ز', 'س', 'ش', 'ص', 'ع', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي']
+        self.use_ai = use_ai
+        self.ask_ai = ask_ai
+        
+        self.all_letters = ['ا', 'ب', 'ت', 'ج', 'ح', 'خ', 'د', 'ر', 'ز', 'س', 'ش', 'ص', 'ع
         self.database = {
             'ا': {'human': 'احمد', 'animal': 'اسد', 'plant': 'ازهار', 'country': 'الامارات'},
             'ب': {'human': 'باسم', 'animal': 'بقرة', 'plant': 'برتقال', 'country': 'بحرين'},
