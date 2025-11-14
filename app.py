@@ -1377,6 +1377,7 @@ def handle_message(event):
         if text in games_map:
             game_class, game_type = games_map[text]
             
+            # معالجة خاصة للتوافق
             if text == 'توافق':
                 if CompatibilityGame is None:
                     line_bot_api.reply_message(event.reply_token,
@@ -1393,13 +1394,18 @@ def handle_message(event):
                         'type': 'توافق',
                         'created_at': datetime.now(),
                         'participants': participants,
-                        'answered_users': set()
+                        'answered_users': set(),
+                        'last_game': text  # حفظ نوع اللعبة
                     }
                 line_bot_api.reply_message(event.reply_token,
                     TextSendMessage(text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: ميش عبير",
                         quick_reply=get_quick_reply()))
                 logger.info(f"✅ بدأت لعبة توافق")
                 return
+            
+            # حفظ نوع اللعبة الأخيرة
+            if game_id in active_games:
+                active_games[game_id]['last_game'] = text
             
             start_game(game_id, game_class, game_type, user_id, event)
             return
@@ -1444,13 +1450,22 @@ def handle_message(event):
                     
                     if result.get('game_over', False):
                         with games_lock:
+                            # حفظ نوع اللعبة قبل الحذف
+                            last_game_type = active_games[game_id].get('last_game', 'أغنية')
                             if game_id in active_games:
                                 del active_games[game_id]
                         
                         if result.get('winner_card'):
+                            # تعديل زر "لعب مرة أخرى" ليعيد نفس اللعبة
+                            winner_card = result['winner_card']
+                            if 'footer' in winner_card and 'contents' in winner_card['footer']:
+                                for button in winner_card['footer']['contents']:
+                                    if button.get('type') == 'button' and 'لعب مرة أخرى' in button.get('action', {}).get('label', ''):
+                                        button['action']['text'] = last_game_type
+                            
                             line_bot_api.reply_message(event.reply_token,
                                 FlexSendMessage(alt_text="الفائز", 
-                                    contents=result['winner_card'], quick_reply=get_quick_reply()))
+                                    contents=winner_card, quick_reply=get_quick_reply()))
                         else:
                             response = result.get('response', TextSendMessage(text=result.get('message', '')))
                             if isinstance(response, TextSendMessage):
