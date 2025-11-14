@@ -41,7 +41,7 @@ try:
     
     if USE_AI:
         genai.configure(api_key=GEMINI_API_KEYS[0])
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
         logger.info(f"✅ Gemini AI جاهز - {len(GEMINI_API_KEYS)} مفاتيح")
         
         def ask_gemini(prompt, max_retries=2):
@@ -289,142 +289,218 @@ def get_quick_reply():
     ])
 
 def get_simple_registration_card(display_name):
-    """بطاقة تم التسجيل - صغيرة"""
+    """بطاقة تم التسجيل - متوسطة"""
     return {
         "type": "bubble",
-        "size": "nano",
         "body": {
             "type": "box",
             "layout": "vertical",
             "contents": [
                 {
-                    "type": "text",
-                    "text": "✓",
-                    "size": "xl",
-                    "weight": "bold",
-                    "color": "#FFFFFF",
-                    "align": "center"
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "تم التسجيل بنجاح",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#FFFFFF",
+                            "align": "center"
+                        }
+                    ],
+                    "backgroundColor": "#000000",
+                    "cornerRadius": "12px",
+                    "paddingAll": "24px"
                 },
                 {
-                    "type": "text",
-                    "text": "تم التسجيل",
-                    "size": "md",
-                    "weight": "bold",
-                    "color": "#000000",
-                    "align": "center",
-                    "margin": "md"
-                },
-                {
-                    "type": "text",
-                    "text": display_name,
-                    "size": "sm",
-                    "color": "#666666",
-                    "align": "center",
-                    "margin": "xs"
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": display_name,
+                            "size": "lg",
+                            "weight": "bold",
+                            "color": "#000000",
+                            "align": "center"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "يمكنك الآن اللعب وجمع النقاط",
+                            "size": "sm",
+                            "color": "#666666",
+                            "align": "center",
+                            "margin": "lg",
+                            "wrap": True
+                        }
+                    ],
+                    "margin": "xl"
                 }
             ],
             "backgroundColor": "#FFFFFF",
-            "paddingAll": "20px",
-            "alignItems": "center",
-            "spacing": "sm"
+            "paddingAll": "24px"
         },
-        "styles": {
-            "body": {
-                "backgroundColor": "#FFFFFF"
-            }
+        "footer": {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "ابدأ اللعب", "text": "أغنية"},
+                    "style": "primary",
+                    "color": "#000000",
+                    "height": "sm"
+                }
+            ],
+            "backgroundColor": "#F5F5F5",
+            "paddingAll": "16px"
         }
     }
 
 def get_simple_withdrawal_card(display_name):
-    """بطاقة الانسحاب - صغيرة"""
+    """بطاقة الانسحاب - متوسطة"""
     return {
         "type": "bubble",
-        "size": "nano",
         "body": {
             "type": "box",
             "layout": "vertical",
             "contents": [
                 {
-                    "type": "text",
-                    "text": "👋",
-                    "size": "xl",
-                    "align": "center"
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "تم الانسحاب",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#FFFFFF",
+                            "align": "center"
+                        }
+                    ],
+                    "backgroundColor": "#666666",
+                    "cornerRadius": "12px",
+                    "paddingAll": "24px"
                 },
                 {
-                    "type": "text",
-                    "text": "تم الانسحاب",
-                    "size": "md",
-                    "weight": "bold",
-                    "color": "#000000",
-                    "align": "center",
-                    "margin": "md"
-                },
-                {
-                    "type": "text",
-                    "text": f"وداعاً {display_name}",
-                    "size": "sm",
-                    "color": "#666666",
-                    "align": "center",
-                    "margin": "xs"
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": display_name,
+                            "size": "lg",
+                            "weight": "bold",
+                            "color": "#000000",
+                            "align": "center"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "نتمنى رؤيتك مرة أخرى",
+                            "size": "sm",
+                            "color": "#666666",
+                            "align": "center",
+                            "margin": "lg"
+                        }
+                    ],
+                    "margin": "xl"
                 }
             ],
             "backgroundColor": "#FFFFFF",
-            "paddingAll": "20px",
-            "alignItems": "center",
-            "spacing": "sm"
-        },
-        "styles": {
-            "body": {
-                "backgroundColor": "#FFFFFF"
-            }
+            "paddingAll": "24px"
         }
     }
 
 def get_simple_welcome_card(display_name):
-    """بطاقة البداية - صغيرة"""
+    """بطاقة البداية - متوسطة"""
     return {
         "type": "bubble",
-        "size": "nano",
         "body": {
             "type": "box",
             "layout": "vertical",
             "contents": [
                 {
-                    "type": "text",
-                    "text": "▪️",
-                    "size": "xl",
-                    "weight": "bold",
-                    "color": "#000000",
-                    "align": "center"
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "مرحباً بك",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#FFFFFF",
+                            "align": "center"
+                        }
+                    ],
+                    "backgroundColor": "#000000",
+                    "cornerRadius": "12px",
+                    "paddingAll": "24px"
                 },
                 {
-                    "type": "text",
-                    "text": f"مرحباً {display_name}",
-                    "size": "md",
-                    "weight": "bold",
-                    "color": "#000000",
-                    "align": "center",
-                    "margin": "md",
-                    "wrap": True
-                },
-                {
-                    "type": "text",
-                    "text": "استخدم الأزرار للعب",
-                    "size": "xs",
-                    "color": "#666666",
-                    "align": "center",
-                    "margin": "sm"
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": display_name,
+                            "size": "lg",
+                            "weight": "bold",
+                            "color": "#000000",
+                            "align": "center"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "استخدم الأزرار أدناه للعب",
+                            "size": "sm",
+                            "color": "#666666",
+                            "align": "center",
+                            "margin": "lg",
+                            "wrap": True
+                        }
+                    ],
+                    "margin": "xl"
                 }
             ],
             "backgroundColor": "#FFFFFF",
-            "paddingAll": "20px",
-            "alignItems": "center",
-            "spacing": "sm"
+            "paddingAll": "24px"
         },
-        "styles": {
-            "body": {
-                "backgroundColor": "#FFFFFF"
-            }
+        "footer": {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "انضم", "text": "انضم"},
+                    "style": "primary",
+                    "color": "#000000",
+                    "height": "sm"
+                },
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"},
+                    "style": "secondary",
+                    "height": "sm"
+                }
+            ],
+            "spacing": "sm",
+            "backgroundColor": "#F5F5F5",
+            "paddingAll": "16px"
         }
     }
 
@@ -791,31 +867,52 @@ def get_leaderboard_card():
     }
 
 def get_winner_card(winner_name, winner_score, all_scores):
-    """بطاقة الفائز المحسنة"""
+    """بطاقة الفائز - ستايل البوت"""
     score_items = []
     for i, (name, score) in enumerate(all_scores, 1):
         if i == 1:
-            icon = "👑"
+            rank_text = "المركز الأول"
             text_color = "#000000"
+            bg_color = "#F5F5F5"
         elif i == 2:
-            icon = "🥈"
+            rank_text = "المركز الثاني"
             text_color = "#333333"
+            bg_color = "#FAFAFA"
         elif i == 3:
-            icon = "🥉"
+            rank_text = "المركز الثالث"
             text_color = "#666666"
+            bg_color = "#FAFAFA"
         else:
-            icon = "▫️"
+            rank_text = f"المركز {i}"
             text_color = "#666666"
+            bg_color = "#FAFAFA"
         
         score_items.append({
             "type": "box",
             "layout": "horizontal",
             "contents": [
-                {"type": "text", "text": f"{icon} {i}", "size": "sm", "color": text_color, "flex": 0, "weight": "bold"},
-                {"type": "text", "text": name, "size": "sm", "color": "#333333", "flex": 3, "margin": "md", "wrap": True},
-                {"type": "text", "text": f"{score} نقطة", "size": "sm", "color": text_color, "flex": 2, "align": "end", "weight": "bold"}
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": rank_text, "size": "xs", "color": "#999999"},
+                        {"type": "text", "text": name, "size": "sm", "color": text_color, "weight": "bold", "wrap": True}
+                    ],
+                    "flex": 3
+                },
+                {
+                    "type": "text",
+                    "text": f"{score}",
+                    "size": "lg",
+                    "color": text_color,
+                    "weight": "bold",
+                    "align": "end",
+                    "flex": 1
+                }
             ],
-            "paddingAll": "8px",
+            "backgroundColor": bg_color,
+            "cornerRadius": "8px",
+            "paddingAll": "12px",
             "margin": "sm" if i > 1 else "none"
         })
     
@@ -831,23 +928,16 @@ def get_winner_card(winner_name, winner_score, all_scores):
                     "contents": [
                         {
                             "type": "text",
-                            "text": "👑",
-                            "size": "xxl",
-                            "align": "center"
-                        },
-                        {
-                            "type": "text",
                             "text": "انتهت اللعبة",
                             "size": "xl",
                             "weight": "bold",
                             "color": "#FFFFFF",
-                            "align": "center",
-                            "margin": "md"
+                            "align": "center"
                         }
                     ],
                     "backgroundColor": "#000000",
-                    "cornerRadius": "15px",
-                    "paddingAll": "20px"
+                    "cornerRadius": "12px",
+                    "paddingAll": "24px"
                 },
                 {
                     "type": "separator",
@@ -872,7 +962,8 @@ def get_winner_card(winner_name, winner_score, all_scores):
                             "weight": "bold",
                             "color": "#000000",
                             "align": "center",
-                            "margin": "sm"
+                            "margin": "sm",
+                            "wrap": True
                         },
                         {
                             "type": "box",
@@ -880,32 +971,17 @@ def get_winner_card(winner_name, winner_score, all_scores):
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": f"{winner_score}",
-                                    "size": "xl",
+                                    "text": f"{winner_score} نقطة",
+                                    "size": "md",
                                     "weight": "bold",
-                                    "color": "#FFFFFF",
+                                    "color": "#666666",
                                     "align": "center"
                                 }
                             ],
-                            "backgroundColor": "#000000",
-                            "cornerRadius": "20px",
-                            "paddingAll": "10px",
-                            "margin": "md",
-                            "width": "80px",
-                            "height": "40px",
-                            "justifyContent": "center"
-                        },
-                        {
-                            "type": "text",
-                            "text": "نقطة",
-                            "size": "xs",
-                            "color": "#999999",
-                            "align": "center",
-                            "margin": "sm"
+                            "margin": "md"
                         }
                     ],
-                    "margin": "xl",
-                    "alignItems": "center"
+                    "margin": "xl"
                 },
                 {
                     "type": "separator",
@@ -924,9 +1000,6 @@ def get_winner_card(winner_name, winner_score, all_scores):
                     "type": "box",
                     "layout": "vertical",
                     "contents": score_items,
-                    "backgroundColor": "#FAFAFA",
-                    "cornerRadius": "10px",
-                    "paddingAll": "12px",
                     "margin": "md"
                 }
             ],
@@ -1323,7 +1396,7 @@ def handle_message(event):
                         'answered_users': set()
                     }
                 line_bot_api.reply_message(event.reply_token,
-                    TextSendMessage(text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: أحمد فاطمة",
+                    TextSendMessage(text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: ميش عبير",
                         quick_reply=get_quick_reply()))
                 logger.info(f"✅ بدأت لعبة توافق")
                 return
