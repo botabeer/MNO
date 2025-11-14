@@ -15,6 +15,7 @@ import time
 import random
 import re
 import logging
+import sys
 
 # ✅ إعداد Logger
 logging.basicConfig(
@@ -60,19 +61,69 @@ except Exception as e:
     USE_AI = False
     logger.warning(f"⚠️ Gemini AI غير متوفر: {e}")
 
-# استيراد الألعاب
+# استيراد الألعاب مع معالجة الأخطاء
+SongGame = None
+HumanAnimalPlantGame = None
+ChainWordsGame = None
+FastTypingGame = None
+OppositeGame = None
+LettersWordsGame = None
+DifferencesGame = None
+CompatibilityGame = None
+
 try:
-    from games.song_game import SongGame
-    from games.human_animal_plant_game import HumanAnimalPlantGame
-    from games.chain_words_game import ChainWordsGame
-    from games.fast_typing_game import FastTypingGame
-    from games.opposite_game import OppositeGame
-    from games.letters_words_game import LettersWordsGame
-    from games.differences_game import DifferencesGame
-    from games.compatibility_game import CompatibilityGame
-    logger.info("✅ تم استيراد جميع الألعاب")
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'games'))
+    
+    try:
+        from song_game import SongGame
+        logger.info("✅ تم استيراد SongGame")
+    except Exception as e:
+        logger.warning(f"⚠️ لم يتم استيراد SongGame: {e}")
+    
+    try:
+        from human_animal_plant_game import HumanAnimalPlantGame
+        logger.info("✅ تم استيراد HumanAnimalPlantGame")
+    except Exception as e:
+        logger.warning(f"⚠️ لم يتم استيراد HumanAnimalPlantGame: {e}")
+    
+    try:
+        from chain_words_game import ChainWordsGame
+        logger.info("✅ تم استيراد ChainWordsGame")
+    except Exception as e:
+        logger.warning(f"⚠️ لم يتم استيراد ChainWordsGame: {e}")
+    
+    try:
+        from fast_typing_game import FastTypingGame
+        logger.info("✅ تم استيراد FastTypingGame")
+    except Exception as e:
+        logger.warning(f"⚠️ لم يتم استيراد FastTypingGame: {e}")
+    
+    try:
+        from opposite_game import OppositeGame
+        logger.info("✅ تم استيراد OppositeGame")
+    except Exception as e:
+        logger.warning(f"⚠️ لم يتم استيراد OppositeGame: {e}")
+    
+    try:
+        from letters_words_game import LettersWordsGame
+        logger.info("✅ تم استيراد LettersWordsGame")
+    except Exception as e:
+        logger.warning(f"⚠️ لم يتم استيراد LettersWordsGame: {e}")
+    
+    try:
+        from differences_game import DifferencesGame
+        logger.info("✅ تم استيراد DifferencesGame")
+    except Exception as e:
+        logger.warning(f"⚠️ لم يتم استيراد DifferencesGame: {e}")
+    
+    try:
+        from compatibility_game import CompatibilityGame
+        logger.info("✅ تم استيراد CompatibilityGame")
+    except Exception as e:
+        logger.warning(f"⚠️ لم يتم استيراد CompatibilityGame: {e}")
+        
 except Exception as e:
-    logger.error(f"❌ خطأ استيراد الألعاب: {e}")
+    logger.error(f"❌ خطأ في استيراد الألعاب: {e}")
 
 app = Flask(__name__)
 
@@ -210,7 +261,7 @@ def load_text_file(filename):
 QUESTIONS = load_text_file('questions.txt')
 CHALLENGES = load_text_file('challenges.txt')
 CONFESSIONS = load_text_file('confessions.txt')
-FRIENDSHIP_QUESTIONS = load_text_file('more_questions.txt')
+MENTION_QUESTIONS = load_text_file('more_questions.txt')
 
 def get_user_profile_safe(user_id):
     try:
@@ -226,7 +277,7 @@ def get_quick_reply():
         QuickReplyButton(action=MessageAction(label="▪️سؤال", text="سؤال")),
         QuickReplyButton(action=MessageAction(label="▪️تحدي", text="تحدي")),
         QuickReplyButton(action=MessageAction(label="▪️اعتراف", text="اعتراف")),
-        QuickReplyButton(action=MessageAction(label="▪️صحبه", text="صحبه")),
+        QuickReplyButton(action=MessageAction(label="▪️منشن", text="منشن")),
         QuickReplyButton(action=MessageAction(label="▫️أغنية", text="أغنية")),
         QuickReplyButton(action=MessageAction(label="▫️لعبة", text="لعبة")),
         QuickReplyButton(action=MessageAction(label="▫️سلسلة", text="سلسلة")),
@@ -237,112 +288,143 @@ def get_quick_reply():
         QuickReplyButton(action=MessageAction(label="▫️توافق", text="توافق"))
     ])
 
-def get_registration_card(display_name):
-    """بطاقة تم التسجيل"""
+def get_simple_registration_card(display_name):
+    """بطاقة تم التسجيل - صغيرة"""
     return {
         "type": "bubble",
+        "size": "nano",
         "body": {
             "type": "box",
             "layout": "vertical",
             "contents": [
                 {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "✓",
-                            "size": "xxl",
-                            "weight": "bold",
-                            "color": "#FFFFFF",
-                            "align": "center"
-                        }
-                    ],
-                    "backgroundColor": "#000000",
-                    "cornerRadius": "50px",
-                    "width": "80px",
-                    "height": "80px",
-                    "justifyContent": "center",
-                    "alignItems": "center",
-                    "offsetTop": "none",
-                    "offsetBottom": "none",
-                    "offsetStart": "none",
-                    "offsetEnd": "none",
-                    "paddingAll": "0px"
+                    "type": "text",
+                    "text": "✓",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": "#FFFFFF",
+                    "align": "center"
                 },
                 {
                     "type": "text",
-                    "text": "تم التسجيل بنجاح",
-                    "size": "xl",
+                    "text": "تم التسجيل",
+                    "size": "md",
                     "weight": "bold",
                     "color": "#000000",
                     "align": "center",
-                    "margin": "xl"
+                    "margin": "md"
                 },
                 {
                     "type": "text",
                     "text": display_name,
-                    "size": "lg",
+                    "size": "sm",
                     "color": "#666666",
                     "align": "center",
-                    "margin": "sm"
-                },
-                {
-                    "type": "separator",
-                    "margin": "xl",
-                    "color": "#E5E5E5"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "يمكنك الآن:",
-                            "size": "sm",
-                            "color": "#666666",
-                            "weight": "bold"
-                        },
-                        {
-                            "type": "text",
-                            "text": "▪️ اللعب وجمع النقاط\n▪️ المنافسة على الصدارة\n▪️ تتبع إحصائياتك",
-                            "size": "sm",
-                            "color": "#333333",
-                            "wrap": True,
-                            "margin": "md"
-                        }
-                    ],
-                    "backgroundColor": "#F5F5F5",
-                    "cornerRadius": "10px",
-                    "paddingAll": "16px",
-                    "margin": "xl"
+                    "margin": "xs"
                 }
             ],
             "backgroundColor": "#FFFFFF",
-            "paddingAll": "24px",
-            "alignItems": "center"
+            "paddingAll": "20px",
+            "alignItems": "center",
+            "spacing": "sm"
         },
-        "footer": {
+        "styles": {
+            "body": {
+                "backgroundColor": "#FFFFFF"
+            }
+        }
+    }
+
+def get_simple_withdrawal_card(display_name):
+    """بطاقة الانسحاب - صغيرة"""
+    return {
+        "type": "bubble",
+        "size": "nano",
+        "body": {
             "type": "box",
-            "layout": "horizontal",
+            "layout": "vertical",
             "contents": [
                 {
-                    "type": "button",
-                    "action": {"type": "message", "label": "ابدأ اللعب", "text": "أغنية"},
-                    "style": "primary",
-                    "color": "#000000",
-                    "height": "sm"
+                    "type": "text",
+                    "text": "👋",
+                    "size": "xl",
+                    "align": "center"
                 },
                 {
-                    "type": "button",
-                    "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
-                    "style": "secondary",
-                    "height": "sm"
+                    "type": "text",
+                    "text": "تم الانسحاب",
+                    "size": "md",
+                    "weight": "bold",
+                    "color": "#000000",
+                    "align": "center",
+                    "margin": "md"
+                },
+                {
+                    "type": "text",
+                    "text": f"وداعاً {display_name}",
+                    "size": "sm",
+                    "color": "#666666",
+                    "align": "center",
+                    "margin": "xs"
                 }
             ],
-            "spacing": "sm",
-            "backgroundColor": "#F5F5F5",
-            "paddingAll": "16px"
+            "backgroundColor": "#FFFFFF",
+            "paddingAll": "20px",
+            "alignItems": "center",
+            "spacing": "sm"
+        },
+        "styles": {
+            "body": {
+                "backgroundColor": "#FFFFFF"
+            }
+        }
+    }
+
+def get_simple_welcome_card(display_name):
+    """بطاقة البداية - صغيرة"""
+    return {
+        "type": "bubble",
+        "size": "nano",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "▪️",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": "#000000",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": f"مرحباً {display_name}",
+                    "size": "md",
+                    "weight": "bold",
+                    "color": "#000000",
+                    "align": "center",
+                    "margin": "md",
+                    "wrap": True
+                },
+                {
+                    "type": "text",
+                    "text": "استخدم الأزرار للعب",
+                    "size": "xs",
+                    "color": "#666666",
+                    "align": "center",
+                    "margin": "sm"
+                }
+            ],
+            "backgroundColor": "#FFFFFF",
+            "paddingAll": "20px",
+            "alignItems": "center",
+            "spacing": "sm"
+        },
+        "styles": {
+            "body": {
+                "backgroundColor": "#FFFFFF"
+            }
         }
     }
 
@@ -877,6 +959,16 @@ def get_winner_card(winner_name, winner_score, all_scores):
 
 def start_game(game_id, game_class, game_type, user_id, event):
     """بدء لعبة جديدة"""
+    if game_class is None:
+        try:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"▫️ لعبة {game_type} غير متوفرة حالياً", quick_reply=get_quick_reply())
+            )
+        except:
+            pass
+        return False
+    
     try:
         with games_lock:
             if game_class in [SongGame, HumanAnimalPlantGame, LettersWordsGame]:
@@ -912,7 +1004,7 @@ def start_game(game_id, game_class, game_type, user_id, event):
         try:
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="حدث خطأ في بدء اللعبة", quick_reply=get_quick_reply())
+                TextSendMessage(text="▫️ حدث خطأ في بدء اللعبة", quick_reply=get_quick_reply())
             )
         except:
             pass
@@ -920,6 +1012,16 @@ def start_game(game_id, game_class, game_type, user_id, event):
 
 @app.route("/", methods=['GET'])
 def home():
+    games_status = []
+    if SongGame: games_status.append("أغنية")
+    if HumanAnimalPlantGame: games_status.append("لعبة")
+    if ChainWordsGame: games_status.append("سلسلة")
+    if FastTypingGame: games_status.append("أسرع")
+    if OppositeGame: games_status.append("ضد")
+    if LettersWordsGame: games_status.append("تكوين")
+    if DifferencesGame: games_status.append("اختلاف")
+    if CompatibilityGame: games_status.append("توافق")
+    
     return f"""
     <!DOCTYPE html>
     <html>
@@ -967,6 +1069,14 @@ def home():
             .status-item:last-child {{ border-bottom: none; }}
             .label {{ color: #666; }}
             .value {{ color: #000; font-weight: bold; }}
+            .games-list {{
+                background: #FAFAFA;
+                border-radius: 8px;
+                padding: 12px;
+                margin-top: 10px;
+                font-size: 0.85em;
+                color: #666;
+            }}
             .footer {{ 
                 text-align: center; 
                 margin-top: 20px; 
@@ -995,6 +1105,14 @@ def home():
                     <span class="label">ألعاب نشطة</span>
                     <span class="value">▫️ {len(active_games)}</span>
                 </div>
+                <div class="status-item">
+                    <span class="label">الألعاب المتوفرة</span>
+                    <span class="value">▪️ {len(games_status)}/8</span>
+                </div>
+            </div>
+            <div class="games-list">
+                <strong>الألعاب الجاهزة:</strong><br>
+                {', '.join(games_status) if games_status else 'لا توجد ألعاب متوفرة'}
             </div>
             <div class="footer">بوت الحُوت - منصة ألعاب تفاعلية</div>
         </div>
@@ -1009,7 +1127,17 @@ def health_check():
         "timestamp": datetime.now().isoformat(),
         "active_games": len(active_games),
         "registered_players": len(registered_players),
-        "ai_enabled": USE_AI
+        "ai_enabled": USE_AI,
+        "games_loaded": {
+            "song_game": SongGame is not None,
+            "human_animal_plant": HumanAnimalPlantGame is not None,
+            "chain_words": ChainWordsGame is not None,
+            "fast_typing": FastTypingGame is not None,
+            "opposite": OppositeGame is not None,
+            "letters_words": LettersWordsGame is not None,
+            "differences": DifferencesGame is not None,
+            "compatibility": CompatibilityGame is not None
+        }
     }, 200
 
 @app.route("/callback", methods=['POST'])
@@ -1054,7 +1182,8 @@ def handle_message(event):
         # الأوامر الأساسية
         if text in ['البداية', 'ابدأ', 'start', 'البوت']:
             line_bot_api.reply_message(event.reply_token,
-                TextSendMessage(text=f"▪️ مرحباً {display_name}\n\nاستخدم الأزرار أدناه للعب",
+                FlexSendMessage(alt_text=f"مرحباً {display_name}",
+                    contents=get_simple_welcome_card(display_name),
                     quick_reply=get_quick_reply()))
             return
         
@@ -1104,7 +1233,7 @@ def handle_message(event):
                     
                     line_bot_api.reply_message(event.reply_token,
                         FlexSendMessage(alt_text="تم التسجيل", 
-                            contents=get_registration_card(display_name), 
+                            contents=get_simple_registration_card(display_name), 
                             quick_reply=get_quick_reply()))
                     logger.info(f"✅ انضم: {display_name}")
             return
@@ -1114,7 +1243,8 @@ def handle_message(event):
                 if user_id in registered_players:
                     registered_players.remove(user_id)
                     line_bot_api.reply_message(event.reply_token,
-                        TextSendMessage(text=f"▫️ تم انسحابك يا {display_name}\n\nنتمنى رؤيتك مرة أخرى",
+                        FlexSendMessage(alt_text="تم الانسحاب",
+                            contents=get_simple_withdrawal_card(display_name),
                             quick_reply=get_quick_reply()))
                     logger.info(f"❌ انسحب: {display_name}")
                 else:
@@ -1150,13 +1280,13 @@ def handle_message(event):
                     TextSendMessage(text="▫️ ملف الاعترافات غير متوفر", quick_reply=get_quick_reply()))
             return
         
-        elif text in ['صحبه', 'صحبة']:
-            if FRIENDSHIP_QUESTIONS:
+        elif text in ['منشن', 'mention']:
+            if MENTION_QUESTIONS:
                 line_bot_api.reply_message(event.reply_token,
-                    TextSendMessage(text=f"▪️ {random.choice(FRIENDSHIP_QUESTIONS)}", quick_reply=get_quick_reply()))
+                    TextSendMessage(text=f"▪️ {random.choice(MENTION_QUESTIONS)}", quick_reply=get_quick_reply()))
             else:
                 line_bot_api.reply_message(event.reply_token,
-                    TextSendMessage(text="▫️ ملف أسئلة الصحبة غير متوفر", quick_reply=get_quick_reply()))
+                    TextSendMessage(text="▫️ ملف المنشن غير متوفر", quick_reply=get_quick_reply()))
             return
         
         # بدء الألعاب
@@ -1175,6 +1305,11 @@ def handle_message(event):
             game_class, game_type = games_map[text]
             
             if text == 'توافق':
+                if CompatibilityGame is None:
+                    line_bot_api.reply_message(event.reply_token,
+                        TextSendMessage(text="▫️ لعبة التوافق غير متوفرة حالياً", quick_reply=get_quick_reply()))
+                    return
+                    
                 with games_lock:
                     with players_lock:
                         participants = registered_players.copy()
@@ -1279,8 +1414,8 @@ def cleanup_old_games():
                         to_delete.append(game_id)
                 for game_id in to_delete:
                     del active_games[game_id]
-                    if to_delete:
-                        logger.info(f"🗑️ حذف {len(to_delete)} لعبة قديمة")
+                if to_delete:
+                    logger.info(f"🗑️ حذف {len(to_delete)} لعبة قديمة")
         except Exception as e:
             logger.error(f"❌ خطأ التنظيف: {e}")
 
@@ -1308,5 +1443,18 @@ if __name__ == "__main__":
     logger.info(f"🤖 Gemini AI: {'✅ مفعّل' if USE_AI else '⚠️ معطّل'}")
     logger.info(f"📊 اللاعبون: {len(registered_players)}")
     logger.info(f"🎮 الألعاب: {len(active_games)}")
+    
+    # طباعة حالة الألعاب المحملة
+    games_loaded = []
+    if SongGame: games_loaded.append("أغنية")
+    if HumanAnimalPlantGame: games_loaded.append("لعبة")
+    if ChainWordsGame: games_loaded.append("سلسلة")
+    if FastTypingGame: games_loaded.append("أسرع")
+    if OppositeGame: games_loaded.append("ضد")
+    if LettersWordsGame: games_loaded.append("تكوين")
+    if DifferencesGame: games_loaded.append("اختلاف")
+    if CompatibilityGame: games_loaded.append("توافق")
+    
+    logger.info(f"🎯 الألعاب المتوفرة ({len(games_loaded)}/8): {', '.join(games_loaded)}")
     logger.info("="*50)
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
