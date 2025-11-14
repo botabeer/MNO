@@ -19,32 +19,56 @@ class SongGame:
         self.use_ai = use_ai
         self.ask_ai = ask_ai
         
-        # الأغاني الجديدة فقط
+        #  ----------------------------
+        #  🎶 قائمة الأغاني الجديدة فقط
+        #  ----------------------------
         self.all_songs = [
-            {"lyrics": "رجعت لي أيام الماضي معاك", "singer": "أم كلثوم"},
-            {"lyrics": "جلست والخوف بعينيها تتأمل فنجاني", "singer": "عبد الحليم حافظ"},
-            {"lyrics": "تملي معاك ولو حتى بعيد عني", "singer": "عمرو دياب"},
-            {"lyrics": "يا بنات يا بنات", "singer": "نانسي عجرم"},
-            {"lyrics": "قولي أحبك كي تزيد وسامتي", "singer": "كاظم الساهر"},
+            {"lyrics": "أنا بلياك إذا أرمش إلك تنزل ألف دمعة", "singer": "ماجد المهندس"},
+            {"lyrics": "يا بعدهم كلهم .. يا سراجي بينهم", "singer": "عبدالمجيد عبدالله"},
             {"lyrics": "أنا لحبيبي وحبيبي إلي", "singer": "فيروز"},
-            {"lyrics": "حبيبي يا كل الحياة اوعدني تبقى معايا", "singer": "تامر حسني"},
-            {"lyrics": "قلبي بيسألني عنك دخلك طمني وينك", "singer": "وائل كفوري"},
-            {"lyrics": "كيف أبيّن لك شعوري دون ما أحكي\nخابرك لمّاح لكن مالمحته\nلاتغرّك كثرة مزوحي وضحكي\nوالله إن قلبي لغيرك ما فتحته", "singer": "عايض"},
-            {"lyrics": "اسخر لك غلا وتشوفني مقصر\nمعاك الحق ..\nوش الي يملي عيونك\nأنا ما عيش من دونك\nأحد ربي يجيبه لك حبيب\nويقدر يخونك", "singer": "عايض"},
-            {"lyrics": "رحت عني ما قويت جيت لك لاتردني", "singer": "عبدالمجيد عبدالله"},
+            {"lyrics": "قولي أحبك كي تزيد وسامتي", "singer": "كاظم الساهر"},
+            {"lyrics": "كيف أبيّن لك شعوري دون ما أحكي", "singer": "عايض"},
+            {"lyrics": "أريد الله يسامحني لان أذيت نفسي", "singer": "رحمة رياض"},
+            {"lyrics": "جنّنت قلبي بحبٍ يلوي ذراعي", "singer": "ماجد المهندس"},
+            {"lyrics": "واسِع خيالك إكتبه آنا بكذبك مُعجبه", "singer": "شمة حمدان"},
             {"lyrics": "خذني من ليلي لليلك", "singer": "عبادي الجوهر"},
-            {"lyrics": "تدري كثر ماني من البعد مخنوق", "singer": "راشد الماجد"},
-            {"lyrics": "انسى هالعالم ولو هم يزعلون", "singer": "عباس ابراهيم"},
             {"lyrics": "أنا عندي قلب واحد", "singer": "حسين الجسمي"},
-            {"lyrics": "منوتي ليتك معي", "singer": "محمد عبده"},
+            {"lyrics": "احس اني لقيتك بس عشان تضيع مني", "singer": "عبدالمجيد عبدالله"},
+            {"lyrics": "قال الوداع و مقصده يجرح القلب", "singer": "راشد الماجد"},
+            {"lyrics": "يا بنات يا بنات", "singer": "نانسي عجرم"},
+            {"lyrics": "احبك موت كلمة مالها تفسير", "singer": "ماجد المهندس"},
             {"lyrics": "خلنا مني طمني عليك", "singer": "نوال الكويتية"},
+            {"lyrics": "رحت عني ما قويت جيت لك لاتردني", "singer": "عبدالمجيد عبدالله"},
+            {"lyrics": "انسى هالعالم ولو هم يزعلون", "singer": "عباس ابراهيم"},
+            {"lyrics": "مشاعر تشاور تودع تسافر", "singer": "شيرين"},
+            {"lyrics": "جلست والخوف بعينيها تتأمل فنجاني", "singer": "عبد الحليم حافظ"},
+            {"lyrics": "اسخر لك غلا وتشوفني مقصر", "singer": "عايض"},
+            {"lyrics": "أنا استاهل وداع افضل وداع", "singer": "نوال الكويتية"},
+            {"lyrics": "ظلمتني والله قويٍ يجازيك", "singer": "طلال مداح"},
+            {"lyrics": "منوتي ليتك معي", "singer": "محمد عبده"},
+            {"lyrics": "انتى ندمتى", "singer": "تامر عاشور"},
+            {"lyrics": "احبك لو تكون حاضر .. احبك لو تكون هاجر", "singer": "عبادي الجوهر"},
+            {"lyrics": "أنا أكثر شخص بالدنيا يحبك .. وأنتي ماتدرين", "singer": "راشد الماجد"},
+            {"lyrics": "يردون .. قلت لازم يردون وين مني يروحون", "singer": "وليد الشامي"},
+            {"lyrics": "نكتشف مر الحقيقة بعد ما يفوت الأوان", "singer": "أصاله نصري"},
+            {"lyrics": "إسمحيلي يالغرام العف", "singer": "محمد عبده"},
+            {"lyrics": "تدري كثر ماني من البعد مخنوق", "singer": "راشد الماجد"},
+            {"lyrics": "احبه بس مو معناه اسمحله بيه يجرح", "singer": "أصيل هميم"},
+            {"lyrics": "ياما حاولت الفراق وما قويت", "singer": "عبدالمجيد عبدالله"},
+            {"lyrics": "بيان صادر من معاناة المحبة", "singer": "أميمة طالب"},
+            {"lyrics": "قلبي يسألني عنك دخلك طمني وينك", "singer": "وائل كفوري"},
+            {"lyrics": "بردان أنا تكفى أبي احترق بدفا", "singer": "محمد عبده"},
+            {"lyrics": "عايش لك .. ما عيش من دونك", "singer": "عايض"},
+            {"lyrics": "انا مش بتاعت الكلام ده", "singer": "شيرين"},
+            {"lyrics": "يراودني شعور .. اني أحبك اكثر مْن اول", "singer": "راشد الماجد"},
+            {"lyrics": "تملي معاك ولو حتى بعيد عني", "singer": "عمرو دياب"},
+            {"lyrics": "ياليت العمر لو كان مليون مره", "singer": "راشد الماجد"},
+            {"lyrics": "يا هي توجع كذبة اخباري تمام", "singer": "أميمة طالب"},
             {"lyrics": "أحبك ليه أنا مدري", "singer": "عبدالمجيد عبدالله"},
-            {"lyrics": "أمر الله أقوى أحبك والعقل واعي", "singer": "ماجد المهندس"},
-            {"lyrics": "الحب يتعب من يدله والله في حبه بلاني", "singer": "راشد الماجد"},
-            {"lyrics": "محد غيرك شغل عقلي شغل بالي", "singer": "وليد الشامي"},
-            {"lyrics": "نكتشف مر الحقيقة بعد ما يفوت الأوان", "singer": "اصاله نصري"},
-            {"lyrics": "يا هي توجع كذبة اخباري تمام", "singer": "اميمة طالب"},
-            {"lyrics": "احس اني لقيتك بس عشان تضيع مني", "singer": "عبدالمجيد عبدالله"}
+            {"lyrics": "يا مغرور جرحني غرورك", "singer": "أصالة"},
+            {"lyrics": "سألوني الناس عنك يا حبيبي", "singer": "فيروز"},
+            {"lyrics": "أنا ما عيش من دونك", "singer": "ماجد المهندس"},
+            {"lyrics": "أمر الله أقوى أحبك والعقل واعي", "singer": "ماجد المهندس"}
         ]
         
         self.questions = []
@@ -68,10 +92,7 @@ class SongGame:
             prompt = """اعطني 10 مقاطع من أغاني عربية مشهورة مع اسم المغني.
 الصيغة:
 مقطع الأغنية | اسم المغني
-
-مثال:
-يا بعد عمري وروحي | راشد الماجد"""
-            
+"""
             response = self.ask_ai(prompt)
             if response:
                 lines = response.strip().split('\n')
@@ -84,12 +105,11 @@ class SongGame:
                                 'lyrics': parts[0].strip(),
                                 'singer': parts[1].strip()
                             })
-                
                 if new_songs:
                     self.all_songs = new_songs
-        except Exception as e:
+        except:
             pass
-    
+
     def _next_question(self):
         self.question_number += 1
         self.current_song = self.questions[self.question_number - 1]
@@ -97,12 +117,12 @@ class SongGame:
         return TextSendMessage(
             text=f"▪️ لعبة الأغاني\n\nسؤال {self.question_number} من {self.total_questions}\n\n{self.current_song['lyrics']}\n\nمن المغني؟\n\n▫️ لمح - للحصول على تلميح\n▫️ جاوب - لعرض الإجابة"
         )
-    
+
     def next_question(self):
         if self.question_number < self.total_questions:
             return self._next_question()
         return None
-    
+
     def check_answer(self, answer, user_id, display_name):
         if not self.current_song:
             return None
@@ -129,10 +149,10 @@ class SongGame:
             else:
                 return {
                     'response': TextSendMessage(text="استخدمت التلميح"),
-                    'points': 0,
-                    'correct': False,
-                    'won': False,
-                    'game_over': False
+                    'points": 0,
+                    'correct": False,
+                    'won": False,
+                    'game_over": False
                 }
         
         if answer_lower in ['جاوب', 'الجواب', 'answer']:
@@ -140,12 +160,12 @@ class SongGame:
             
             if self.question_number < self.total_questions:
                 return {
-                    'response': TextSendMessage(text=response_text),
-                    'points': 0,
-                    'correct': False,
-                    'won': False,
-                    'game_over': False,
-                    'next_question': True
+                    'response": TextSendMessage(text=response_text),
+                    'points": 0,
+                    'correct": False,
+                    'won": False,
+                    'game_over": False,
+                    'next_question": True
                 }
             else:
                 return self._end_game()
@@ -160,18 +180,18 @@ class SongGame:
             if self.question_number < self.total_questions:
                 response_text = f"▪️ صحيح {display_name}\n\nالمغني: {self.current_song['singer']}\n\n▫️ النقاط: {points}"
                 return {
-                    'response': TextSendMessage(text=response_text),
-                    'points': points,
-                    'correct': True,
-                    'won': True,
-                    'game_over': False,
-                    'next_question': True
+                    'response": TextSendMessage(text=response_text),
+                    'points": points,
+                    'correct": True,
+                    'won": True,
+                    'game_over": False,
+                    'next_question": True
                 }
             else:
                 return self._end_game()
         
         return None
-    
+
     def _end_game(self):
         if self.player_scores:
             sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
@@ -182,17 +202,17 @@ class SongGame:
             winner_card = get_winner_card(winner['name'], winner['score'], all_scores)
             
             return {
-                'points': 0,
-                'correct': False,
-                'won': True,
-                'game_over': True,
-                'winner_card': winner_card
+                'points": 0,
+                'correct": False,
+                'won": True,
+                'game_over": True,
+                'winner_card": winner_card
             }
         else:
             return {
-                'response': TextSendMessage(text="انتهت اللعبة"),
-                'points': 0,
-                'correct': False,
-                'won': False,
-                'game_over': True
+                'response": TextSendMessage(text="انتهت اللعبة"),
+                'points": 0,
+                'correct": False,
+                'won": False,
+                'game_over": True
             }
