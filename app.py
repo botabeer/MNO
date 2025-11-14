@@ -1117,101 +1117,101 @@ def get_stats_card(user_id, display_name):
     win_rate = (stats['wins'] / stats['games_played'] * 100) if stats['games_played'] > 0 else 0
     
     return {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "إحصائياتك",
-                    "size": "lg",
-                    "weight": "bold",
-                    "color": "#000000",
-                    "align": "center"
-                },
-                {
-                    "type": "text",
-                    "text": display_name[:20],
-                    "size": "sm",
-                    "color": "#666666",
-                    "align": "center",
-                    "margin": "xs"
-                },
-                {
-                    "type": "separator",
-                    "margin": "md",
-                    "color": "#DDDDDD"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "text", "text": "النقاط", "size": "xs", "color": "#666666", "flex": 1},
-                                {"type": "text", "text": str(stats['total_points']), "size": "xl", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
-                            ]
-                        },
-                        {
-                            "type": "separator",
-                            "margin": "sm",
-                            "color": "#E5E5E5"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "text", "text": "الألعاب", "size": "xs", "color": "#666666", "flex": 1},
-                                {"type": "text", "text": str(stats['games_played']), "size": "sm", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
-                            ],
-                            "margin": "sm"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "text", "text": "الفوز", "size": "xs", "color": "#666666", "flex": 1},
-                                {"type": "text", "text": str(stats['wins']), "size": "sm", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
-                            ],
-                            "margin": "xs"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "text", "text": "معدل الفوز", "size": "xs", "color": "#666666", "flex": 1},
-                                {"type": "text", "text": f"{win_rate:.0f}%", "size": "sm", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
-                            ],
-                            "margin": "xs"
-                        }
-                    ],
-                    "backgroundColor": "#F5F5F5",
-                    "cornerRadius": "8px",
-                    "paddingAll": "12px",
-                    "margin": "md"
-                }
-            ],
-            "backgroundColor": "#FFFFFF",
-            "paddingAll": "16px"
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "button",
-                    "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
-                    "style": "secondary",
-                    "height": "sm"
-                }
-            ],
-            "backgroundColor": "#F8F8F8",
-            "paddingAll": "10px"
-        }
+    "type": "bubble",
+    "body": {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+            {
+                "type": "text",
+                "text": "إحصائياتك",
+                "size": "lg",
+                "weight": "bold",
+                "color": "#000000",
+                "align": "center"
+            },
+            {
+                "type": "text",
+                "text": display_name[:20],
+                "size": "sm",
+                "color": "#666666",
+                "align": "center",
+                "margin": "xs"
+            },
+            {
+                "type": "separator",
+                "margin": "md",
+                "color": "#DDDDDD"
+            },
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": "النقاط", "size": "xs", "color": "#666666", "flex": 1},
+                            {"type": "text", "text": str(stats['total_points']), "size": "xl", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "sm",
+                        "color": "#E5E5E5"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": "الألعاب", "size": "xs", "color": "#666666", "flex": 1},
+                            {"type": "text", "text": str(stats['games_played']), "size": "sm", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
+                        ],
+                        "margin": "sm"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": "الفوز", "size": "xs", "color": "#666666", "flex": 1},
+                            {"type": "text", "text": str(stats['wins']), "size": "sm", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
+                        ],
+                        "margin": "xs"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": "معدل الفوز", "size": "xs", "color": "#666666", "flex": 1},
+                            {"type": "text", "text": f"{win_rate:.0f}%", "size": "sm", "weight": "bold", "color": "#000000", "flex": 1, "align": "end"}
+                        ],
+                        "margin": "xs"
+                    }
+                ],
+                "backgroundColor": "#F5F5F5",
+                "cornerRadius": "8px",
+                "paddingAll": "12px",
+                "margin": "md"
+            }
+        ],
+        "backgroundColor": "#FFFFFF",
+        "paddingAll": "16px"
+    },
+    "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+            {
+                "type": "button",
+                "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
+                "style": "secondary",
+                "height": "sm"
+            }
+        ],
+        "backgroundColor": "#F8F8F8",
+        "paddingAll": "10px"
     }
+}
 
 def get_leaderboard_card():
     """لوحة الصدارة المحسّنة"""
