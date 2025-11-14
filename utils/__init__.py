@@ -1,71 +1,16 @@
 """
-Utils Package - Game Bot Utilities
-===================================
-مجموعة أدوات مساعدة للبوت
+Utils Package
+Helper functions and utilities
 """
 
-from .database import (
-    init_db,
-    get_db_connection,
-    update_user_points,
-    get_user_stats,
-    get_leaderboard,
-    get_user_game_history
-)
-
-from .helpers import (
-    get_user_profile_safe,
-    check_rate_limit,
-    sanitize_text,
-    format_number,
-    get_time_greeting
-)
-
-from .ui_components import (
-    create_flex_message,
-    create_welcome_bubble,
-    create_stats_bubble,
-    create_leaderboard_bubble,
-    create_game_result_bubble,
-    get_quick_reply_buttons,
-    create_help_bubble  # تمت إضافة create_help_bubble هنا
-)
-
-from .gemini_config import (
-    get_gemini_api_key,
-    switch_gemini_key,
-    is_ai_available
-)
+from .helpers import normalize_text, get_user_profile_safe
+from .database import init_db, update_user_points, get_user_stats, get_leaderboard
 
 __all__ = [
-    # Database
+    'normalize_text',
+    'get_user_profile_safe',
     'init_db',
-    'get_db_connection',
     'update_user_points',
     'get_user_stats',
-    'get_leaderboard',
-    'get_user_game_history',
-    
-    # Helpers
-    'get_user_profile_safe',
-    'check_rate_limit',
-    'sanitize_text',
-    'format_number',
-    'get_time_greeting',
-    
-    # UI Components
-    'create_flex_message',
-    'create_welcome_bubble',
-    'create_stats_bubble',
-    'create_leaderboard_bubble',
-    'create_game_result_bubble',
-    'get_quick_reply_buttons',
-    'create_help_bubble',  # تمت إضافة create_help_bubble هنا
-    
-    # Gemini Config
-    'get_gemini_api_key',
-    'switch_gemini_key',
-    'is_ai_available'
+    'get_leaderboard'
 ]
-
-__version__ = '1.0.1'  # تحديث الإصدار بعد التعديل
