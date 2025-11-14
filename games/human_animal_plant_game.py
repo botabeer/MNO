@@ -11,21 +11,9 @@ class HumanAnimalPlantGame:
         self.answers = {}
         self.scores = {}
         
-        self.letters = [
-            'أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 
-            'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 
-            'ل', 'م', 'ن', 'ه', 'و', 'ي'
-        ]
-        
-        self.valid_answers = {
-            'human': ['أحمد', 'محمد', 'علي', 'فاطمة', 'عائشة', 'خديجة', 'حسن', 'حسين'],
-            'animal': ['أسد', 'نمر', 'فيل', 'حصان', 'جمل', 'غزال', 'ذئب', 'كلب'],
-            'plant': ['ورد', 'ياسمين', 'نخلة', 'زيتون', 'تفاح', 'موز', 'عنب', 'برتقال'],
-            'country': ['مصر', 'سعودية', 'عراق', 'سوريا', 'اردن', 'لبنان', 'كويت', 'امارات']
-        }
+        self.letters = ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي']
     
     def normalize_text(self, text):
-        """تطبيع النص"""
         if not text:
             return ""
         text = text.strip().lower()
@@ -37,31 +25,43 @@ class HumanAnimalPlantGame:
         return text
     
     def start_game(self):
-        """بدء اللعبة"""
         self.current_letter = random.choice(self.letters)
         self.answers = {}
         self.scores = {}
         
-        message = (
-            f"▪️ لعبة إنسان حيوان نبات بلاد\n\n"
-            f"الحرف: {self.current_letter}\n\n"
-            f"اكتب إجاباتك بهذا الشكل:\n"
-            f"إنسان: ...\n"
-            f"حيوان: ...\n"
-            f"نبات: ...\n"
-            f"بلاد: ..."
-        )
-        return TextSendMessage(text=message)
+        return TextSendMessage(text=f"▪️ لعبة إنسان حيوان نبات بلاد\n\nالحرف: {self.current_letter}\n\nاكتب إجاباتك بهذا الشكل:\nإنسان: ...\nحيوان: ...\nنبات: ...\nبلاد: ...\n\nأو اكتب كلمة واحدة لكل سطر")
     
     def check_answer(self, text, user_id, display_name):
-        """فحص الإجابة"""
         if user_id in self.answers:
             return None
         
-        lines = text.strip().split('\n')
-        if len(lines) < 4:
-            return None
+        text = text.strip()
+        lines = text.split('\n')
         
+        # دعم الإجابات المباشرة (كلمة في كل سطر)
+        if len(lines) >= 4 and ':' not in text:
+            words = [line.strip() for line in lines if line.strip()]
+            if len(words) >= 4:
+                # التحقق من أن جميع الكلمات تبدأ بالحرف المطلوب
+                valid_count = sum(1 for word in words[:4] if word and word[0] == self.current_letter)
+                
+                if valid_count >= 4:
+                    points = valid_count * 3
+                    self.answers[user_id] = words[:4]
+                    
+                    if user_id not in self.scores:
+                        self.scores[user_id] = {'name': display_name, 'score': 0}
+                    self.scores[user_id]['score'] += points
+                    
+                    return {
+                        'correct': True,
+                        'points': points,
+                        'won': valid_count == 4,
+                        'game_over': True,
+                        'response': TextSendMessage(text=f"▪️ {display_name}\n\nإجابات صحيحة: {valid_count}/4\n+{points} نقطة")
+                    }
+        
+        # دعم الصيغة القديمة (إنسان: ... إلخ)
         user_answers = {}
         categories = ['إنسان', 'حيوان', 'نبات', 'بلاد']
         categories_en = ['human', 'animal', 'plant', 'country']
@@ -75,38 +75,20 @@ class HumanAnimalPlantGame:
                         if answer and answer[0] == self.current_letter:
                             user_answers[categories_en[i]] = answer
         
-        if len(user_answers) < 4:
+        if len(user_answers) >= 4:
+            points = len(user_answers) * 3
+            self.answers[user_id] = user_answers
+            
+            if user_id not in self.scores:
+                self.scores[user_id] = {'name': display_name, 'score': 0}
+            self.scores[user_id]['score'] += points
+            
             return {
-                'correct': False,
-                'response': TextSendMessage(
-                    text=f"▫️ يرجى تقديم إجابات لجميع الفئات بالشكل الصحيح"
-                )
+                'correct': True,
+                'points': points,
+                'won': len(user_answers) == 4,
+                'game_over': True,
+                'response': TextSendMessage(text=f"▪️ {display_name}\n\nإجابات صحيحة: {len(user_answers)}/4\n+{points} نقطة")
             }
         
-        points = 0
-        correct_count = 0
-        
-        for cat in categories_en:
-            if cat in user_answers:
-                answer = user_answers[cat]
-                if answer[0] == self.current_letter:
-                    points += 3
-                    correct_count += 1
-        
-        self.answers[user_id] = user_answers
-        
-        if user_id not in self.scores:
-            self.scores[user_id] = {'name': display_name, 'score': 0}
-        self.scores[user_id]['score'] += points
-        
-        return {
-            'correct': True,
-            'points': points,
-            'won': correct_count == 4,
-            'game_over': True,
-            'response': TextSendMessage(
-                text=f"▪️ إجابة {display_name}\n\n"
-                     f"إجابات صحيحة: {correct_count}/4\n"
-                     f"+{points} نقطة"
-            )
-        }
+        return None
