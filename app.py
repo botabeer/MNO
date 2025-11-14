@@ -1,3 +1,11 @@
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("game-bot")
+
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -15,7 +23,6 @@ import time
 import json
 import random
 import re
-import logging
 
 # إعداد Gemini AI
 try:
@@ -36,9 +43,6 @@ try:
 except Exception as e:
     USE_AI = False
     logger.error(f"❌ خطأ في تحميل Gemini: {e}")
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 def get_gemini_api_key():
     """الحصول على مفتاح Gemini API الحالي"""
