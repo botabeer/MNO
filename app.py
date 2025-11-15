@@ -294,6 +294,8 @@ def log_error(error_type, message, details=None):
                 error_log.pop(0)
     except:
         pass
+
+def ensure_user_exists(user_id):
     """
     ✅ التأكد من وجود سجل المستخدم في قاعدة البيانات
     يتم استدعاؤها قبل أي عملية على المستخدم
@@ -318,6 +320,8 @@ def log_error(error_type, message, details=None):
     except Exception as e:
         logger.error(f"❌ خطأ في ensure_user_exists: {e}")
         return False
+
+def get_user_profile_safe(user_id):
     """
     الحصول على اسم المستخدم مع:
     - معالجة 404
@@ -1367,7 +1371,7 @@ def home():
 def view_errors():
     """عرض آخر الأخطاء"""
     with error_log_lock:
-        errors = list(reversed(error_log))  # الأحدث أولاً
+        errors = list(reversed(error_log))
     
     html = """
     <!DOCTYPE html>
@@ -1502,8 +1506,8 @@ def health_check():
         "active_games": len(active_games),
         "registered_players": len(registered_players),
         "cached_names": len(user_names_cache),
-        "error_count": error_count,  # ✅ عدد الأخطاء
-        "last_error": last_error.get('timestamp') if last_error else None,  # ✅ آخر خطأ
+        "error_count": error_count,
+        "last_error": last_error.get('timestamp') if last_error else None,
         "ai_enabled": USE_AI,
         "games_loaded": {
             "song_game": SongGame is not None,
@@ -1516,10 +1520,6 @@ def health_check():
             "compatibility": CompatibilityGame is not None
         }
     }, 200
-
-# ==========================================
-# ✅ معالج Webhook المحسّن
-# ==========================================
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -1756,7 +1756,7 @@ def handle_message(event):
                         'participants': participants,
                         'answered_users': set(),
                         'last_game': text,
-                        'waiting_for_names': True  # ✅ إضافة علم
+                        'waiting_for_names': True
                     }
                 line_bot_api.reply_message(event.reply_token,
                     TextSendMessage(text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\n⚠️ نص فقط بدون @ أو رموز\n\nمثال: ميش عبير",
@@ -1969,10 +1969,6 @@ def cleanup_old_games():
 cleanup_thread = threading.Thread(target=cleanup_old_games, daemon=True)
 cleanup_thread.start()
 
-# ==========================================
-# ✅ معالجات الأخطاء المحسّنة
-# ==========================================
-
 @app.errorhandler(InvalidSignatureError)
 def handle_invalid_signature(error):
     """معالج خاص للتوقيع غير الصالح"""
@@ -1998,10 +1994,6 @@ def handle_error(error):
     if request.path == '/callback':
         return 'OK', 200
     return 'Internal Server Error', 500
-
-# ==========================================
-# ✅ Endpoint للاختبار
-# ==========================================
 
 @app.route("/webhook-test", methods=['GET', 'POST'])
 def webhook_test():
