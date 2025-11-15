@@ -276,7 +276,31 @@ CHALLENGES = load_text_file('challenges.txt')
 CONFESSIONS = load_text_file('confessions.txt')
 MENTION_QUESTIONS = load_text_file('more_questions.txt')
 
-def get_user_profile_safe(user_id):
+def ensure_user_exists(user_id):
+    """
+    ✅ التأكد من وجود سجل المستخدم في قاعدة البيانات
+    يتم استدعاؤها قبل أي عملية على المستخدم
+    """
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
+        
+        if not c.fetchone():
+            # المستخدم غير موجود - إنشاء سجل جديد
+            display_name = f"لاعب_{user_id[-4:]}"
+            c.execute('''INSERT INTO users (user_id, display_name, total_points, 
+                         games_played, wins, last_played) 
+                         VALUES (?, ?, 0, 0, 0, ?)''',
+                      (user_id, display_name, datetime.now().isoformat()))
+            conn.commit()
+            logger.info(f"🆕 إنشاء سجل جديد: {display_name} ({user_id[-4:]})")
+        
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"❌ خطأ في ensure_user_exists: {e}")
+        return False
     """
     الحصول على اسم المستخدم مع:
     - معالجة 404
@@ -1385,21 +1409,8 @@ def handle_message(event):
                 registered_players.add(user_id)
                 logger.info(f"🆕 تسجيل تلقائي لمستخدم جديد: {user_id[-4:]}")
                 
-                # إضافة المستخدم لقاعدة البيانات
-                display_name = get_user_profile_safe(user_id)
-                try:
-                    conn = get_db_connection()
-                    c = conn.cursor()
-                    c.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
-                    if not c.fetchone():
-                        c.execute('''INSERT INTO users (user_id, display_name, total_points, 
-                                     games_played, wins) VALUES (?, ?, 0, 0, 0)''',
-                                  (user_id, display_name))
-                        conn.commit()
-                        logger.info(f"✅ تم إضافة {display_name} لقاعدة البيانات")
-                    conn.close()
-                except Exception as e:
-                    logger.error(f"❌ خطأ في حفظ المستخدم الجديد: {e}")
+                # ✅ إنشاء سجل في قاعدة البيانات
+                ensure_user_exists(user_id)
         
         if not check_rate_limit(user_id):
             try:
