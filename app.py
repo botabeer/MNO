@@ -140,10 +140,12 @@ active_games = {}
 registered_players = set()
 user_message_count = defaultdict(lambda: {'count': 0, 'reset_time': datetime.now()})
 user_names_cache = {}  # ✅ ذاكرة مؤقتة للأسماء
+error_log = []  # ✅ سجل للأخطاء الأخيرة (آخر 50 خطأ)
 
 games_lock = threading.Lock()
 players_lock = threading.Lock()
 names_cache_lock = threading.Lock()  # ✅ قفل للذاكرة المؤقتة
+error_log_lock = threading.Lock()  # ✅ قفل لسجل الأخطاء
 
 DB_NAME = 'game_scores.db'
 
@@ -276,7 +278,22 @@ CHALLENGES = load_text_file('challenges.txt')
 CONFESSIONS = load_text_file('confessions.txt')
 MENTION_QUESTIONS = load_text_file('more_questions.txt')
 
-def ensure_user_exists(user_id):
+def log_error(error_type, message, details=None):
+    """تسجيل الأخطاء في سجل مؤقت"""
+    try:
+        with error_log_lock:
+            error_entry = {
+                'timestamp': datetime.now().isoformat(),
+                'type': error_type,
+                'message': str(message),
+                'details': details or {}
+            }
+            error_log.append(error_entry)
+            # الاحتفاظ بآخر 50 خطأ فقط
+            if len(error_log) > 50:
+                error_log.pop(0)
+    except:
+        pass
     """
     ✅ التأكد من وجود سجل المستخدم في قاعدة البيانات
     يتم استدعاؤها قبل أي عملية على المستخدم
@@ -1323,10 +1340,22 @@ def home():
                     <span class="label">أسماء محفوظة</span>
                     <span class="value">▪️ {len(user_names_cache)}</span>
                 </div>
+                <div class="status-item">
+                    <span class="label">أخطاء مسجلة</span>
+                    <span class="value">{'⚠️ ' + str(len(error_log)) if error_log else '✅ 0'}</span>
+                </div>
             </div>
             <div class="games-list">
                 <strong>الألعاب الجاهزة:</strong><br>
                 {', '.join(games_status) if games_status else 'لا توجد ألعاب متوفرة'}
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="/errors" style="display: inline-block; padding: 10px 20px; background: {'#ff4444' if error_log else '#4CAF50'}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">
+                    📋 عرض الأخطاء ({len(error_log)})
+                </a>
+                <a href="/health" style="display: inline-block; padding: 10px 20px; background: #2196F3; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">
+                    🔍 فحص الصحة
+                </a>
             </div>
             <div class="footer">بوت الحُوت - منصة ألعاب تفاعلية</div>
         </div>
@@ -1334,15 +1363,147 @@ def home():
     </html>
     """
 
+@app.route("/errors", methods=['GET'])
+def view_errors():
+    """عرض آخر الأخطاء"""
+    with error_log_lock:
+        errors = list(reversed(error_log))  # الأحدث أولاً
+    
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>سجل الأخطاء - بوت الحُوت</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                background: #f5f5f5;
+                padding: 20px;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            h1 {
+                color: #000;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e5e5e5;
+            }
+            .error-item {
+                background: #fafafa;
+                border-left: 4px solid #ff4444;
+                padding: 15px;
+                margin: 15px 0;
+                border-radius: 6px;
+            }
+            .error-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+            }
+            .error-type {
+                font-weight: bold;
+                color: #ff4444;
+            }
+            .error-time {
+                color: #666;
+                font-size: 0.9em;
+            }
+            .error-message {
+                color: #333;
+                margin: 10px 0;
+                padding: 10px;
+                background: white;
+                border-radius: 4px;
+                font-family: monospace;
+                font-size: 0.9em;
+            }
+            .error-details {
+                color: #666;
+                font-size: 0.85em;
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid #ddd;
+            }
+            .no-errors {
+                text-align: center;
+                padding: 40px;
+                color: #666;
+            }
+            .back-link {
+                display: inline-block;
+                margin-top: 20px;
+                color: #000;
+                text-decoration: none;
+                padding: 10px 20px;
+                background: #f5f5f5;
+                border-radius: 6px;
+            }
+            .back-link:hover {
+                background: #e5e5e5;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📋 سجل الأخطاء - بوت الحُوت</h1>
+    """
+    
+    if not errors:
+        html += '<div class="no-errors">✅ لا توجد أخطاء مسجلة</div>'
+    else:
+        for error in errors:
+            html += f"""
+            <div class="error-item">
+                <div class="error-header">
+                    <span class="error-type">{error.get('type', 'Unknown')}</span>
+                    <span class="error-time">{error.get('timestamp', 'Unknown')}</span>
+                </div>
+                <div class="error-message">{error.get('message', 'No message')}</div>
+            """
+            
+            details = error.get('details', {})
+            if details:
+                html += '<div class="error-details">'
+                for key, value in details.items():
+                    html += f'<div><strong>{key}:</strong> {value}</div>'
+                html += '</div>'
+            
+            html += '</div>'
+    
+    html += """
+            <a href="/" class="back-link">← العودة للرئيسية</a>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html
+
 @app.route("/health", methods=['GET'])
 def health_check():
     """فحص صحة البوت مع إحصائيات مفصلة"""
+    with error_log_lock:
+        error_count = len(error_log)
+        last_error = error_log[-1] if error_log else None
+    
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "active_games": len(active_games),
         "registered_players": len(registered_players),
-        "cached_names": len(user_names_cache),  # ✅ عدد الأسماء المخزنة
+        "cached_names": len(user_names_cache),
+        "error_count": error_count,  # ✅ عدد الأخطاء
+        "last_error": last_error.get('timestamp') if last_error else None,  # ✅ آخر خطأ
         "ai_enabled": USE_AI,
         "games_loaded": {
             "song_game": SongGame is not None,
@@ -1398,9 +1559,24 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """معالج الرسائل الرئيسي مع حماية من الأخطاء"""
+    user_id = None
+    text = None
+    display_name = None
+    game_id = None
+    
     try:
+        # ✅ تهيئة المتغيرات الأساسية
         user_id = event.source.user_id
-        text = event.message.text.strip()
+        text = event.message.text.strip() if event.message.text else ""
+        
+        # ✅ التحقق من صحة البيانات
+        if not user_id:
+            logger.error("❌ user_id فارغ!")
+            return
+        
+        if not text:
+            logger.warning(f"⚠️ رسالة فارغة من {user_id[-4:]}")
+            return
         
         # ✅ التسجيل التلقائي عند أول رسالة
         with players_lock:
@@ -1412,18 +1588,29 @@ def handle_message(event):
                 # ✅ إنشاء سجل في قاعدة البيانات
                 ensure_user_exists(user_id)
         
+        # ✅ التحقق من حد المعدل
         if not check_rate_limit(user_id):
             try:
                 line_bot_api.reply_message(event.reply_token,
                     TextSendMessage(text="▪️ انتظر قليلاً", quick_reply=get_quick_reply()))
-            except:
-                pass
+            except Exception as rate_error:
+                logger.error(f"❌ خطأ في رد rate limit: {rate_error}")
             return
         
-        display_name = get_user_profile_safe(user_id)
-        game_id = getattr(event.source, 'group_id', user_id)
+        # ✅ جلب اسم المستخدم
+        try:
+            display_name = get_user_profile_safe(user_id)
+        except Exception as name_error:
+            logger.error(f"❌ خطأ في جلب الاسم: {name_error}")
+            display_name = f"لاعب_{user_id[-4:]}"
         
-        logger.info(f"📨 {display_name} ({user_id[-4:]}): {text}")
+        # ✅ تحديد معرف اللعبة
+        try:
+            game_id = getattr(event.source, 'group_id', user_id)
+        except:
+            game_id = user_id
+        
+        logger.info(f"📨 {display_name} ({user_id[-4:]}): {text[:50]}")
         
         # الأوامر الأساسية
         if text in ['البداية', 'ابدأ', 'start', 'البوت']:
@@ -1722,17 +1909,35 @@ def handle_message(event):
     
     except Exception as e:
         logger.error(f"❌ خطأ في handle_message: {e}", exc_info=True)
-        # محاولة إرسال رد للمستخدم
+        
+        # ✅ تسجيل تفصيلي للخطأ
+        error_details = {
+            'user_id': user_id[-4:] if user_id else 'Unknown',
+            'text': text[:100] if text else 'Unknown',
+            'display_name': display_name if display_name else 'Unknown',
+            'game_id': str(game_id)[:20] if game_id else 'Unknown',
+            'error': str(e)
+        }
+        
         try:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(
-                    text="▫️ حدث خطأ مؤقت. حاول مرة أخرى.",
-                    quick_reply=get_quick_reply()
-                )
-            )
+            log_error('handle_message', e, error_details)
+            logger.error(f"   تفاصيل الخطأ: {error_details}")
         except:
             pass
+        
+        # محاولة إرسال رد للمستخدم
+        try:
+            if hasattr(event, 'reply_token') and event.reply_token:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(
+                        text="▫️ حدث خطأ مؤقت. حاول مرة أخرى.",
+                        quick_reply=get_quick_reply()
+                    )
+                )
+        except Exception as reply_error:
+            logger.error(f"❌ فشل إرسال رسالة الخطأ: {reply_error}")
+            log_error('reply_error', reply_error, {'user_id': user_id[-4:] if user_id else 'Unknown'})
 
 def cleanup_old_games():
     """تنظيف الألعاب القديمة وتحديث الذاكرة المؤقتة"""
