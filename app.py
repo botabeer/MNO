@@ -630,6 +630,28 @@ def get_simple_welcome_card(display_name):
                             "align": "center",
                             "margin": "lg",
                             "wrap": True
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "🐋 بوت الحُوت",
+                            "size": "xs",
+                            "color": "#999999",
+                            "align": "center",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "منصة ألعاب تفاعلية مدعومة بالذكاء الاصطناعي",
+                            "size": "xxs",
+                            "color": "#AAAAAA",
+                            "align": "center",
+                            "margin": "xs",
+                            "wrap": True
                         }
                     ],
                     "margin": "xl"
@@ -697,7 +719,7 @@ def get_help_card():
                         },
                         {
                             "type": "text",
-                            "text": "▫️ انضم - التسجيل في البوت\n▫️ انسحب - إلغاء التسجيل\n▫️ نقاطي - عرض إحصائياتك\n▫️ الصدارة - أفضل اللاعبين\n▫️ إيقاف - إنهاء اللعبة\n▫️ مساعدة - عرض هذا الدليل",
+                            "text": "▫️ انضم - التسجيل في البوت\n▫️ انسحب - إلغاء التسجيل\n▫️ نقاطي - عرض إحصائياتك\n▫️ الصدارة - أفضل اللاعبين\n▫️ إيقاف - إنهاء اللعبة\n▫️ كيف ألعب - شرح الألعاب",
                             "size": "sm",
                             "color": "#333333",
                             "wrap": True,
@@ -736,12 +758,17 @@ def get_help_card():
                     "margin": "md"
                 },
                 {
+                    "type": "separator",
+                    "margin": "lg",
+                    "color": "#E5E5E5"
+                },
+                {
                     "type": "text",
-                    "text": "بوت الحُوت",
+                    "text": "🐋 بوت الحُوت",
                     "size": "xs",
                     "color": "#999999",
                     "align": "center",
-                    "margin": "xl"
+                    "margin": "md"
                 }
             ],
             "backgroundColor": "#FFFFFF",
@@ -753,15 +780,9 @@ def get_help_card():
             "contents": [
                 {
                     "type": "button",
-                    "action": {"type": "message", "label": "انضم", "text": "انضم"},
+                    "action": {"type": "message", "label": "كيف ألعب؟", "text": "كيف ألعب"},
                     "style": "primary",
                     "color": "#000000",
-                    "height": "sm"
-                },
-                {
-                    "type": "button",
-                    "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
-                    "style": "secondary",
                     "height": "sm"
                 },
                 {
@@ -775,6 +796,512 @@ def get_help_card():
             "backgroundColor": "#F5F5F5",
             "paddingAll": "16px"
         }
+    }
+
+def get_games_guide_card():
+    """بطاقة شرح الألعاب"""
+    return {
+        "type": "carousel",
+        "contents": [
+            {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "🎵 لعبة الأغنية",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#000000"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "md",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "الهدف",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "text",
+                            "text": "خمّن اسم الأغنية من الكلمات المخفية",
+                            "size": "sm",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "طريقة اللعب",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "1. اكتب: أغنية\n2. سيظهر اسم الأغنية مع ⬛⬛⬛\n3. اكتب اسم الأغنية كاملاً\n4. احصل على 10 نقاط",
+                            "size": "xs",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "💡 استخدم 'لمح' للمساعدة",
+                            "size": "xxs",
+                            "color": "#999999",
+                            "margin": "md"
+                        }
+                    ],
+                    "backgroundColor": "#FFFFFF",
+                    "paddingAll": "20px"
+                }
+            },
+            {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "🎮 لعبة إنسان حيوان",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#000000"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "md",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "الهدف",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "text",
+                            "text": "أجب على أسئلة: إنسان، حيوان، نبات، جماد، بلاد",
+                            "size": "sm",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "طريقة اللعب",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "1. اكتب: لعبة\n2. سيظهر سؤال مثل: إنسان بحرف م\n3. اكتب الإجابة: محمد\n4. 5 أسئلة × 2 نقطة = 10 نقاط",
+                            "size": "xs",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "💡 الإجابة يجب أن تبدأ بالحرف المطلوب",
+                            "size": "xxs",
+                            "color": "#999999",
+                            "margin": "md",
+                            "wrap": True
+                        }
+                    ],
+                    "backgroundColor": "#FFFFFF",
+                    "paddingAll": "20px"
+                }
+            },
+            {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "🔗 لعبة السلسلة",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#000000"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "md",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "الهدف",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "text",
+                            "text": "أكمل سلسلة الكلمات - كل كلمة تبدأ بآخر حرف من الكلمة السابقة",
+                            "size": "sm",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "طريقة اللعب",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "1. اكتب: سلسلة\n2. تظهر كلمة مثل: سيارة\n3. اكتب كلمة تبدأ بـ 'ة/ه': هاتف\n4. استمر حتى نهاية السلسلة",
+                            "size": "xs",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "💡 كلمات من 3 حروف فأكثر",
+                            "size": "xxs",
+                            "color": "#999999",
+                            "margin": "md"
+                        }
+                    ],
+                    "backgroundColor": "#FFFFFF",
+                    "paddingAll": "20px"
+                }
+            },
+            {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "⚡ لعبة الأسرع",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#000000"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "md",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "الهدف",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "text",
+                            "text": "اكتب الكلمة المعروضة بأسرع وقت ممكن",
+                            "size": "sm",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "طريقة اللعب",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "1. اكتب: أسرع\n2. تظهر كلمة مثل: برمجة\n3. اكتبها بالضبط: برمجة\n4. كلما كنت أسرع، زادت نقاطك",
+                            "size": "xs",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "⏱️ لديك 30 ثانية لكل كلمة",
+                            "size": "xxs",
+                            "color": "#999999",
+                            "margin": "md"
+                        }
+                    ],
+                    "backgroundColor": "#FFFFFF",
+                    "paddingAll": "20px"
+                }
+            },
+            {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "🔄 لعبة الضد",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#000000"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "md",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "الهدف",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "text",
+                            "text": "اكتب عكس الكلمة المعروضة",
+                            "size": "sm",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "طريقة اللعب",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "1. اكتب: ضد\n2. تظهر كلمة مثل: سريع\n3. اكتب العكس: بطيء\n4. 5 كلمات × 2 نقطة",
+                            "size": "xs",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "💡 فكر جيداً في المعنى المضاد",
+                            "size": "xxs",
+                            "color": "#999999",
+                            "margin": "md"
+                        }
+                    ],
+                    "backgroundColor": "#FFFFFF",
+                    "paddingAll": "20px"
+                }
+            },
+            {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "🔤 لعبة التكوين",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#000000"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "md",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "الهدف",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "text",
+                            "text": "كوّن 3 كلمات صحيحة من 6 حروف معطاة",
+                            "size": "sm",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "طريقة اللعب",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "1. اكتب: تكوين\n2. تظهر 6 حروف: ك ت ا ب ر م\n3. كوّن 3 كلمات مختلفة:\n   - كتاب\n   - مكتب\n   - ركب\n4. اكتب كل كلمة في رسالة منفصلة",
+                            "size": "xs",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "💡 يمكن تكرار استخدام الحرف",
+                            "size": "xxs",
+                            "color": "#999999",
+                            "margin": "md"
+                        }
+                    ],
+                    "backgroundColor": "#FFFFFF",
+                    "paddingAll": "20px"
+                }
+            },
+            {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "🔍 لعبة الاختلاف",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#000000"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "md",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "الهدف",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "text",
+                            "text": "اكتشف الكلمة المختلفة من بين 4 كلمات",
+                            "size": "sm",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "طريقة اللعب",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "1. اكتب: اختلاف\n2. تظهر 4 كلمات مثل:\n   تفاح، برتقال، موز، سيارة\n3. اكتب الكلمة المختلفة: سيارة\n4. 5 أسئلة × 2 نقطة",
+                            "size": "xs",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "💡 ابحث عن الكلمة التي لا تنتمي للمجموعة",
+                            "size": "xxs",
+                            "color": "#999999",
+                            "margin": "md",
+                            "wrap": True
+                        }
+                    ],
+                    "backgroundColor": "#FFFFFF",
+                    "paddingAll": "20px"
+                }
+            },
+            {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "💕 لعبة التوافق",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": "#000000"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "md",
+                            "color": "#E5E5E5"
+                        },
+                        {
+                            "type": "text",
+                            "text": "الهدف",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "text",
+                            "text": "اكتشف نسبة التوافق بين شخصين",
+                            "size": "sm",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "طريقة اللعب",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": "#666666",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "1. اكتب: توافق\n2. اكتب اسمين مفصولين بمسافة\n   مثال: أحمد فاطمة\n3. ⚠️ نص فقط بدون @ أو رموز\n4. ستظهر نسبة التوافق بينهما",
+                            "size": "xs",
+                            "color": "#333333",
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "🎲 للتسلية فقط",
+                            "size": "xxs",
+                            "color": "#999999",
+                            "margin": "md"
+                        }
+                    ],
+                    "backgroundColor": "#FFFFFF",
+                    "paddingAll": "20px"
+                }
+            }
+        ]
     }
 
 def get_stats_card(user_id, display_name):
@@ -1624,6 +2151,12 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token,
                 FlexSendMessage(alt_text="المساعدة", 
                     contents=get_help_card(), quick_reply=get_quick_reply()))
+            return
+        
+        elif text in ['كيف ألعب', 'كيف العب', 'شرح الألعاب', 'طريقة اللعب']:
+            line_bot_api.reply_message(event.reply_token,
+                FlexSendMessage(alt_text="شرح الألعاب", 
+                    contents=get_games_guide_card(), quick_reply=get_quick_reply()))
             return
         
         elif text in ['نقاطي', 'إحصائياتي', 'احصائياتي']:
