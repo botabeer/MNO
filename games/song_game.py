@@ -1,15 +1,7 @@
 from linebot.models import TextSendMessage, FlexSendMessage
 import random
 import re
-
-COLORS = {
-    'primary': '#00D4FF',
-    'dark': '#1A1A2E',
-    'card_bg': '#1E2A38',
-    'text_light': '#8FA3B8',
-    'text_dark': '#E8EEF3',
-    'border': '#2D3E50'
-}
+from constants import COLORS
 
 def normalize_text(text):
     if not text:
@@ -66,10 +58,10 @@ class SongGame:
     
     def _show_question(self):
         song = self.questions[self.current_question]
-        prev_text = f"\n\nالاجابة السابقة: {self.previous_answer}" if self.previous_answer else ""
+        prev_text = f"\n\n✅ الإجابة السابقة: {self.previous_answer}" if self.previous_answer else ""
         
         return FlexSendMessage(
-            alt_text="لعبة الأغنية",
+            alt_text="🎵 لعبة الأغنية",
             contents={
                 "type": "bubble",
                 "body": {
@@ -82,10 +74,10 @@ class SongGame:
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "لعبة الأغنية",
+                                    "text": "🎵 لعبة الأغنية",
                                     "weight": "bold",
                                     "size": "xl",
-                                    "color": "#FFFFFF"
+                                    "color": COLORS['white']
                                 }
                             ],
                             "backgroundColor": COLORS['primary'],
@@ -115,7 +107,8 @@ class SongGame:
                                     "text": "من المغني؟",
                                     "size": "sm",
                                     "color": COLORS['primary'],
-                                    "margin": "md"
+                                    "margin": "md",
+                                    "weight": "bold"
                                 }
                             ],
                             "margin": "lg",
@@ -132,13 +125,13 @@ class SongGame:
                             "contents": [
                                 {
                                     "type": "button",
-                                    "action": {"type": "message", "label": "لمح", "text": "لمح"},
+                                    "action": {"type": "message", "label": "💡 لمح", "text": "لمح"},
                                     "style": "secondary",
                                     "height": "sm"
                                 },
                                 {
                                     "type": "button",
-                                    "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
+                                    "action": {"type": "message", "label": "📝 جاوب", "text": "جاوب"},
                                     "style": "secondary",
                                     "height": "sm"
                                 }
@@ -174,18 +167,18 @@ class SongGame:
                 first_letter = song['singer'][0]
                 word_length = len(song['singer'])
                 return {
-                    'response': TextSendMessage(text=f"يبدأ بحرف: {first_letter}\nعدد الحروف: {word_length}"),
+                    'response': TextSendMessage(text=f"💡 يبدأ بحرف: {first_letter}\n📏 عدد الحروف: {word_length}"),
                     'points': 0,
                     'correct': False
                 }
-            return {'response': TextSendMessage(text="استخدمت التلميح"), 'points': 0, 'correct': False}
+            return {'response': TextSendMessage(text="❌ استخدمت التلميح مسبقاً"), 'points': 0, 'correct': False}
         
-        if answer_lower in ['جاوب', 'الجواب']:
+        if answer_lower in ['جاوب', 'الجواب', 'الحل']:
             self.previous_answer = song['singer']
             self.answered_users.add(user_id)
             if self.current_question + 1 < self.total_questions:
                 return {
-                    'response': TextSendMessage(text=f"الاجابة: {song['singer']}"),
+                    'response': TextSendMessage(text=f"✅ الإجابة: {song['singer']}"),
                     'points': 0,
                     'correct': False,
                     'next_question': True
@@ -205,7 +198,7 @@ class SongGame:
             
             if self.current_question + 1 < self.total_questions:
                 return {
-                    'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\n+{points} نقطة"),
+                    'response': TextSendMessage(text=f"✅ إجابة صحيحة {display_name}!\n🎯 +{points} نقطة"),
                     'points': points,
                     'correct': True,
                     'won': True,
@@ -219,7 +212,7 @@ class SongGame:
     def _end_game(self):
         if not self.player_scores:
             return {
-                'response': TextSendMessage(text="انتهت اللعبة"),
+                'response': TextSendMessage(text="🎮 انتهت اللعبة"),
                 'points': 0,
                 'correct': False,
                 'won': False,
@@ -233,7 +226,7 @@ class SongGame:
                                   for i, p in enumerate(sorted_players[:5])])
         
         winner_card = FlexSendMessage(
-            alt_text="نتائج اللعبة",
+            alt_text="🏆 نتائج اللعبة",
             contents={
                 "type": "bubble",
                 "body": {
@@ -246,10 +239,10 @@ class SongGame:
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "انتهت اللعبة",
+                                    "text": "🎉 انتهت اللعبة",
                                     "weight": "bold",
                                     "size": "xl",
-                                    "color": "#FFFFFF"
+                                    "color": COLORS['white']
                                 }
                             ],
                             "backgroundColor": COLORS['primary'],
@@ -262,7 +255,7 @@ class SongGame:
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "الفائز",
+                                    "text": "🏆 الفائز",
                                     "size": "sm",
                                     "color": COLORS['text_light']
                                 },
@@ -276,7 +269,7 @@ class SongGame:
                                 },
                                 {
                                     "type": "text",
-                                    "text": f"{winner['score']} نقطة",
+                                    "text": f"⭐ {winner['score']} نقطة",
                                     "size": "lg",
                                     "color": COLORS['text_dark'],
                                     "margin": "xs"
@@ -296,7 +289,7 @@ class SongGame:
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "النتائج",
+                                    "text": "📊 النتائج",
                                     "size": "sm",
                                     "color": COLORS['text_light']
                                 },
@@ -318,7 +311,7 @@ class SongGame:
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "إعادة", "text": "أغنية"},
+                            "action": {"type": "message", "label": "🔄 إعادة", "text": "أغنية"},
                             "style": "primary",
                             "color": COLORS['primary'],
                             "height": "sm",
