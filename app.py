@@ -39,15 +39,14 @@ def get_quick_reply():
         QuickReplyButton(action=MessageAction(label="اعتراف", text="اعتراف")),
         QuickReplyButton(action=MessageAction(label="تحدي", text="تحدي")),
         QuickReplyButton(action=MessageAction(label="توافق", text="توافق")),
+        QuickReplyButton(action=MessageAction(label="فئة", text="فئة")),
         QuickReplyButton(action=MessageAction(label="اسرع", text="اسرع")),
         QuickReplyButton(action=MessageAction(label="سلسله", text="سلسله")),
         QuickReplyButton(action=MessageAction(label="مافيا", text="مافيا")),
         QuickReplyButton(action=MessageAction(label="لعبه", text="لعبه")),
         QuickReplyButton(action=MessageAction(label="اغنيه", text="اغنيه")),
         QuickReplyButton(action=MessageAction(label="ضد", text="ضد")),
-        QuickReplyButton(action=MessageAction(label="تكوين", text="تكوين")),
-        QuickReplyButton(action=MessageAction(label="فئه", text="فئه")),
-        QuickReplyButton(action=MessageAction(label="ايقاف", text="ايقاف"))
+        QuickReplyButton(action=MessageAction(label="تكوين", text="تكوين"))
     ])
 
 def is_user_registered(group_id, user_id):
@@ -108,6 +107,7 @@ def handle_message(event):
     if not any(text.lower().startswith(cmd.lower()) for cmd in allowed_commands) and not is_vote_command and not game:
         return
 
+    # الأوامر التي لا تحتاج تسجيل
     no_registration_commands = ["سؤال", "سوال", "تحدي", "اعتراف", "منشن", "توافق"]
     
     if text.lower() in ["بدايه", "start", "ابدا"]:
@@ -160,6 +160,7 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token, msg)
         return
 
+    # معالجة الأوامر التي لا تحتاج تسجيل
     if text.lower() in no_registration_commands:
         if text in ["سؤال", "سوال"]:
             msg = TextSendMessage(text=game_manager.get_random_question(), quick_reply=quick_reply)
@@ -176,6 +177,7 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token, msg)
         return
 
+    # الألعاب التي تحتاج تسجيل
     game_commands = {
         "اغنيه": "song", "لعبه": "human_animal", "سلسله": "chain",
         "اسرع": "fast_typing", "ضد": "opposite", "تكوين": "letters",
