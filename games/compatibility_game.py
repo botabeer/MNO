@@ -8,7 +8,7 @@ class CompatibilityGame:
     
     def start_game(self):
         return TextSendMessage(
-            text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: ميش عبير"
+            text="▪️ لعبة التوافق\n\nاكتب اسمين مفصولين بمسافة\nمثال: اسم اسم"
         )
     
     def check_answer(self, answer, user_id, display_name):
