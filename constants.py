@@ -25,7 +25,9 @@ POINTS = {
     'show_answer_penalty': -5,
     'perfect_game_bonus': 20,
     'mafia_win': 15,
-    'citizen_win': 10
+    'citizen_win': 10,
+    'detective_win': 12,
+    'doctor_win': 12
 }
 
 # عدد الأسئلة
@@ -54,15 +56,15 @@ MESSAGES = {
 
 # أوامر البوت
 COMMANDS = {
-    'start': ['البداية', 'ابدأ', 'start', 'البوت'],
-    'help': ['مساعدة', 'help'],
-    'stats': ['نقاطي', 'إحصائياتي', 'احصائياتي'],
-    'leaderboard': ['الصدارة', 'المتصدرين'],
-    'stop': ['إيقاف', 'stop', 'ايقاف'],
-    'join': ['انضم', 'تسجيل', 'join'],
-    'leave': ['انسحب', 'خروج'],
+    'start': ['البداية', 'ابدأ', 'start', 'البوت', 'ابدا'],
+    'help': ['مساعدة', 'help', 'المساعدة'],
+    'stats': ['نقاطي', 'إحصائياتي', 'احصائياتي', 'احصائيات'],
+    'leaderboard': ['الصدارة', 'المتصدرين', 'المتصدرون'],
+    'stop': ['إيقاف', 'stop', 'ايقاف', 'توقف'],
+    'join': ['انضم', 'تسجيل', 'join', 'انظم'],
+    'leave': ['انسحب', 'خروج', 'leave', 'الغاء'],
     'hint': ['لمح', 'تلميح', 'hint'],
-    'answer': ['جاوب', 'الجواب', 'answer']
+    'answer': ['جاوب', 'الجواب', 'answer', 'الحل']
 }
 
 # أنواع الألعاب
@@ -82,7 +84,7 @@ GAMES = {
 TEXT_COMMANDS = {
     'question': ['سؤال', 'سوال'],
     'challenge': ['تحدي', 'challenge'],
-    'confession': ['اعتراف', 'confession'],
+    'confession': ['اعتراف', 'confession', 'اعترف'],
     'mention': ['منشن', 'mention']
 }
 
@@ -101,18 +103,95 @@ MAX_GAME_DURATION = 900
 MAFIA_CONFIG = {
     'min_players': 4,
     'max_players': 12,
-    'discussion_time': 120,
-    'voting_time': 60,
-    'night_time': 30,
+    'discussion_time': 120,  # دقيقتان
+    'voting_time': 60,       # دقيقة
+    'night_time': 90,        # دقيقة ونصف
     'roles': {
-        4: {'mafia': 1, 'citizen': 2, 'detective': 1},
-        5: {'mafia': 1, 'citizen': 3, 'detective': 1},
-        6: {'mafia': 2, 'citizen': 3, 'detective': 1},
-        7: {'mafia': 2, 'citizen': 4, 'detective': 1},
-        8: {'mafia': 2, 'citizen': 5, 'detective': 1},
-        9: {'mafia': 3, 'citizen': 5, 'detective': 1},
-        10: {'mafia': 3, 'citizen': 6, 'detective': 1},
-        11: {'mafia': 3, 'citizen': 7, 'detective': 1},
-        12: {'mafia': 4, 'citizen': 7, 'detective': 1}
+        4: {'mafia': 1, 'detective': 1, 'doctor': 0, 'citizen': 2},
+        5: {'mafia': 1, 'detective': 1, 'doctor': 1, 'citizen': 2},
+        6: {'mafia': 2, 'detective': 1, 'doctor': 1, 'citizen': 2},
+        7: {'mafia': 2, 'detective': 1, 'doctor': 1, 'citizen': 3},
+        8: {'mafia': 2, 'detective': 1, 'doctor': 1, 'citizen': 4},
+        9: {'mafia': 3, 'detective': 1, 'doctor': 1, 'citizen': 4},
+        10: {'mafia': 3, 'detective': 1, 'doctor': 1, 'citizen': 5},
+        11: {'mafia': 3, 'detective': 1, 'doctor': 1, 'citizen': 6},
+        12: {'mafia': 4, 'detective': 1, 'doctor': 1, 'citizen': 6}
     }
+}
+
+# أوامر المافيا
+MAFIA_COMMANDS = {
+    'join': ['انضم مافيا', 'انضم للمافيا'],
+    'start': ['بدء مافيا', 'ابدأ مافيا', 'بداية مافيا'],
+    'kill': ['قتل'],  # للمافيا
+    'investigate': ['تحقق'],  # للمحقق
+    'protect': ['احم', 'حماية'],  # للدكتور
+    'vote': ['صوت'],  # للتصويت
+    'status': ['حالة', 'الحالة', 'وضع'],
+    'alive': ['الأحياء', 'احياء']
+}
+
+# رسائل المافيا
+MAFIA_MESSAGES = {
+    'registration_open': 'لعبة المافيا - فتح التسجيل',
+    'player_joined': '{} انضم للعبة ({})',
+    'game_full': 'اللعبة ممتلئة',
+    'already_joined': 'أنت مسجل بالفعل',
+    'game_started': 'اللعبة بدأت - جاري توزيع الأدوار',
+    'not_enough_players': 'عدد اللاعبين غير كافٍ (الحد الأدنى: {})',
+    'night_begins': 'بدأت الليلة {} - المافيا والمحقق والدكتور يرسلون أوامرهم للبوت في الخاص',
+    'day_begins': 'بدأ النهار {} - وقت النقاش',
+    'voting_begins': 'وقت التصويت - صوتوا لطرد شخص',
+    'victim_found': 'تم العثور على {} ميتاً',
+    'no_victim': 'لم يحدث شيء في الليل',
+    'player_executed': 'تم إعدام {} - الدور: {}',
+    'mafia_wins': 'المافيا انتصرت',
+    'citizens_win': 'المواطنون انتصروا',
+    'vote_registered': 'تم تسجيل تصويتك',
+    'action_registered': 'تم تسجيل إجراءك',
+    'not_night': 'ليس وقت الليل',
+    'not_voting': 'ليس وقت التصويت',
+    'player_not_found': 'لم يتم العثور على اللاعب',
+    'not_in_game': 'لست في اللعبة'
+}
+
+# أوصاف الأدوار
+ROLE_DESCRIPTIONS = {
+    'mafia': {
+        'name': 'المافيا',
+        'emoji': '🔪',
+        'description': 'أنت من المافيا - مهمتك القضاء على المواطنين',
+        'action': 'كل ليلة اختر ضحية بإرسال: قتل @الاسم',
+        'win_condition': 'تنتصر عندما يصبح عدد المافيا مساوياً أو أكبر من المواطنين'
+    },
+    'detective': {
+        'name': 'المحقق',
+        'emoji': '🔍',
+        'description': 'أنت المحقق - مهمتك اكتشاف المافيا',
+        'action': 'كل ليلة تحقق من شخص بإرسال: تحقق @الاسم',
+        'win_condition': 'تنتصر عندما يتم القضاء على جميع المافيا'
+    },
+    'doctor': {
+        'name': 'الدكتور',
+        'emoji': '💉',
+        'description': 'أنت الدكتور - مهمتك حماية المواطنين',
+        'action': 'كل ليلة احم شخصاً بإرسال: احم @الاسم',
+        'win_condition': 'تنتصر عندما يتم القضاء على جميع المافيا'
+    },
+    'citizen': {
+        'name': 'مواطن',
+        'emoji': '👤',
+        'description': 'أنت مواطن - مهمتك العثور على المافيا',
+        'action': 'شارك في النقاش والتصويت لطرد المشتبه بهم',
+        'win_condition': 'تنتصر عندما يتم القضاء على جميع المافيا'
+    }
+}
+
+# مراحل لعبة المافيا
+MAFIA_PHASES = {
+    'registration': 'التسجيل',
+    'night': 'الليل',
+    'discussion': 'النقاش',
+    'voting': 'التصويت',
+    'ended': 'انتهت'
 }
