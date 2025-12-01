@@ -1,185 +1,340 @@
-from games.base_game import BaseGame
+from linebot.models import TextSendMessage, FlexSendMessage
 import random
-from typing import Dict, Any, Optional
+import re
 
+COLORS = {
+    'primary': '#00D4FF',
+    'dark': '#1A1A2E',
+    'card_bg': '#1E2A38',
+    'text_light': '#8FA3B8',
+    'text_dark': '#E8EEF3',
+    'border': '#2D3E50'
+}
 
-class SongGame(BaseGame):
-    """لعبة أغنيه"""
+def normalize_text(text):
+    if not text:
+        return ""
+    text = text.strip().lower()
+    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+    text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
+    text = text.replace('ة', 'ه').replace('ى', 'ي')
+    text = re.sub(r'[\u064B-\u065F]', '', text)
+    text = re.sub(r'\s+', '', text)
+    return text
 
+class SongGame:
     def __init__(self, line_bot_api):
-        super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "أغنيه"
-        self.supports_hint = True
-        self.supports_reveal = True
-
+        self.line_bot_api = line_bot_api
         self.songs = [
-            {"lyrics":"رجعت لي أيام الماضي معاك","artist":"أم كلثوم"},
-            {"lyrics":"قولي أحبك كي تزيد وسامتي","artist":"كاظم الساهر"},
-            {"lyrics":"بردان أنا تكفى أبي احترق بدفا لعيونك","artist":"محمد عبده"},
-            {"lyrics":"جلست والخوف بعينيها تتأمل فنجاني","artist":"عبد الحليم حافظ"},
-            {"lyrics":"أحبك موت كلمة مالها تفسير","artist":"ماجد المهندس"},
-            {"lyrics":"تملي معاك ولو حتى بعيد عني","artist":"عمرو دياب"},
-            {"lyrics":"يا بنات يا بنات","artist":"نانسي عجرم"},
-            {"lyrics":"رحت عني ما قويت جيت لك لاتردني","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"أنا لحبيبي وحبيبي إلي","artist":"فيروز"},
-            {"lyrics":"كيف أبيّن لك شعوري دون ما أحكي","artist":"عايض"},
-            {"lyrics":"حبيبي يا كل الحياة اوعدني تبقى معايا","artist":"تامر حسني"},
-            {"lyrics":"خذني من ليلي لليلك","artist":"عبادي الجوهر"},
-            {"lyrics":"قلبي بيسألني عنك دخلك طمني وينك","artist":"وائل كفوري"},
-            {"lyrics":"تدري كثر ماني من البعد مخنوق","artist":"راشد الماجد"},
-            {"lyrics":"اسخر لك غلا وتشوفني مقصر","artist":"عايض"},
-            {"lyrics":"انسى هالعالم ولو هم يزعلون","artist":"عباس ابراهيم"},
-            {"lyrics":"أشوفك كل يوم وأروح وأقول نظرة ترد الروح","artist":"محمد عبده"},
-            {"lyrics":"أنا عندي قلب واحد","artist":"حسين الجسمي"},
-            {"lyrics":"منوتي ليتك معي","artist":"محمد عبده"},
-            {"lyrics":"جننت قلبي بحب يلوي ذراعي","artist":"ماجد المهندس"},
-            {"lyrics":"خلنا مني طمني عليك","artist":"نوال الكويتية"},
-            {"lyrics":"أحبك ليه أنا مدري","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"أمر الله أقوى أحبك والعقل واعي","artist":"ماجد المهندس"},
-            {"lyrics":"في زحمة الناس صعبة حالتي","artist":"محمد عبده"},
-            {"lyrics":"الحب يتعب من يدله والله في حبه بلاني","artist":"راشد الماجد"},
-            {"lyrics":"محد غيرك شغل عقلي شغل بالي","artist":"وليد الشامي"},
-            {"lyrics":"نكتشف مر الحقيقة بعد ما يفوت الأوان","artist":"أصالة"},
-            {"lyrics":"بديت أطيب بديت احس بك عادي","artist":"ماجد المهندس"},
-            {"lyrics":"يا هي توجع كذبة اخباري تمام","artist":"أميمة طالب"},
-            {"lyrics":"احس اني لقيتك بس عشان تضيع مني","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"اختلفنا مين يحب الثاني أكثر","artist":"محمد عبده"},
-            {"lyrics":"من أول نظرة شفتك قلت هذا اللي تمنيته","artist":"ماجد المهندس"},
-            {"lyrics":"لبيه يا بو عيون وساع","artist":"محمد عبده"},
-            {"lyrics":"اسمحيلي يا الغرام العف","artist":"محمد عبده"},
-            {"lyrics":"سألوني الناس عنك يا حبيبي","artist":"فيروز"},
-            {"lyrics":"أنا بلياك إذا أرمش تنزل ألف دمعة","artist":"ماجد المهندس"},
-            {"lyrics":"عطشان يا برق السما","artist":"ماجد المهندس"},
-            {"lyrics":"يراودني شعور إني أحبك أكثر من أول","artist":"راشد الماجد"},
-            {"lyrics":"هيجيلي موجوع دموعه ف عينه","artist":"تامر عاشور"},
-            {"lyrics":"تيجي نتراهن إن هيجي اليوم","artist":"تامر عاشور"},
-            {"lyrics":"خليني ف حضنك يا حبيبي","artist":"تامر عاشور"},
-            {"lyrics":"أنا أكثر شخص بالدنيا يحبك","artist":"راشد الماجد"},
-            {"lyrics":"أريد الله يسامحني لأن أذيت نفسي","artist":"رحمة رياض"},
-            {"lyrics":"كون نصير أنا وياك نجمة بالسما","artist":"رحمة رياض"},
-            {"lyrics":"على طاري الزعل والدمعتين","artist":"أصيل هميم"},
-            {"lyrics":"يشبهك قلبي كنك القلب مخلوق","artist":"أصيل هميم"},
-            {"lyrics":"ليت العمر لو كان مليون مرة","artist":"راشد الماجد"},
-            {"lyrics":"أحبه بس مو معناه اسمحله يجرح","artist":"أصيل هميم"},
-            {"lyrics":"المفروض أعوفك من زمان","artist":"أصيل هميم"},
-            {"lyrics":"ضعت منك وانهدم جسر التلاقي","artist":"أميمة طالب"},
-            {"lyrics":"تلمست لك عذر","artist":"راشد الماجد"},
-            {"lyrics":"بيان صادر من معاناة المحبة","artist":"أميمة طالب"},
-            {"lyrics":"أنا ودي إذا ودك نعيد الماضي","artist":"رابح صقر"},
-            {"lyrics":"عظيم إحساسي والشوق فيني","artist":"راشد الماجد"},
-            {"lyrics":"مثل ما تحب ياروحي ألبي رغبتك","artist":"رابح صقر"},
-            {"lyrics":"كل ما بلل مطر وصلك ثيابي","artist":"رابح صقر"},
-            {"lyrics":"خذ راحتك ماعاد تفرق معي","artist":"راشد الماجد"},
-            {"lyrics":"واسع خيالك اكتبه أنا بكذبك معجبه","artist":"شمة حمدان"},
-            {"lyrics":"ما دريت إني أحبك ما دريت","artist":"شمة حمدان"},
-            {"lyrics":"قال الوداع ومقصده يجرح القلب","artist":"راشد الماجد"},
-            {"lyrics":"حبيته بيني وبين نفسي","artist":"شيرين"},
-            {"lyrics":"كلها غيرانة بتحقد","artist":"شيرين"},
-            {"lyrics":"اللي لقى احبابه نسى اصحابه","artist":"راشد الماجد"},
-            {"lyrics":"مشاعر تشاور تودع تسافر","artist":"شيرين"},
-            {"lyrics":"أنا مش بتاعت الكلام ده","artist":"شيرين"},
-            {"lyrics":"مقادير يا قلبي العنا مقادير","artist":"طلال مداح"},
-            {"lyrics":"ظلمتني والله قوي يجازيك","artist":"طلال مداح"},
-            {"lyrics":"كلمة ولو جبر خاطر","artist":"عبادي الجوهر"},
-            {"lyrics":"فزيت من نومي أناديلك","artist":"ذكرى"},
-            {"lyrics":"ابد على حطة يدك","artist":"ذكرى"},
-            {"lyrics":"أنا لولا الغلا والمحبة","artist":"فؤاد عبدالواحد"},
-            {"lyrics":"أحبك لو تكون حاضر","artist":"عبادي الجوهر"},
-            {"lyrics":"إلحق عيني إلحق","artist":"وليد الشامي"},
-            {"lyrics":"يردون قلت لازم يردون","artist":"وليد الشامي"},
-            {"lyrics":"ماعاد يمديني ولا عاد يمديك","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"ولهان أنا ولهان","artist":"وليد الشامي"},
-            {"lyrics":"اقولها كبر عن الدنيا حبيبي","artist":"وليد الشامي"},
-            {"lyrics":"أنا استاهل وداع أفضل وداع","artist":"نوال الكويتية"},
-            {"lyrics":"لقيت روحي بعد ما لقيتك","artist":"نوال الكويتية"},
-            {"lyrics":"يا بعدهم كلهم يا سراجي بينهم","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"غريبة الناس غريبة الدنيا","artist":"وائل جسار"},
-            {"lyrics":"اعذريني يوم زفافك","artist":"وائل جسار"},
-            {"lyrics":"حتى الكره احساس","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"استكثرك وقتي علي","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"ياما حاولت الفراق وما قويت","artist":"عبدالمجيد عبدالله"}
+            {"lyrics": "أنا بلياك إذا أرمش إلك تنزل ألف دمعة", "singer": "ماجد المهندس"},
+            {"lyrics": "يا بعدهم كلهم .. يا سراجي بينهم", "singer": "عبدالمجيد عبدالله"},
+            {"lyrics": "أنا لحبيبي وحبيبي إلي", "singer": "فيروز"},
+            {"lyrics": "قولي أحبك كي تزيد وسامتي", "singer": "كاظم الساهر"},
+            {"lyrics": "كيف أبيّن لك شعوري دون ما أحكي", "singer": "عايض"},
+            {"lyrics": "أريد الله يسامحني لان أذيت نفسي", "singer": "رحمة رياض"},
+            {"lyrics": "جنّنت قلبي بحبٍ يلوي ذراعي", "singer": "ماجد المهندس"},
+            {"lyrics": "واسِع خيالك إكتبه آنا بكذبك مُعجبه", "singer": "شمة حمدان"},
+            {"lyrics": "خذني من ليلي لليلك", "singer": "عبادي الجوهر"},
+            {"lyrics": "أنا عندي قلب واحد", "singer": "حسين الجسمي"},
+            {"lyrics": "احس اني لقيتك بس عشان تضيع مني", "singer": "عبدالمجيد عبدالله"},
+            {"lyrics": "قال الوداع و مقصده يجرح القلب", "singer": "راشد الماجد"},
+            {"lyrics": "يا بنات يا بنات", "singer": "نانسي عجرم"},
+            {"lyrics": "احبك موت كلمة مالها تفسير", "singer": "ماجد المهندس"},
+            {"lyrics": "خلني مني طمني عليك", "singer": "نوال الكويتية"},
+            {"lyrics": "رحت عني ما قويت جيت لك لاتردني", "singer": "عبدالمجيد عبدالله"},
+            {"lyrics": "انسى هالعالم ولو هم يزعلون", "singer": "عباس ابراهيم"},
+            {"lyrics": "مشاعر تشاور تودع تسافر", "singer": "شيرين"},
+            {"lyrics": "جلست والخوف بعينيها تتأمل فنجاني", "singer": "عبد الحليم حافظ"},
+            {"lyrics": "اسخر لك غلا وتشوفني مقصر", "singer": "عايض"}
         ]
-
-        random.shuffle(self.songs)
-        self.used_songs = []
-
-    def start_game(self):
+        self.questions = []
         self.current_question = 0
-        self.game_active = True
-        self.previous_question = None
+        self.total_questions = 5
+        self.player_scores = {}
+        self.answered_users = set()
         self.previous_answer = None
-        self.answered_users.clear()
-        self.used_songs = []
-        return self.get_question()
-
-    def get_question(self):
-        available = [s for s in self.songs if s not in self.used_songs]
-        if not available:
-            self.used_songs = []
-            available = self.songs.copy()
-
-        q_data = random.choice(available)
-        self.used_songs.append(q_data)
-        self.current_answer = [q_data["artist"]]
-
-        return self.build_question_flex(
-            question_text=q_data['lyrics'],
-            additional_info="من المغني"
-        )
-
-    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        if not self.game_active or user_id in self.answered_users:
-            return None
-
-        if self.team_mode and user_id not in self.joined_users:
-            return None
-
-        normalized = self.normalize_text(user_answer)
-
-        if self.can_use_hint() and normalized == "لمح":
-            artist = self.current_answer[0]
-            hint = f"يبدأ بـ {artist[0]}\nعدد الحروف {len(artist)}"
-            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
-
-        if self.can_reveal_answer() and normalized == "جاوب":
-            reveal = f"المغني {self.current_answer[0]}"
-            self.previous_question = self.used_songs[-1]["lyrics"] if self.used_songs else None
-            self.previous_answer = self.current_answer[0]
-            self.current_question += 1
-            self.answered_users.clear()
-
-            if self.current_question >= self.questions_count:
-                result = self.end_game()
-                result["message"] = f"{reveal}\n\n{result.get('message', '')}"
-                return result
-
-            return {"message": reveal, "response": self.get_question(), "points": 0}
-
-        if self.team_mode and normalized in ["لمح", "جاوب"]:
-            return None
-
-        correct_normalized = self.normalize_text(self.current_answer[0])
+        self.hints_used = {}
         
-        if normalized == correct_normalized:
-            total_points = 1
-
-            if self.team_mode:
-                team = self.get_user_team(user_id) or self.assign_to_team(user_id)
-                self.add_team_score(team, total_points)
-            else:
-                self.add_score(user_id, display_name, total_points)
-
-            self.previous_question = self.used_songs[-1]["lyrics"] if self.used_songs else None
-            self.previous_answer = self.current_answer[0]
-            self.answered_users.add(user_id)
-            self.current_question += 1
-            self.answered_users.clear()
-
-            if self.current_question >= self.questions_count:
-                result = self.end_game()
-                result["points"] = total_points
-                return result
-
-            return {"message": f"صحيح +{total_points}", "response": self.get_question(), "points": total_points}
-
+    def start_game(self):
+        self.questions = random.sample(self.songs, self.total_questions)
+        self.current_question = 0
+        self.player_scores = {}
+        self.answered_users = set()
+        self.previous_answer = None
+        self.hints_used = {}
+        return self._show_question()
+    
+    def _show_question(self):
+        song = self.questions[self.current_question]
+        prev_text = f"\n\nالاجابة السابقة: {self.previous_answer}" if self.previous_answer else ""
+        
+        return FlexSendMessage(
+            alt_text="لعبة الأغنية",
+            contents={
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "لعبة الأغنية",
+                                    "weight": "bold",
+                                    "size": "xl",
+                                    "color": "#FFFFFF"
+                                }
+                            ],
+                            "backgroundColor": COLORS['primary'],
+                            "paddingAll": "20px",
+                            "cornerRadius": "10px"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": f"السؤال {self.current_question + 1} من {self.total_questions}",
+                                    "size": "sm",
+                                    "color": COLORS['text_light']
+                                },
+                                {
+                                    "type": "text",
+                                    "text": song['lyrics'] + prev_text,
+                                    "size": "md",
+                                    "color": COLORS['text_dark'],
+                                    "wrap": True,
+                                    "margin": "md"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "من المغني؟",
+                                    "size": "sm",
+                                    "color": COLORS['primary'],
+                                    "margin": "md"
+                                }
+                            ],
+                            "margin": "lg",
+                            "spacing": "sm"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": COLORS['border']
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "button",
+                                    "action": {"type": "message", "label": "لمح", "text": "لمح"},
+                                    "style": "secondary",
+                                    "height": "sm"
+                                },
+                                {
+                                    "type": "button",
+                                    "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
+                                    "style": "secondary",
+                                    "height": "sm"
+                                }
+                            ],
+                            "spacing": "sm",
+                            "margin": "lg"
+                        }
+                    ],
+                    "backgroundColor": COLORS['card_bg'],
+                    "paddingAll": "20px"
+                }
+            }
+        )
+    
+    def next_question(self):
+        self.current_question += 1
+        if self.current_question < self.total_questions:
+            self.answered_users = set()
+            self.hints_used = {}
+            return self._show_question()
         return None
+    
+    def check_answer(self, answer, user_id, display_name):
+        if user_id in self.answered_users:
+            return None
+            
+        answer_lower = answer.strip().lower()
+        song = self.questions[self.current_question]
+        
+        if answer_lower in ['لمح', 'تلميح']:
+            if user_id not in self.hints_used:
+                self.hints_used[user_id] = True
+                first_letter = song['singer'][0]
+                word_length = len(song['singer'])
+                return {
+                    'response': TextSendMessage(text=f"يبدأ بحرف: {first_letter}\nعدد الحروف: {word_length}"),
+                    'points': 0,
+                    'correct': False
+                }
+            return {'response': TextSendMessage(text="استخدمت التلميح"), 'points': 0, 'correct': False}
+        
+        if answer_lower in ['جاوب', 'الجواب']:
+            self.previous_answer = song['singer']
+            self.answered_users.add(user_id)
+            if self.current_question + 1 < self.total_questions:
+                return {
+                    'response': TextSendMessage(text=f"الاجابة: {song['singer']}"),
+                    'points': 0,
+                    'correct': False,
+                    'next_question': True
+                }
+            else:
+                return self._end_game()
+        
+        if normalize_text(answer) == normalize_text(song['singer']):
+            points = 10 if user_id not in self.hints_used else 7
+            
+            if user_id not in self.player_scores:
+                self.player_scores[user_id] = {'name': display_name, 'score': 0}
+            self.player_scores[user_id]['score'] += points
+            
+            self.answered_users.add(user_id)
+            self.previous_answer = song['singer']
+            
+            if self.current_question + 1 < self.total_questions:
+                return {
+                    'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\n+{points} نقطة"),
+                    'points': points,
+                    'correct': True,
+                    'won': True,
+                    'next_question': True
+                }
+            else:
+                return self._end_game()
+        
+        return None
+    
+    def _end_game(self):
+        if not self.player_scores:
+            return {
+                'response': TextSendMessage(text="انتهت اللعبة"),
+                'points': 0,
+                'correct': False,
+                'won': False,
+                'game_over': True
+            }
+        
+        sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
+        winner = sorted_players[0][1]
+        
+        players_text = "\n".join([f"{i+1}. {p[1]['name']}: {p[1]['score']} نقطة" 
+                                  for i, p in enumerate(sorted_players[:5])])
+        
+        winner_card = FlexSendMessage(
+            alt_text="نتائج اللعبة",
+            contents={
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "انتهت اللعبة",
+                                    "weight": "bold",
+                                    "size": "xl",
+                                    "color": "#FFFFFF"
+                                }
+                            ],
+                            "backgroundColor": COLORS['primary'],
+                            "paddingAll": "20px",
+                            "cornerRadius": "10px"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "الفائز",
+                                    "size": "sm",
+                                    "color": COLORS['text_light']
+                                },
+                                {
+                                    "type": "text",
+                                    "text": winner['name'],
+                                    "size": "xxl",
+                                    "color": COLORS['primary'],
+                                    "weight": "bold",
+                                    "margin": "xs"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": f"{winner['score']} نقطة",
+                                    "size": "lg",
+                                    "color": COLORS['text_dark'],
+                                    "margin": "xs"
+                                }
+                            ],
+                            "margin": "lg",
+                            "spacing": "xs"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": COLORS['border']
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "النتائج",
+                                    "size": "sm",
+                                    "color": COLORS['text_light']
+                                },
+                                {
+                                    "type": "text",
+                                    "text": players_text,
+                                    "size": "sm",
+                                    "color": COLORS['text_dark'],
+                                    "wrap": True,
+                                    "margin": "md"
+                                }
+                            ],
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": COLORS['border']
+                        },
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "إعادة", "text": "أغنية"},
+                            "style": "primary",
+                            "color": COLORS['primary'],
+                            "height": "sm",
+                            "margin": "lg"
+                        }
+                    ],
+                    "backgroundColor": COLORS['card_bg'],
+                    "paddingAll": "20px"
+                }
+            }
+        )
+        
+        return {
+            'response': winner_card,
+            'points': winner['score'],
+            'correct': True,
+            'won': True,
+            'game_over': True
+        }
