@@ -20,9 +20,9 @@ class CompatibilityGame:
                         {"type": "box", "layout": "vertical", "contents": [
                             {"type": "text", "text": "اكتب اسمين بهذا الشكل:", "size": "md", "color": COLORS['text_dark'], "wrap": True},
                             {"type": "text", "text": "اسم و اسم", "size": "lg", "color": COLORS['primary'], "margin": "md", "weight": "bold", "align": "center"},
-                            {"type": "text", "text": "مثال: محمد و فاطمة", "size": "sm", "color": COLORS['text_light'], "margin": "sm"},
-                            {"type": "text", "text": "مثال: وداد و أحمد", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
-                            {"type": "text", "text": "مثال: أبو سعد و أم سعد", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}
+                            {"type": "text", "text": "مثال: الحُوت و عبير", "size": "sm", "color": COLORS['text_light'], "margin": "sm"},
+                            {"type": "text", "text": "مثال: الحُوت و القوس", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
+                            {"type": "text", "text": "مثال: أبو فلان و أم فلان", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}
                         ], "margin": "lg", "spacing": "sm"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
