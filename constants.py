@@ -33,3 +33,19 @@ POINTS = {
 }
 
 QUESTIONS_PER_GAME = 5
+
+# إعدادات لعبة المافيا
+MAFIA_CONFIG = {
+    'min_players': 5,
+    'max_players': 20,
+    'roles': {
+        'mafia': 1,
+        'detective': 1,
+        'doctor': 1,
+        'citizen': 'remaining'  # باقي اللاعبين
+    },
+    'phases': ['registration', 'night', 'day', 'voting', 'ended'],
+    'night_duration': 60,  # ثانية
+    'day_duration': 120,   # ثانية
+    'voting_duration': 60  # ثانية
+}
