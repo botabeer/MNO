@@ -4,52 +4,25 @@ class UIBuilder:
 
     @staticmethod
     def welcome_card(display_name, is_registered=False):
-        """نافذة البداية مع أزرار انضم/انسحب ونقاطي والصدارة"""
-        buttons = []
+        """نافذة البداية مع أزرار منظمة - زرين جنب بعض"""
         
-        if is_registered:
-            buttons.extend([
-                {
-                    "type": "button",
-                    "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
-                    "style": "secondary",
-                    "height": "sm",
-                    "color": "#FF6B6B"
-                },
-                {
-                    "type": "button",
-                    "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
-                    "style": "primary",
-                    "height": "sm",
-                    "color": COLORS['primary'],
-                    "margin": "sm"
-                }
-            ])
-        else:
-            buttons.append({
-                "type": "button",
-                "action": {"type": "message", "label": "انضم", "text": "انضم"},
-                "style": "primary",
-                "height": "sm",
-                "color": COLORS['primary']
-            })
-        
-        buttons.extend([
+        # صف الأزرار الأول: انضم + انسحب
+        first_row = [
             {
                 "type": "button",
-                "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
+                "action": {"type": "message", "label": "انضم", "text": "انضم"},
                 "style": "secondary",
                 "height": "sm",
-                "margin": "sm"
+                "flex": 1
             },
             {
                 "type": "button",
-                "action": {"type": "message", "label": "المساعدة", "text": "مساعدة"},
+                "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
                 "style": "secondary",
                 "height": "sm",
-                "margin": "sm"
+                "flex": 1
             }
-        ])
+        ]
         
         return {
             "type": "bubble",
@@ -80,7 +53,107 @@ class UIBuilder:
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "contents": buttons,
+                        "contents": [
+                            # صف أول: انضم + انسحب
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": first_row,
+                                "spacing": "sm"
+                            },
+                            # صف ثاني: نقاطي + الصدارة
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    }
+                                ],
+                                "spacing": "sm",
+                                "margin": "sm"
+                            },
+                            # صف ثالث: سؤال + منشن
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "سؤال", "text": "سؤال"},
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "منشن", "text": "منشن"},
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    }
+                                ],
+                                "spacing": "sm",
+                                "margin": "sm"
+                            },
+                            # صف رابع: اعتراف + تحدي
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "اعتراف", "text": "اعتراف"},
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "تحدي", "text": "تحدي"},
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    }
+                                ],
+                                "spacing": "sm",
+                                "margin": "sm"
+                            },
+                            # صف خامس: توافق + مساعدة
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "توافق", "text": "توافق"},
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"},
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    }
+                                ],
+                                "spacing": "sm",
+                                "margin": "sm"
+                            }
+                        ],
                         "margin": "lg"
                     },
                     {"type": "separator", "margin": "lg", "color": COLORS['border']},
@@ -154,7 +227,8 @@ class UIBuilder:
                         "layout": "vertical",
                         "contents": [
                             {"type": "text", "text": "ألعاب تحتاج تسجيل مع نقاط", "size": "md", "color": COLORS['primary'], "weight": "bold"},
-                            {"type": "text", "text": "أغنية - لعبة تخمين اسم المغني", "size": "sm", "color": COLORS['text_light'], "margin": "sm"},
+                            {"type": "text", "text": "فئة - لعبة فئة وحرف", "size": "sm", "color": COLORS['text_light'], "margin": "sm"},
+                            {"type": "text", "text": "أغنية - لعبة تخمين اسم المغني", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                             {"type": "text", "text": "ضد - لعبة الأضداد", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                             {"type": "text", "text": "تكوين - تكوين كلمات من حروف", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                             {"type": "text", "text": "سلسلة - سلسلة الكلمات", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
