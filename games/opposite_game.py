@@ -1,6 +1,15 @@
-from linebot.models import TextSendMessage
+from linebot.models import TextSendMessage, FlexSendMessage
 import random
 import re
+
+COLORS = {
+    'primary': '#00D4FF',
+    'dark': '#1A1A2E',
+    'card_bg': '#1E2A38',
+    'text_light': '#8FA3B8',
+    'text_dark': '#E8EEF3',
+    'border': '#2D3E50'
+}
 
 def normalize_text(text):
     if not text:
@@ -36,99 +45,164 @@ class OppositeGame:
             {"word": "مظلم", "opposite": "مضيء"},
             {"word": "صادق", "opposite": "كاذب"},
             {"word": "شجاع", "opposite": "جبان"},
-            {"word": "نشيط", "opposite": "كسول"},
-            {"word": "واسع", "opposite": "ضيق"},
-            {"word": "عالي", "opposite": "منخفض"},
-            {"word": "حلو", "opposite": "مر"},
-            {"word": "ناعم", "opposite": "خشن"},
-            {"word": "رطب", "opposite": "جاف"}
+            {"word": "نشيط", "opposite": "كسول"}
         ]
-        
         self.questions = []
-        self.current_word = None
-        self.hints_used = 0
-        self.question_number = 0
+        self.current_question = 0
         self.total_questions = 5
         self.player_scores = {}
-    
+        self.answered_users = set()
+        self.previous_answer = None
+        self.hints_used = {}
+        
     def start_game(self):
         self.questions = random.sample(self.all_words, self.total_questions)
-        self.question_number = 0
+        self.current_question = 0
         self.player_scores = {}
-        return self._next_question()
+        self.answered_users = set()
+        self.previous_answer = None
+        self.hints_used = {}
+        return self._show_question()
     
-    def _next_question(self):
-        self.question_number += 1
-        self.current_word = self.questions[self.question_number - 1]
-        self.hints_used = 0
-        return TextSendMessage(
-            text=f"▪️ لعبة الأضداد\n\nسؤال {self.question_number} من {self.total_questions}\n\nما هو عكس كلمة: {self.current_word['word']}\n\n▫️ لمح - للحصول على تلميح\n▫️ جاوب - لعرض الإجابة"
+    def _show_question(self):
+        word = self.questions[self.current_question]
+        prev_text = f"\n\nالاجابة السابقة: {self.previous_answer}" if self.previous_answer else ""
+        
+        return FlexSendMessage(
+            alt_text="لعبة الأضداد",
+            contents={
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "لعبة الأضداد",
+                                    "weight": "bold",
+                                    "size": "xl",
+                                    "color": "#FFFFFF"
+                                }
+                            ],
+                            "backgroundColor": COLORS['primary'],
+                            "paddingAll": "20px",
+                            "cornerRadius": "10px"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": f"السؤال {self.current_question + 1} من {self.total_questions}",
+                                    "size": "sm",
+                                    "color": COLORS['text_light']
+                                },
+                                {
+                                    "type": "text",
+                                    "text": f"ما هو عكس: {word['word']}" + prev_text,
+                                    "size": "lg",
+                                    "color": COLORS['text_dark'],
+                                    "wrap": True,
+                                    "margin": "md",
+                                    "weight": "bold"
+                                }
+                            ],
+                            "margin": "lg",
+                            "spacing": "sm"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": COLORS['border']
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "button",
+                                    "action": {"type": "message", "label": "لمح", "text": "لمح"},
+                                    "style": "secondary",
+                                    "height": "sm"
+                                },
+                                {
+                                    "type": "button",
+                                    "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
+                                    "style": "secondary",
+                                    "height": "sm"
+                                }
+                            ],
+                            "spacing": "sm",
+                            "margin": "lg"
+                        }
+                    ],
+                    "backgroundColor": COLORS['card_bg'],
+                    "paddingAll": "20px"
+                }
+            }
         )
     
     def next_question(self):
-        if self.question_number < self.total_questions:
-            return self._next_question()
+        self.current_question += 1
+        if self.current_question < self.total_questions:
+            self.answered_users = set()
+            self.hints_used = {}
+            return self._show_question()
         return None
     
     def check_answer(self, answer, user_id, display_name):
-        if not self.current_word:
+        if user_id in self.answered_users:
             return None
-        
-        answer_lower = answer.strip().lower()
-        
-        if answer_lower in ['لمح', 'تلميح', 'hint']:
-            if self.hints_used == 0:
-                opposite = self.current_word['opposite']
-                first_letter = opposite[0]
-                word_length = len(opposite)
-                hint = f"▫️ يبدأ بحرف: {first_letter}\n▫️ عدد الحروف: {word_length}"
-                self.hints_used += 1
-                return {
-                    'response': TextSendMessage(text=hint),
-                    'points': 0,
-                    'correct': False,
-                    'won': False,
-                    'game_over': False
-                }
-            else:
-                return {
-                    'response': TextSendMessage(text="استخدمت التلميح"),
-                    'points': 0,
-                    'correct': False,
-                    'won': False,
-                    'game_over': False
-                }
-        
-        if answer_lower in ['جاوب', 'الجواب', 'answer']:
-            response_text = f"▪️ الإجابة: {self.current_word['opposite']}"
             
-            if self.question_number < self.total_questions:
+        answer_lower = answer.strip().lower()
+        word = self.questions[self.current_question]
+        
+        if answer_lower in ['لمح', 'تلميح']:
+            if user_id not in self.hints_used:
+                self.hints_used[user_id] = True
+                first_letter = word['opposite'][0]
+                word_length = len(word['opposite'])
                 return {
-                    'response': TextSendMessage(text=response_text),
+                    'response': TextSendMessage(text=f"يبدأ بحرف: {first_letter}\nعدد الحروف: {word_length}"),
+                    'points': 0,
+                    'correct': False
+                }
+            return {'response': TextSendMessage(text="استخدمت التلميح"), 'points': 0, 'correct': False}
+        
+        if answer_lower in ['جاوب', 'الجواب']:
+            self.previous_answer = word['opposite']
+            self.answered_users.add(user_id)
+            if self.current_question + 1 < self.total_questions:
+                return {
+                    'response': TextSendMessage(text=f"الاجابة: {word['opposite']}"),
                     'points': 0,
                     'correct': False,
-                    'won': False,
-                    'game_over': False,
                     'next_question': True
                 }
             else:
                 return self._end_game()
         
-        if normalize_text(answer) == normalize_text(self.current_word['opposite']):
-            points = 15 - (self.hints_used * 3)
+        if normalize_text(answer) == normalize_text(word['opposite']):
+            points = 10 if user_id not in self.hints_used else 7
             
             if user_id not in self.player_scores:
                 self.player_scores[user_id] = {'name': display_name, 'score': 0}
             self.player_scores[user_id]['score'] += points
             
-            if self.question_number < self.total_questions:
-                response_text = f"▪️ صحيح {display_name}\n\n{self.current_word['word']} ↔️ {self.current_word['opposite']}\n\n▫️ النقاط: {points}"
+            self.answered_users.add(user_id)
+            self.previous_answer = word['opposite']
+            
+            if self.current_question + 1 < self.total_questions:
                 return {
-                    'response': TextSendMessage(text=response_text),
+                    'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\n+{points} نقطة"),
                     'points': points,
                     'correct': True,
                     'won': True,
-                    'game_over': False,
                     'next_question': True
                 }
             else:
@@ -137,22 +211,7 @@ class OppositeGame:
         return None
     
     def _end_game(self):
-        if self.player_scores:
-            sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
-            winner = sorted_players[0][1]
-            all_scores = [(data['name'], data['score']) for uid, data in sorted_players]
-            
-            from app import get_winner_card
-            winner_card = get_winner_card(winner['name'], winner['score'], all_scores)
-            
-            return {
-                'points': 0,
-                'correct': False,
-                'won': True,
-                'game_over': True,
-                'winner_card': winner_card
-            }
-        else:
+        if not self.player_scores:
             return {
                 'response': TextSendMessage(text="انتهت اللعبة"),
                 'points': 0,
@@ -160,3 +219,116 @@ class OppositeGame:
                 'won': False,
                 'game_over': True
             }
+        
+        sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
+        winner = sorted_players[0][1]
+        
+        players_text = "\n".join([f"{i+1}. {p[1]['name']}: {p[1]['score']} نقطة" 
+                                  for i, p in enumerate(sorted_players[:5])])
+        
+        winner_card = FlexSendMessage(
+            alt_text="نتائج اللعبة",
+            contents={
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "انتهت اللعبة",
+                                    "weight": "bold",
+                                    "size": "xl",
+                                    "color": "#FFFFFF"
+                                }
+                            ],
+                            "backgroundColor": COLORS['primary'],
+                            "paddingAll": "20px",
+                            "cornerRadius": "10px"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "الفائز",
+                                    "size": "sm",
+                                    "color": COLORS['text_light']
+                                },
+                                {
+                                    "type": "text",
+                                    "text": winner['name'],
+                                    "size": "xxl",
+                                    "color": COLORS['primary'],
+                                    "weight": "bold",
+                                    "margin": "xs"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": f"{winner['score']} نقطة",
+                                    "size": "lg",
+                                    "color": COLORS['text_dark'],
+                                    "margin": "xs"
+                                }
+                            ],
+                            "margin": "lg",
+                            "spacing": "xs"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": COLORS['border']
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "النتائج",
+                                    "size": "sm",
+                                    "color": COLORS['text_light']
+                                },
+                                {
+                                    "type": "text",
+                                    "text": players_text,
+                                    "size": "sm",
+                                    "color": COLORS['text_dark'],
+                                    "wrap": True,
+                                    "margin": "md"
+                                }
+                            ],
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": COLORS['border']
+                        },
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "إعادة", "text": "ضد"},
+                            "style": "primary",
+                            "color": COLORS['primary'],
+                            "height": "sm",
+                            "margin": "lg"
+                        }
+                    ],
+                    "backgroundColor": COLORS['card_bg'],
+                    "paddingAll": "20px"
+                }
+            }
+        )
+        
+        return {
+            'response': winner_card,
+            'points': winner['score'],
+            'correct': True,
+            'won': True,
+            'game_over': True
+        }
