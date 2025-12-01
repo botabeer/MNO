@@ -1,114 +1,185 @@
-from linebot.models import TextSendMessage
+from games.base_game import BaseGame
 import random
-import re
+from typing import Dict, Any, Optional
 
-class SongGame:
-    def __init__(self, line_bot_api, use_ai=False, ask_ai=None):
-        self.line_bot_api = line_bot_api
-        self.use_ai = use_ai
-        self.ask_ai = ask_ai
-        self.current_song = None
-        self.scores = {}
-        self.answered = False
 
-        # دمج الأغاني الجديدة
+class SongGame(BaseGame):
+    """لعبة أغنيه"""
+
+    def __init__(self, line_bot_api):
+        super().__init__(line_bot_api, questions_count=5)
+        self.game_name = "أغنيه"
+        self.supports_hint = True
+        self.supports_reveal = True
+
         self.songs = [
-            {"lyrics": "أنا بلياك إذا أرمش إلك تنزل ألف دمعة", "singer": "ماجد المهندس"},
-            {"lyrics": "يا بعدهم كلهم .. يا سراجي بينهم", "singer": "عبدالمجيد عبدالله"},
-            {"lyrics": "أنا لحبيبي وحبيبي إلي", "singer": "فيروز"},
-            {"lyrics": "قولي أحبك كي تزيد وسامتي", "singer": "كاظم الساهر"},
-            {"lyrics": "كيف أبيّن لك شعوري دون ما أحكي", "singer": "عايض"},
-            {"lyrics": "أريد الله يسامحني لان أذيت نفسي", "singer": "رحمة رياض"},
-            {"lyrics": "جنّنت قلبي بحبٍ يلوي ذراعي", "singer": "ماجد المهندس"},
-            {"lyrics": "واسِع خيالك إكتبه آنا بكذبك مُعجبه", "singer": "شمة حمدان"},
-            {"lyrics": "خذني من ليلي لليلك", "singer": "عبادي الجوهر"},
-            {"lyrics": "أنا عندي قلب واحد", "singer": "حسين الجسمي"},
-            {"lyrics": "احس اني لقيتك بس عشان تضيع مني", "singer": "عبدالمجيد عبدالله"},
-            {"lyrics": "قال الوداع و مقصده يجرح القلب", "singer": "راشد الماجد"},
-            {"lyrics": "يا بنات يا بنات", "singer": "نانسي عجرم"},
-            {"lyrics": "احبك موت كلمة مالها تفسير", "singer": "ماجد المهندس"},
-            {"lyrics": "خلني مني طمني عليك", "singer": "نوال الكويتية"},
-            {"lyrics": "رحت عني ما قويت جيت لك لاتردني", "singer": "عبدالمجيد عبدالله"},
-            {"lyrics": "انسى هالعالم ولو هم يزعلون", "singer": "عباس ابراهيم"},
-            {"lyrics": "مشاعر تشاور تودع تسافر", "singer": "شيرين"},
-            {"lyrics": "جلست والخوف بعينيها تتأمل فنجاني", "singer": "عبد الحليم حافظ"},
-            {"lyrics": "اسخر لك غلا وتشوفني مقصر", "singer": "عايض"},
-            {"lyrics": "أنا استاهل وداع افضل وداع", "singer": "نوال الكويتية"},
-            {"lyrics": "ظلمتني والله قويٍ يجازيك", "singer": "طلال مداح"},
-            {"lyrics": "خلك من الي ما بقلبه وفا", "singer": "محمد عبده"},
-            {"lyrics": "انتى ندمتى", "singer": "تامر عاشور"},
-            {"lyrics": "احبك لو تكون حاضر .. احبك لو تكون هاجر", "singer": "عبادي الجوهر"},
-            {"lyrics": "منوتي ليتك معي", "singer": "محمد عبده"},
-            {"lyrics": "أنا أكثر شخص بالدنيا يحبك .. وأنتي ماتدرين", "singer": "راشد الماجد"},
-            {"lyrics": "يردون .. قلت لازم يردون وين مني يروحون", "singer": "وليد الشامي"},
-            {"lyrics": "نكتشف مر الحقيقة بعد ما يفوت الأوان", "singer": "أصاله نصري"},
-            {"lyrics": "اسميحيلي يالغرام العف", "singer": "محمد عبده"},
-            {"lyrics": "تدري كثر ماني من البعد مخنوق", "singer": "راشد الماجد"},
-            {"lyrics": "احبه بس مو معناه اسمحله بيه يجرح", "singer": "أصيل هميم"},
-            {"lyrics": "يمان حاولت الفراق وما قويت", "singer": "عبدالمجيد عبدالله"},
-            {"lyrics": "بيرجع من هواي فيك", "singer": "أميمة طالب"},
-            {"lyrics": "قلبك يسألني عنك طمني وينك", "singer": "وائل كفوري"},
-            {"lyrics": "بردان أنا تكفى أبي احترق بدفا", "singer": "محمد عبده"},
-            {"lyrics": "عايش لك .. ما عيش من دونك", "singer": "عايض"},
-            {"lyrics": "انا مش بتاعت الكلام ده", "singer": "شيرين"},
-            {"lyrics": "أنا احبك اكثر من اول", "singer": "راشد الماجد"},
-            {"lyrics": "تملي معاك ولو حتى بعيد عني", "singer": "عمرو دياب"},
-            {"lyrics": "ياليت العمر لو كان مليون مره", "singer": "راشد الماجد"},
-            {"lyrics": "يا هي توجع كذبة اخباري تمام", "singer": "أميمة طالب"},
-            {"lyrics": "أحبك ليه أنا مدري", "singer": "عبدالمجيد عبدالله"},
-            {"lyrics": "يا مغرور جرحني غرورك", "singer": "أصالة"},
-            {"lyrics": "سألوني الناس عنك يا حبيبي", "singer": "فيروز"},
-            {"lyrics": "أنا ما عيش من دونك", "singer": "ماجد المهندس"},
-            {"lyrics": "أمر الله أقوى أحبك والعقل واعي", "singer": "ماجد المهندس"}
+            {"lyrics":"رجعت لي أيام الماضي معاك","artist":"أم كلثوم"},
+            {"lyrics":"قولي أحبك كي تزيد وسامتي","artist":"كاظم الساهر"},
+            {"lyrics":"بردان أنا تكفى أبي احترق بدفا لعيونك","artist":"محمد عبده"},
+            {"lyrics":"جلست والخوف بعينيها تتأمل فنجاني","artist":"عبد الحليم حافظ"},
+            {"lyrics":"أحبك موت كلمة مالها تفسير","artist":"ماجد المهندس"},
+            {"lyrics":"تملي معاك ولو حتى بعيد عني","artist":"عمرو دياب"},
+            {"lyrics":"يا بنات يا بنات","artist":"نانسي عجرم"},
+            {"lyrics":"رحت عني ما قويت جيت لك لاتردني","artist":"عبدالمجيد عبدالله"},
+            {"lyrics":"أنا لحبيبي وحبيبي إلي","artist":"فيروز"},
+            {"lyrics":"كيف أبيّن لك شعوري دون ما أحكي","artist":"عايض"},
+            {"lyrics":"حبيبي يا كل الحياة اوعدني تبقى معايا","artist":"تامر حسني"},
+            {"lyrics":"خذني من ليلي لليلك","artist":"عبادي الجوهر"},
+            {"lyrics":"قلبي بيسألني عنك دخلك طمني وينك","artist":"وائل كفوري"},
+            {"lyrics":"تدري كثر ماني من البعد مخنوق","artist":"راشد الماجد"},
+            {"lyrics":"اسخر لك غلا وتشوفني مقصر","artist":"عايض"},
+            {"lyrics":"انسى هالعالم ولو هم يزعلون","artist":"عباس ابراهيم"},
+            {"lyrics":"أشوفك كل يوم وأروح وأقول نظرة ترد الروح","artist":"محمد عبده"},
+            {"lyrics":"أنا عندي قلب واحد","artist":"حسين الجسمي"},
+            {"lyrics":"منوتي ليتك معي","artist":"محمد عبده"},
+            {"lyrics":"جننت قلبي بحب يلوي ذراعي","artist":"ماجد المهندس"},
+            {"lyrics":"خلنا مني طمني عليك","artist":"نوال الكويتية"},
+            {"lyrics":"أحبك ليه أنا مدري","artist":"عبدالمجيد عبدالله"},
+            {"lyrics":"أمر الله أقوى أحبك والعقل واعي","artist":"ماجد المهندس"},
+            {"lyrics":"في زحمة الناس صعبة حالتي","artist":"محمد عبده"},
+            {"lyrics":"الحب يتعب من يدله والله في حبه بلاني","artist":"راشد الماجد"},
+            {"lyrics":"محد غيرك شغل عقلي شغل بالي","artist":"وليد الشامي"},
+            {"lyrics":"نكتشف مر الحقيقة بعد ما يفوت الأوان","artist":"أصالة"},
+            {"lyrics":"بديت أطيب بديت احس بك عادي","artist":"ماجد المهندس"},
+            {"lyrics":"يا هي توجع كذبة اخباري تمام","artist":"أميمة طالب"},
+            {"lyrics":"احس اني لقيتك بس عشان تضيع مني","artist":"عبدالمجيد عبدالله"},
+            {"lyrics":"اختلفنا مين يحب الثاني أكثر","artist":"محمد عبده"},
+            {"lyrics":"من أول نظرة شفتك قلت هذا اللي تمنيته","artist":"ماجد المهندس"},
+            {"lyrics":"لبيه يا بو عيون وساع","artist":"محمد عبده"},
+            {"lyrics":"اسمحيلي يا الغرام العف","artist":"محمد عبده"},
+            {"lyrics":"سألوني الناس عنك يا حبيبي","artist":"فيروز"},
+            {"lyrics":"أنا بلياك إذا أرمش تنزل ألف دمعة","artist":"ماجد المهندس"},
+            {"lyrics":"عطشان يا برق السما","artist":"ماجد المهندس"},
+            {"lyrics":"يراودني شعور إني أحبك أكثر من أول","artist":"راشد الماجد"},
+            {"lyrics":"هيجيلي موجوع دموعه ف عينه","artist":"تامر عاشور"},
+            {"lyrics":"تيجي نتراهن إن هيجي اليوم","artist":"تامر عاشور"},
+            {"lyrics":"خليني ف حضنك يا حبيبي","artist":"تامر عاشور"},
+            {"lyrics":"أنا أكثر شخص بالدنيا يحبك","artist":"راشد الماجد"},
+            {"lyrics":"أريد الله يسامحني لأن أذيت نفسي","artist":"رحمة رياض"},
+            {"lyrics":"كون نصير أنا وياك نجمة بالسما","artist":"رحمة رياض"},
+            {"lyrics":"على طاري الزعل والدمعتين","artist":"أصيل هميم"},
+            {"lyrics":"يشبهك قلبي كنك القلب مخلوق","artist":"أصيل هميم"},
+            {"lyrics":"ليت العمر لو كان مليون مرة","artist":"راشد الماجد"},
+            {"lyrics":"أحبه بس مو معناه اسمحله يجرح","artist":"أصيل هميم"},
+            {"lyrics":"المفروض أعوفك من زمان","artist":"أصيل هميم"},
+            {"lyrics":"ضعت منك وانهدم جسر التلاقي","artist":"أميمة طالب"},
+            {"lyrics":"تلمست لك عذر","artist":"راشد الماجد"},
+            {"lyrics":"بيان صادر من معاناة المحبة","artist":"أميمة طالب"},
+            {"lyrics":"أنا ودي إذا ودك نعيد الماضي","artist":"رابح صقر"},
+            {"lyrics":"عظيم إحساسي والشوق فيني","artist":"راشد الماجد"},
+            {"lyrics":"مثل ما تحب ياروحي ألبي رغبتك","artist":"رابح صقر"},
+            {"lyrics":"كل ما بلل مطر وصلك ثيابي","artist":"رابح صقر"},
+            {"lyrics":"خذ راحتك ماعاد تفرق معي","artist":"راشد الماجد"},
+            {"lyrics":"واسع خيالك اكتبه أنا بكذبك معجبه","artist":"شمة حمدان"},
+            {"lyrics":"ما دريت إني أحبك ما دريت","artist":"شمة حمدان"},
+            {"lyrics":"قال الوداع ومقصده يجرح القلب","artist":"راشد الماجد"},
+            {"lyrics":"حبيته بيني وبين نفسي","artist":"شيرين"},
+            {"lyrics":"كلها غيرانة بتحقد","artist":"شيرين"},
+            {"lyrics":"اللي لقى احبابه نسى اصحابه","artist":"راشد الماجد"},
+            {"lyrics":"مشاعر تشاور تودع تسافر","artist":"شيرين"},
+            {"lyrics":"أنا مش بتاعت الكلام ده","artist":"شيرين"},
+            {"lyrics":"مقادير يا قلبي العنا مقادير","artist":"طلال مداح"},
+            {"lyrics":"ظلمتني والله قوي يجازيك","artist":"طلال مداح"},
+            {"lyrics":"كلمة ولو جبر خاطر","artist":"عبادي الجوهر"},
+            {"lyrics":"فزيت من نومي أناديلك","artist":"ذكرى"},
+            {"lyrics":"ابد على حطة يدك","artist":"ذكرى"},
+            {"lyrics":"أنا لولا الغلا والمحبة","artist":"فؤاد عبدالواحد"},
+            {"lyrics":"أحبك لو تكون حاضر","artist":"عبادي الجوهر"},
+            {"lyrics":"إلحق عيني إلحق","artist":"وليد الشامي"},
+            {"lyrics":"يردون قلت لازم يردون","artist":"وليد الشامي"},
+            {"lyrics":"ماعاد يمديني ولا عاد يمديك","artist":"عبدالمجيد عبدالله"},
+            {"lyrics":"ولهان أنا ولهان","artist":"وليد الشامي"},
+            {"lyrics":"اقولها كبر عن الدنيا حبيبي","artist":"وليد الشامي"},
+            {"lyrics":"أنا استاهل وداع أفضل وداع","artist":"نوال الكويتية"},
+            {"lyrics":"لقيت روحي بعد ما لقيتك","artist":"نوال الكويتية"},
+            {"lyrics":"يا بعدهم كلهم يا سراجي بينهم","artist":"عبدالمجيد عبدالله"},
+            {"lyrics":"غريبة الناس غريبة الدنيا","artist":"وائل جسار"},
+            {"lyrics":"اعذريني يوم زفافك","artist":"وائل جسار"},
+            {"lyrics":"حتى الكره احساس","artist":"عبدالمجيد عبدالله"},
+            {"lyrics":"استكثرك وقتي علي","artist":"عبدالمجيد عبدالله"},
+            {"lyrics":"ياما حاولت الفراق وما قويت","artist":"عبدالمجيد عبدالله"}
         ]
-        random.shuffle(self.songs)
 
-    def normalize_text(self, text):
-        if not text:
-            return ""
-        text = text.strip().lower()
-        text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
-        text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
-        text = text.replace('ة', 'ه').replace('ى', 'ي')
-        text = re.sub(r'[\u064B-\u065F]', '', text)
-        text = re.sub(r'\s+', '', text)
-        return text
+        random.shuffle(self.songs)
+        self.used_songs = []
 
     def start_game(self):
-        self.current_song = random.choice(self.songs)
-        self.answered = False
-        return TextSendMessage(text=f"▪️ لعبة الأغنية\n\nأغنية: {self.current_song['lyrics']}\n\nمن المغني؟")
+        self.current_question = 0
+        self.game_active = True
+        self.previous_question = None
+        self.previous_answer = None
+        self.answered_users.clear()
+        self.used_songs = []
+        return self.get_question()
 
-    def check_answer(self, text, user_id, display_name):
-        if self.answered:
+    def get_question(self):
+        available = [s for s in self.songs if s not in self.used_songs]
+        if not available:
+            self.used_songs = []
+            available = self.songs.copy()
+
+        q_data = random.choice(available)
+        self.used_songs.append(q_data)
+        self.current_answer = [q_data["artist"]]
+
+        return self.build_question_flex(
+            question_text=q_data['lyrics'],
+            additional_info="من المغني"
+        )
+
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        if not self.game_active or user_id in self.answered_users:
             return None
-        text_normalized = self.normalize_text(text)
-        singer_normalized = self.normalize_text(self.current_song['singer'])
+
+        if self.team_mode and user_id not in self.joined_users:
+            return None
+
+        normalized = self.normalize_text(user_answer)
+
+        if self.can_use_hint() and normalized == "لمح":
+            artist = self.current_answer[0]
+            hint = f"يبدأ بـ {artist[0]}\nعدد الحروف {len(artist)}"
+            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
+
+        if self.can_reveal_answer() and normalized == "جاوب":
+            reveal = f"المغني {self.current_answer[0]}"
+            self.previous_question = self.used_songs[-1]["lyrics"] if self.used_songs else None
+            self.previous_answer = self.current_answer[0]
+            self.current_question += 1
+            self.answered_users.clear()
+
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"{reveal}\n\n{result.get('message', '')}"
+                return result
+
+            return {"message": reveal, "response": self.get_question(), "points": 0}
+
+        if self.team_mode and normalized in ["لمح", "جاوب"]:
+            return None
+
+        correct_normalized = self.normalize_text(self.current_answer[0])
         
-        if text in ['لمح', 'تلميح']:
-            return {'correct': False, 'response': TextSendMessage(text=f"▪️ تلميح: {self.current_song['lyrics']}")}
-        if text in ['جاوب', 'الجواب', 'الحل']:
-            self.answered = True
-            return {
-                'correct': False,
-                'game_over': True,
-                'response': TextSendMessage(
-                    text=f"▪️ الإجابة الصحيحة:\n{self.current_song['singer']}\nأغنية: {self.current_song['lyrics']}"
-                )
-            }
-        if text_normalized == singer_normalized or singer_normalized in text_normalized:
-            self.answered = True
-            points = 10
-            if user_id not in self.scores:
-                self.scores[user_id] = {'name': display_name, 'score': 0}
-            self.scores[user_id]['score'] += points
-            return {
-                'correct': True,
-                'points': points,
-                'won': True,
-                'game_over': True,
-                'response': TextSendMessage(
-                    text=f"✔️ إجابة صحيحة يا {display_name}\n+{points} نقطة\nالمغني: {self.current_song['singer']}\nأغنية: {self.current_song['lyrics']}"
-                )
-            }
+        if normalized == correct_normalized:
+            total_points = 1
+
+            if self.team_mode:
+                team = self.get_user_team(user_id) or self.assign_to_team(user_id)
+                self.add_team_score(team, total_points)
+            else:
+                self.add_score(user_id, display_name, total_points)
+
+            self.previous_question = self.used_songs[-1]["lyrics"] if self.used_songs else None
+            self.previous_answer = self.current_answer[0]
+            self.answered_users.add(user_id)
+            self.current_question += 1
+            self.answered_users.clear()
+
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["points"] = total_points
+                return result
+
+            return {"message": f"صحيح +{total_points}", "response": self.get_question(), "points": total_points}
+
         return None
