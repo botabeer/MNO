@@ -1,20 +1,21 @@
 """
-Constants - ثوابت المشروع
-========================
-جميع الثوابت والإعدادات في مكان واحد
+Constants - ثوابت المشروع المحسنة
+===================================
 """
 
-# ألوان التصميم - أبيض، أسود، رمادي
+# ألوان التصميم الموحدة
 COLORS = {
-    'primary': '#1a1a1a',      # أسود غامق
-    'secondary': '#4a4a4a',    # رمادي غامق
-    'light': '#f5f5f5',        # رمادي فاتح
-    'medium': '#9a9a9a',       # رمادي متوسط
-    'text_dark': '#2a2a2a',    # نص أسود
-    'text_light': '#6a6a6a',   # نص رمادي
-    'white': '#ffffff',        # أبيض
-    'border': '#e8e8e8',       # حدود
-    'background': '#f8f8f8'    # خلفية
+    'primary': '#1a1a1a',
+    'secondary': '#4a4a4a',
+    'light': '#f5f5f5',
+    'medium': '#9a9a9a',
+    'text_dark': '#2a2a2a',
+    'text_light': '#6a6a6a',
+    'white': '#ffffff',
+    'border': '#e8e8e8',
+    'background': '#f8f8f8',
+    'success': '#2a2a2a',
+    'error': '#4a4a4a'
 }
 
 # نظام النقاط
@@ -22,13 +23,15 @@ POINTS = {
     'correct_answer': 10,
     'hint_penalty': -2,
     'show_answer_penalty': -5,
-    'perfect_game_bonus': 20
+    'perfect_game_bonus': 20,
+    'mafia_win': 15,
+    'citizen_win': 10
 }
 
 # عدد الأسئلة
 QUESTIONS_PER_GAME = 5
 
-# رسائل النجاح والفشل
+# رسائل النجاح والفشل (بدون إيموجي)
 MESSAGES = {
     'correct': [
         'إجابة صحيحة',
@@ -42,7 +45,11 @@ MESSAGES = {
         'للأسف خطأ',
         'غير صحيح',
         'حاول مرة أخرى'
-    ]
+    ],
+    'timeout': 'انتهى الوقت',
+    'hint_used': 'تلميح: {}',
+    'game_stopped': 'تم إيقاف اللعبة',
+    'not_registered': 'يجب التسجيل أولاً - اكتب انضم'
 }
 
 # أوامر البوت
@@ -67,10 +74,11 @@ GAMES = {
     'opposite': 'ضد',
     'letters': 'تكوين',
     'differences': 'اختلاف',
-    'compatibility': 'توافق'
+    'compatibility': 'توافق',
+    'mafia': 'مافيا'
 }
 
-# أوامر نصية فقط (بدون Flex)
+# أوامر نصية (بدون Flex)
 TEXT_COMMANDS = {
     'question': ['سؤال', 'سوال'],
     'challenge': ['تحدي', 'challenge'],
@@ -86,5 +94,25 @@ MAX_MESSAGES_PER_HOUR = 30
 RATE_LIMIT_TIME_WINDOW = 60
 
 # إعدادات التنظيف
-CLEANUP_INTERVAL = 300  # 5 دقائق
-MAX_GAME_DURATION = 900  # 15 دقيقة
+CLEANUP_INTERVAL = 300
+MAX_GAME_DURATION = 900
+
+# إعدادات لعبة المافيا
+MAFIA_CONFIG = {
+    'min_players': 4,
+    'max_players': 12,
+    'discussion_time': 120,
+    'voting_time': 60,
+    'night_time': 30,
+    'roles': {
+        4: {'mafia': 1, 'citizen': 2, 'detective': 1},
+        5: {'mafia': 1, 'citizen': 3, 'detective': 1},
+        6: {'mafia': 2, 'citizen': 3, 'detective': 1},
+        7: {'mafia': 2, 'citizen': 4, 'detective': 1},
+        8: {'mafia': 2, 'citizen': 5, 'detective': 1},
+        9: {'mafia': 3, 'citizen': 5, 'detective': 1},
+        10: {'mafia': 3, 'citizen': 6, 'detective': 1},
+        11: {'mafia': 3, 'citizen': 7, 'detective': 1},
+        12: {'mafia': 4, 'citizen': 7, 'detective': 1}
+    }
+}
