@@ -16,7 +16,6 @@ class Database:
             
             cursor.execute('''CREATE TABLE IF NOT EXISTS users (
                 user_id TEXT PRIMARY KEY,
-                line_name TEXT NOT NULL,
                 display_name TEXT NOT NULL,
                 total_points INTEGER DEFAULT 0,
                 games_played INTEGER DEFAULT 0,
@@ -42,32 +41,23 @@ class Database:
             logger.error(f"خطأ تهيئة DB: {e}")
     
     @staticmethod
-    def register_user(user_id, line_name, display_name):
+    def register_or_update_user(user_id, display_name):
         with Database._lock:
             try:
                 conn = sqlite3.connect(Database.DB_NAME)
                 cursor = conn.cursor()
-                cursor.execute('INSERT OR IGNORE INTO users (user_id, line_name, display_name) VALUES (?, ?, ?)', (user_id, line_name, display_name))
+                cursor.execute('''
+                    INSERT INTO users (user_id, display_name)
+                    VALUES (?, ?)
+                    ON CONFLICT(user_id) DO UPDATE SET
+                    display_name = excluded.display_name,
+                    updated_at = CURRENT_TIMESTAMP
+                ''', (user_id, display_name))
                 conn.commit()
                 conn.close()
                 return True
             except Exception as e:
-                logger.error(f"خطأ تسجيل: {e}")
-                return False
-    
-    @staticmethod
-    def update_user_name(user_id, line_name, display_name):
-        with Database._lock:
-            try:
-                conn = sqlite3.connect(Database.DB_NAME)
-                cursor = conn.cursor()
-                cursor.execute('''INSERT INTO users (user_id, line_name, display_name) VALUES (?, ?, ?)
-                    ON CONFLICT(user_id) DO UPDATE SET line_name = excluded.line_name, display_name = excluded.display_name, updated_at = CURRENT_TIMESTAMP''', (user_id, line_name, display_name))
-                conn.commit()
-                conn.close()
-                return True
-            except Exception as e:
-                logger.error(f"خطأ تحديث: {e}")
+                logger.error(f"خطأ تسجيل/تحديث: {e}")
                 return False
     
     @staticmethod
@@ -84,13 +74,26 @@ class Database:
             return False
     
     @staticmethod
-    def update_user_points(user_id, display_name, points, won, game_type):
+    def update_user_points(user_id, points, won, game_type):
         with Database._lock:
             try:
                 conn = sqlite3.connect(Database.DB_NAME)
                 cursor = conn.cursor()
-                cursor.execute('''UPDATE users SET total_points = total_points + ?, games_played = games_played + 1, wins = wins + ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?''', (points, 1 if won else 0, user_id))
-                cursor.execute('INSERT INTO game_history (user_id, game_type, points, won) VALUES (?, ?, ?, ?)', (user_id, game_type, points, won))
+                
+                cursor.execute('''
+                    UPDATE users
+                    SET total_points = total_points + ?,
+                        games_played = games_played + 1,
+                        wins = wins + ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                ''', (points, 1 if won else 0, user_id))
+                
+                cursor.execute('''
+                    INSERT INTO game_history (user_id, game_type, points, won)
+                    VALUES (?, ?, ?, ?)
+                ''', (user_id, game_type, points, won))
+                
                 conn.commit()
                 conn.close()
                 return True
@@ -103,11 +106,19 @@ class Database:
         try:
             conn = sqlite3.connect(Database.DB_NAME)
             cursor = conn.cursor()
-            cursor.execute('SELECT total_points, games_played, wins, display_name FROM users WHERE user_id = ?', (user_id,))
+            cursor.execute('''
+                SELECT total_points, games_played, wins, display_name
+                FROM users WHERE user_id = ?
+            ''', (user_id,))
             result = cursor.fetchone()
             conn.close()
             if result:
-                return {'total_points': result[0], 'games_played': result[1], 'wins': result[2], 'display_name': result[3]}
+                return {
+                    'total_points': result[0],
+                    'games_played': result[1],
+                    'wins': result[2],
+                    'display_name': result[3]
+                }
             return None
         except Exception as e:
             logger.error(f"خطأ احصائيات: {e}")
@@ -118,10 +129,24 @@ class Database:
         try:
             conn = sqlite3.connect(Database.DB_NAME)
             cursor = conn.cursor()
-            cursor.execute('SELECT display_name, total_points, games_played, wins FROM users WHERE games_played > 0 ORDER BY total_points DESC LIMIT ?', (limit,))
+            cursor.execute('''
+                SELECT display_name, total_points, games_played, wins
+                FROM users
+                WHERE games_played > 0
+                ORDER BY total_points DESC
+                LIMIT ?
+            ''', (limit,))
             results = cursor.fetchall()
             conn.close()
-            return [{'display_name': r[0], 'total_points': r[1], 'games_played': r[2], 'wins': r[3]} for r in results]
+            return [
+                {
+                    'display_name': r[0],
+                    'total_points': r[1],
+                    'games_played': r[2],
+                    'wins': r[3]
+                }
+                for r in results
+            ]
         except Exception as e:
             logger.error(f"خطأ صدارة: {e}")
             return []
