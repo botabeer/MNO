@@ -17,7 +17,7 @@ class CompatibilityGame:
                     "layout": "vertical",
                     "contents": [
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "نسبة التوافق", "weight": "bold", "size": "xl", "color": COLORS['white']}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "10px"},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "اكتب اسمين مفصولين بمسافة", "size": "md", "color": COLORS['text_dark'], "wrap": True}, {"type": "text", "text": "مثال: أحمد فاطمة", "size": "sm", "color": COLORS['text_light'], "margin": "md"}], "margin": "lg", "spacing": "sm"}
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "اكتب اسمين مفصولين بمسافة", "size": "md", "color": COLORS['text_dark'], "wrap": True}, {"type": "text", "text": "مثال: اسم اسم", "size": "sm", "color": COLORS['text_light'], "margin": "md"}], "margin": "lg", "spacing": "sm"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
