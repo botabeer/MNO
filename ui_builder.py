@@ -1,6 +1,6 @@
 """
-UI Builder - بناء واجهات Flex Message المحسنة
-==============================================
+UI Builder - بناء واجهات Flex Message المحسنة بالألوان الجديدة
+==============================================================
 """
 
 from constants import COLORS
@@ -13,6 +13,7 @@ class UIBuilder:
         """بطاقة الترحيب"""
         return {
             "type": "bubble",
+            "size": "mega",
             "header": {
                 "type": "box",
                 "layout": "vertical",
@@ -21,21 +22,21 @@ class UIBuilder:
                         "type": "text",
                         "text": "منصة الألعاب التفاعلية",
                         "weight": "bold",
-                        "size": "xl",
+                        "size": "xxl",
                         "color": COLORS['white'],
                         "align": "center"
                     },
                     {
                         "type": "text",
                         "text": f"مرحباً {display_name}",
-                        "size": "md",
+                        "size": "lg",
                         "color": COLORS['white'],
                         "align": "center",
-                        "margin": "sm"
+                        "margin": "md"
                     }
                 ],
                 "backgroundColor": COLORS['primary'],
-                "paddingAll": "24px"
+                "paddingAll": "28px"
             },
             "body": {
                 "type": "box",
@@ -44,25 +45,39 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": "للبدء في اللعب",
-                        "size": "md",
+                        "size": "lg",
                         "weight": "bold",
-                        "color": COLORS['text_dark']
+                        "color": COLORS['text_dark'],
+                        "align": "center"
                     },
                     {
                         "type": "separator",
-                        "margin": "md",
+                        "margin": "lg",
                         "color": COLORS['border']
                     },
                     {
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            UIBuilder._step_box("1", "اضغط على زر انضم للتسجيل"),
-                            UIBuilder._step_box("2", "اختر لعبتك المفضلة"),
-                            UIBuilder._step_box("3", "اجمع النقاط وتصدر القائمة")
+                            UIBuilder._step_box("1", "اضغط على زر انضم للتسجيل", COLORS['primary']),
+                            UIBuilder._step_box("2", "اختر لعبتك المفضلة", COLORS['secondary']),
+                            UIBuilder._step_box("3", "اجمع النقاط وتصدر القائمة", COLORS['medium'])
                         ],
-                        "spacing": "sm",
-                        "margin": "md"
+                        "spacing": "md",
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "xl",
+                        "color": COLORS['border']
+                    },
+                    {
+                        "type": "text",
+                        "text": "الألعاب المتاحة",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": COLORS['text_dark'],
+                        "margin": "xl"
                     },
                     {
                         "type": "box",
@@ -70,31 +85,37 @@ class UIBuilder:
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "الألعاب المتاحة",
+                                "text": "أغنية • لعبة • سلسلة • أسرع • ضد",
                                 "size": "sm",
-                                "weight": "bold",
-                                "color": COLORS['text_dark'],
-                                "margin": "lg"
+                                "color": COLORS['text_light'],
+                                "align": "center",
+                                "wrap": True
                             },
                             {
                                 "type": "text",
-                                "text": "أغنية - لعبة - سلسلة - أسرع - ضد\nتكوين - اختلاف - توافق - مافيا",
-                                "size": "xs",
+                                "text": "تكوين • اختلاف • توافق • مافيا",
+                                "size": "sm",
                                 "color": COLORS['text_light'],
+                                "align": "center",
                                 "wrap": True,
-                                "margin": "sm"
+                                "margin": "xs"
                             }
-                        ]
+                        ],
+                        "margin": "md"
                     }
                 ],
                 "backgroundColor": COLORS['white'],
-                "paddingAll": "20px",
+                "paddingAll": "24px",
                 "spacing": "none"
             },
             "footer": {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
+                    {
+                        "type": "separator",
+                        "color": COLORS['border']
+                    },
                     {
                         "type": "box",
                         "layout": "horizontal",
@@ -113,7 +134,8 @@ class UIBuilder:
                                 "height": "sm"
                             }
                         ],
-                        "spacing": "sm"
+                        "spacing": "sm",
+                        "margin": "md"
                     }
                 ],
                 "backgroundColor": COLORS['background'],
@@ -126,6 +148,7 @@ class UIBuilder:
         """بطاقة نجاح التسجيل"""
         return {
             "type": "bubble",
+            "size": "mega",
             "body": {
                 "type": "box",
                 "layout": "vertical",
@@ -137,7 +160,7 @@ class UIBuilder:
                             {
                                 "type": "text",
                                 "text": "✓",
-                                "size": "4xl",
+                                "size": "5xl",
                                 "weight": "bold",
                                 "color": COLORS['primary'],
                                 "align": "center"
@@ -145,15 +168,15 @@ class UIBuilder:
                         ],
                         "backgroundColor": COLORS['light'],
                         "cornerRadius": "full",
-                        "width": "80px",
-                        "height": "80px",
+                        "width": "100px",
+                        "height": "100px",
                         "alignItems": "center",
                         "justifyContent": "center"
                     },
                     {
                         "type": "text",
                         "text": "تم التسجيل بنجاح",
-                        "size": "xl",
+                        "size": "xxl",
                         "weight": "bold",
                         "color": COLORS['primary'],
                         "align": "center",
@@ -162,10 +185,11 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": display_name,
-                        "size": "lg",
+                        "size": "xl",
                         "color": COLORS['text_dark'],
                         "align": "center",
-                        "margin": "sm"
+                        "margin": "md",
+                        "wrap": True
                     },
                     {
                         "type": "separator",
@@ -175,7 +199,7 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": "يمكنك الآن اللعب وجمع النقاط",
-                        "size": "sm",
+                        "size": "md",
                         "color": COLORS['text_light'],
                         "align": "center",
                         "wrap": True,
@@ -183,19 +207,24 @@ class UIBuilder:
                     }
                 ],
                 "backgroundColor": COLORS['white'],
-                "paddingAll": "28px",
+                "paddingAll": "32px",
                 "alignItems": "center"
             },
             "footer": {
                 "type": "box",
-                "layout": "horizontal",
+                "layout": "vertical",
                 "contents": [
+                    {
+                        "type": "separator",
+                        "color": COLORS['border']
+                    },
                     {
                         "type": "button",
                         "action": {"type": "message", "label": "ابدأ اللعب", "text": "أغنية"},
                         "style": "primary",
                         "color": COLORS['primary'],
-                        "height": "sm"
+                        "height": "sm",
+                        "margin": "md"
                     }
                 ],
                 "backgroundColor": COLORS['background'],
@@ -213,6 +242,7 @@ class UIBuilder:
         
         return {
             "type": "bubble",
+            "size": "mega",
             "header": {
                 "type": "box",
                 "layout": "vertical",
@@ -221,21 +251,22 @@ class UIBuilder:
                         "type": "text",
                         "text": "إحصائياتك",
                         "weight": "bold",
-                        "size": "xl",
+                        "size": "xxl",
                         "color": COLORS['white'],
                         "align": "center"
                     },
                     {
                         "type": "text",
                         "text": display_name,
-                        "size": "sm",
+                        "size": "md",
                         "color": COLORS['white'],
                         "align": "center",
-                        "margin": "sm"
+                        "margin": "sm",
+                        "wrap": True
                     }
                 ],
                 "backgroundColor": COLORS['primary'],
-                "paddingAll": "20px"
+                "paddingAll": "24px"
             },
             "body": {
                 "type": "box",
@@ -248,7 +279,7 @@ class UIBuilder:
                             {
                                 "type": "text",
                                 "text": str(stats['total_points']),
-                                "size": "4xl",
+                                "size": "5xl",
                                 "weight": "bold",
                                 "color": COLORS['primary'],
                                 "align": "center"
@@ -256,27 +287,27 @@ class UIBuilder:
                             {
                                 "type": "text",
                                 "text": "نقطة",
-                                "size": "xs",
+                                "size": "sm",
                                 "color": COLORS['text_light'],
                                 "align": "center",
-                                "margin": "xs"
+                                "margin": "sm"
                             }
                         ],
                         "backgroundColor": COLORS['light'],
-                        "cornerRadius": "md",
-                        "paddingAll": "16px"
+                        "cornerRadius": "lg",
+                        "paddingAll": "20px"
                     },
                     {
                         "type": "separator",
-                        "margin": "lg",
+                        "margin": "xl",
                         "color": COLORS['border']
                     },
-                    UIBuilder._stat_row("الألعاب", str(stats['games_played'])),
-                    UIBuilder._stat_row("الفوز", str(stats['wins'])),
-                    UIBuilder._stat_row("معدل الفوز", f"{win_rate:.0f}%")
+                    UIBuilder._stat_row("الألعاب", str(stats['games_played']), COLORS['secondary']),
+                    UIBuilder._stat_row("الفوز", str(stats['wins']), COLORS['primary']),
+                    UIBuilder._stat_row("معدل الفوز", f"{win_rate:.0f}%", COLORS['medium'])
                 ],
                 "backgroundColor": COLORS['white'],
-                "paddingAll": "20px",
+                "paddingAll": "24px",
                 "spacing": "md"
             },
             "footer": {
@@ -284,14 +315,19 @@ class UIBuilder:
                 "layout": "vertical",
                 "contents": [
                     {
+                        "type": "separator",
+                        "color": COLORS['border']
+                    },
+                    {
                         "type": "button",
                         "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
                         "style": "secondary",
-                        "height": "sm"
+                        "height": "sm",
+                        "margin": "md"
                     }
                 ],
                 "backgroundColor": COLORS['background'],
-                "paddingAll": "12px"
+                "paddingAll": "16px"
             }
         }
     
@@ -303,8 +339,19 @@ class UIBuilder:
         
         player_items = []
         for i, leader in enumerate(leaders, 1):
-            bg_color = COLORS['primary'] if i == 1 else COLORS['secondary'] if i == 2 else COLORS['text_dark'] if i == 3 else COLORS['light']
-            text_color = COLORS['white'] if i <= 3 else COLORS['text_dark']
+            # تحديد اللون حسب المرتبة
+            if i == 1:
+                bg_color = COLORS['primary']
+                text_color = COLORS['white']
+            elif i == 2:
+                bg_color = COLORS['secondary']
+                text_color = COLORS['white']
+            elif i == 3:
+                bg_color = COLORS['medium']
+                text_color = COLORS['white']
+            else:
+                bg_color = COLORS['light']
+                text_color = COLORS['text_dark']
             
             player_items.append({
                 "type": "box",
@@ -313,7 +360,7 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": str(i),
-                        "size": "sm",
+                        "size": "lg",
                         "color": text_color,
                         "flex": 0,
                         "weight": "bold",
@@ -322,32 +369,33 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": leader['display_name'],
-                        "size": "sm",
+                        "size": "md",
                         "color": text_color,
-                        "flex": 3,
-                        "margin": "md",
+                        "flex": 4,
+                        "margin": "lg",
                         "weight": "bold" if i <= 3 else "regular",
                         "wrap": True
                     },
                     {
                         "type": "text",
                         "text": str(leader['total_points']),
-                        "size": "sm",
+                        "size": "lg",
                         "color": text_color,
                         "flex": 1,
                         "align": "end",
-                        "weight": "bold" if i <= 3 else "regular"
+                        "weight": "bold"
                     }
                 ],
                 "backgroundColor": bg_color,
-                "cornerRadius": "md",
-                "paddingAll": "12px",
+                "cornerRadius": "lg",
+                "paddingAll": "16px",
                 "spacing": "md",
-                "margin": "xs" if i > 1 else "none"
+                "margin": "sm" if i > 1 else "none"
             })
         
         return {
             "type": "bubble",
+            "size": "mega",
             "header": {
                 "type": "box",
                 "layout": "vertical",
@@ -356,21 +404,21 @@ class UIBuilder:
                         "type": "text",
                         "text": "لوحة الصدارة",
                         "weight": "bold",
-                        "size": "xl",
+                        "size": "xxl",
                         "color": COLORS['white'],
                         "align": "center"
                     },
                     {
                         "type": "text",
                         "text": "أفضل اللاعبين",
-                        "size": "sm",
+                        "size": "md",
                         "color": COLORS['white'],
                         "align": "center",
                         "margin": "sm"
                     }
                 ],
                 "backgroundColor": COLORS['primary'],
-                "paddingAll": "20px"
+                "paddingAll": "24px"
             },
             "body": {
                 "type": "box",
@@ -384,14 +432,19 @@ class UIBuilder:
                 "layout": "vertical",
                 "contents": [
                     {
+                        "type": "separator",
+                        "color": COLORS['border']
+                    },
+                    {
                         "type": "button",
                         "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
                         "style": "secondary",
-                        "height": "sm"
+                        "height": "sm",
+                        "margin": "md"
                     }
                 ],
                 "backgroundColor": COLORS['background'],
-                "paddingAll": "12px"
+                "paddingAll": "16px"
             }
         }
     
@@ -400,6 +453,7 @@ class UIBuilder:
         """بطاقة المساعدة"""
         return {
             "type": "bubble",
+            "size": "mega",
             "header": {
                 "type": "box",
                 "layout": "vertical",
@@ -408,13 +462,13 @@ class UIBuilder:
                         "type": "text",
                         "text": "دليل الاستخدام",
                         "weight": "bold",
-                        "size": "xl",
+                        "size": "xxl",
                         "color": COLORS['white'],
                         "align": "center"
                     }
                 ],
                 "backgroundColor": COLORS['primary'],
-                "paddingAll": "20px"
+                "paddingAll": "24px"
             },
             "body": {
                 "type": "box",
@@ -427,42 +481,56 @@ class UIBuilder:
                         ("الصدارة", "أفضل اللاعبين"),
                         ("إيقاف", "إنهاء اللعبة")
                     ]),
-                    {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                    {"type": "separator", "margin": "xl", "color": COLORS['border']},
                     UIBuilder._help_section("أثناء اللعب", [
                         ("لمح", "الحصول على تلميح"),
                         ("جاوب", "عرض الإجابة")
                     ]),
-                    {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                    UIBuilder._help_section("الأوامر النصية", [
-                        ("سؤال", "سؤال عشوائي"),
-                        ("تحدي", "تحدي عشوائي"),
-                        ("اعتراف", "اعتراف عشوائي"),
-                        ("منشن", "منشن عشوائي")
-                    ])
+                    {"type": "separator", "margin": "xl", "color": COLORS['border']},
+                    {
+                        "type": "text",
+                        "text": "ملاحظة: الأوامر النصية (سؤال، تحدي، اعتراف، منشن) تعرض نصوص فقط",
+                        "size": "xs",
+                        "color": COLORS['medium'],
+                        "align": "center",
+                        "wrap": True,
+                        "margin": "lg"
+                    }
                 ],
                 "backgroundColor": COLORS['white'],
-                "paddingAll": "20px",
+                "paddingAll": "24px",
                 "spacing": "none"
             },
             "footer": {
                 "type": "box",
-                "layout": "horizontal",
+                "layout": "vertical",
                 "contents": [
                     {
-                        "type": "button",
-                        "action": {"type": "message", "label": "انضم", "text": "انضم"},
-                        "style": "primary",
-                        "color": COLORS['primary'],
-                        "height": "sm"
+                        "type": "separator",
+                        "color": COLORS['border']
                     },
                     {
-                        "type": "button",
-                        "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
-                        "style": "secondary",
-                        "height": "sm"
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "انضم", "text": "انضم"},
+                                "style": "primary",
+                                "color": COLORS['primary'],
+                                "height": "sm"
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
+                                "style": "secondary",
+                                "height": "sm"
+                            }
+                        ],
+                        "spacing": "sm",
+                        "margin": "md"
                     }
                 ],
-                "spacing": "sm",
                 "backgroundColor": COLORS['background'],
                 "paddingAll": "16px"
             }
@@ -473,8 +541,23 @@ class UIBuilder:
         """بطاقة الفائز"""
         percentage = (correct / total * 100) if total > 0 else 0
         
+        # تحديد المستوى حسب النسبة
+        if percentage >= 90:
+            level = "ممتاز"
+            level_color = COLORS['primary']
+        elif percentage >= 70:
+            level = "جيد جداً"
+            level_color = COLORS['secondary']
+        elif percentage >= 50:
+            level = "جيد"
+            level_color = COLORS['medium']
+        else:
+            level = "مقبول"
+            level_color = COLORS['text_light']
+        
         return {
             "type": "bubble",
+            "size": "mega",
             "header": {
                 "type": "box",
                 "layout": "vertical",
@@ -488,7 +571,7 @@ class UIBuilder:
                         "align": "center"
                     }
                 ],
-                "backgroundColor": COLORS['primary'],
+                "backgroundColor": COLORS['secondary'],
                 "paddingAll": "20px"
             },
             "body": {
@@ -498,7 +581,7 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": "الفائز",
-                        "size": "sm",
+                        "size": "md",
                         "color": COLORS['text_light'],
                         "align": "center"
                     },
@@ -519,7 +602,7 @@ class UIBuilder:
                             {
                                 "type": "text",
                                 "text": str(total_score),
-                                "size": "3xl",
+                                "size": "5xl",
                                 "weight": "bold",
                                 "color": COLORS['primary'],
                                 "align": "center"
@@ -527,86 +610,77 @@ class UIBuilder:
                             {
                                 "type": "text",
                                 "text": "نقطة",
-                                "size": "xs",
+                                "size": "sm",
                                 "color": COLORS['text_light'],
                                 "align": "center",
-                                "margin": "xs"
+                                "margin": "sm"
+                            }
+                        ],
+                        "backgroundColor": COLORS['light'],
+                        "cornerRadius": "lg",
+                        "paddingAll": "20px",
+                        "margin": "xl"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "xl",
+                        "color": COLORS['border']
+                    },
+                    UIBuilder._stat_row("الإجابات الصحيحة", f"{correct}/{total}", COLORS['primary']),
+                    UIBuilder._stat_row("نسبة النجاح", f"{percentage:.0f}%", COLORS['secondary']),
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": level,
+                                "size": "xl",
+                                "weight": "bold",
+                                "color": level_color,
+                                "align": "center"
                             }
                         ],
                         "backgroundColor": COLORS['light'],
                         "cornerRadius": "md",
                         "paddingAll": "16px",
-                        "margin": "lg"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "الإجابات الصحيحة",
-                                "size": "xs",
-                                "color": COLORS['text_light'],
-                                "flex": 3
-                            },
-                            {
-                                "type": "text",
-                                "text": f"{correct}/{total}",
-                                "size": "sm",
-                                "color": COLORS['text_dark'],
-                                "flex": 1,
-                                "align": "end",
-                                "weight": "bold"
-                            }
-                        ],
-                        "margin": "lg"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "نسبة النجاح",
-                                "size": "xs",
-                                "color": COLORS['text_light'],
-                                "flex": 3
-                            },
-                            {
-                                "type": "text",
-                                "text": f"{percentage:.0f}%",
-                                "size": "sm",
-                                "color": COLORS['text_dark'],
-                                "flex": 1,
-                                "align": "end",
-                                "weight": "bold"
-                            }
-                        ],
-                        "margin": "sm"
+                        "margin": "xl"
                     }
                 ],
                 "backgroundColor": COLORS['white'],
-                "paddingAll": "24px"
+                "paddingAll": "24px",
+                "spacing": "md"
             },
             "footer": {
                 "type": "box",
-                "layout": "horizontal",
+                "layout": "vertical",
                 "contents": [
                     {
-                        "type": "button",
-                        "action": {"type": "message", "label": "لعبة جديدة", "text": game_type},
-                        "style": "primary",
-                        "color": COLORS['primary'],
-                        "height": "sm"
+                        "type": "separator",
+                        "color": COLORS['border']
                     },
                     {
-                        "type": "button",
-                        "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
-                        "style": "secondary",
-                        "height": "sm"
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "لعبة جديدة", "text": game_type},
+                                "style": "primary",
+                                "color": COLORS['primary'],
+                                "height": "sm"
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
+                                "style": "secondary",
+                                "height": "sm"
+                            }
+                        ],
+                        "spacing": "sm",
+                        "margin": "md"
                     }
                 ],
-                "spacing": "sm",
                 "backgroundColor": COLORS['background'],
                 "paddingAll": "16px"
             }
@@ -615,36 +689,52 @@ class UIBuilder:
     # Helper Methods
     
     @staticmethod
-    def _step_box(number, text):
+    def _step_box(number, text, color):
         """صندوق خطوة"""
         return {
             "type": "box",
             "layout": "horizontal",
             "contents": [
                 {
-                    "type": "text",
-                    "text": number,
-                    "size": "sm",
-                    "color": COLORS['primary'],
-                    "flex": 0,
-                    "weight": "bold"
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": number,
+                            "size": "lg",
+                            "color": COLORS['white'],
+                            "weight": "bold",
+                            "align": "center"
+                        }
+                    ],
+                    "backgroundColor": color,
+                    "cornerRadius": "full",
+                    "width": "40px",
+                    "height": "40px",
+                    "alignItems": "center",
+                    "justifyContent": "center",
+                    "flex": 0
                 },
                 {
                     "type": "text",
                     "text": text,
-                    "size": "sm",
+                    "size": "md",
                     "color": COLORS['text_dark'],
                     "flex": 1,
                     "margin": "md",
                     "wrap": True
                 }
             ],
-            "spacing": "sm"
+            "spacing": "md"
         }
     
     @staticmethod
-    def _stat_row(label, value):
+    def _stat_row(label, value, color=None):
         """صف إحصائية"""
+        if color is None:
+            color = COLORS['text_dark']
+        
         return {
             "type": "box",
             "layout": "horizontal",
@@ -652,20 +742,21 @@ class UIBuilder:
                 {
                     "type": "text",
                     "text": label,
-                    "size": "sm",
+                    "size": "md",
                     "color": COLORS['text_light'],
-                    "flex": 2
+                    "flex": 3
                 },
                 {
                     "type": "text",
                     "text": value,
-                    "size": "md",
-                    "color": COLORS['text_dark'],
-                    "flex": 3,
+                    "size": "lg",
+                    "color": color,
+                    "flex": 2,
                     "align": "end",
                     "weight": "bold"
                 }
-            ]
+            ],
+            "margin": "md"
         }
     
     @staticmethod
@@ -680,7 +771,7 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": cmd,
-                        "size": "sm",
+                        "size": "md",
                         "color": COLORS['primary'],
                         "flex": 2,
                         "weight": "bold"
@@ -695,7 +786,7 @@ class UIBuilder:
                     }
                 ],
                 "spacing": "md",
-                "margin": "sm" if command_rows else "md"
+                "margin": "md" if command_rows else "lg"
             })
         
         return {
@@ -706,7 +797,7 @@ class UIBuilder:
                     "type": "text",
                     "text": title,
                     "weight": "bold",
-                    "size": "md",
+                    "size": "lg",
                     "color": COLORS['text_dark']
                 },
                 {
@@ -723,6 +814,7 @@ class UIBuilder:
         """إحصائيات فارغة"""
         return {
             "type": "bubble",
+            "size": "mega",
             "body": {
                 "type": "box",
                 "layout": "vertical",
@@ -730,20 +822,29 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": "إحصائياتك",
-                        "size": "xl",
+                        "size": "xxl",
                         "weight": "bold",
                         "color": COLORS['primary'],
                         "align": "center"
                     },
                     {
+                        "type": "text",
+                        "text": display_name,
+                        "size": "lg",
+                        "color": COLORS['text_dark'],
+                        "align": "center",
+                        "margin": "sm",
+                        "wrap": True
+                    },
+                    {
                         "type": "separator",
-                        "margin": "lg",
+                        "margin": "xl",
                         "color": COLORS['border']
                     },
                     {
                         "type": "text",
                         "text": "لم تبدأ بعد",
-                        "size": "md",
+                        "size": "lg",
                         "color": COLORS['text_light'],
                         "align": "center",
                         "margin": "xl"
@@ -753,11 +854,12 @@ class UIBuilder:
                         "action": {"type": "message", "label": "ابدأ الآن", "text": "انضم"},
                         "style": "primary",
                         "color": COLORS['primary'],
-                        "margin": "xl"
+                        "margin": "xl",
+                        "height": "sm"
                     }
                 ],
                 "backgroundColor": COLORS['white'],
-                "paddingAll": "24px"
+                "paddingAll": "32px"
             }
         }
     
@@ -766,6 +868,7 @@ class UIBuilder:
         """صدارة فارغة"""
         return {
             "type": "bubble",
+            "size": "mega",
             "body": {
                 "type": "box",
                 "layout": "vertical",
@@ -773,21 +876,26 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": "لوحة الصدارة",
-                        "size": "xl",
+                        "size": "xxl",
                         "weight": "bold",
                         "color": COLORS['primary'],
                         "align": "center"
                     },
                     {
+                        "type": "separator",
+                        "margin": "xl",
+                        "color": COLORS['border']
+                    },
+                    {
                         "type": "text",
                         "text": "لا توجد بيانات",
-                        "size": "md",
+                        "size": "lg",
                         "color": COLORS['text_light'],
                         "align": "center",
                         "margin": "xl"
                     }
                 ],
                 "backgroundColor": COLORS['white'],
-                "paddingAll": "24px"
+                "paddingAll": "32px"
             }
         }
