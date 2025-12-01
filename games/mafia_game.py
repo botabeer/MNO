@@ -118,7 +118,7 @@ class MafiaGame:
                                 {"type": "text", "text": "الأدوار", "size": "lg", "color": COLORS['text_dark'], "weight": "bold"},
                                 {"type": "text", "text": "🔪 المافيا: يقتل شخصاً كل ليلة", "size": "sm", "color": COLORS['text_light'], "margin": "md", "wrap": True},
                                 {"type": "text", "text": "🔍 المحقق: يكشف دور شخص كل ليلة", "size": "sm", "color": COLORS['text_light'], "margin": "xs", "wrap": True},
-                                {"type": "text", "text": "⚕️ الدكتور: يحمي شخصاً كل ليلة", "size": "sm", "color": COLORS['text_light'], "margin": "xs", "wrap": True},
+                                {"type": "text", "text": "🩹 الدكتور: يحمي شخصاً كل ليلة", "size": "sm", "color": COLORS['text_light'], "margin": "xs", "wrap": True},
                                 {"type": "text", "text": "👤 المواطن: يصوت في النهار", "size": "sm", "color": COLORS['text_light'], "margin": "xs", "wrap": True}
                             ],
                             "margin": "lg"
@@ -185,7 +185,7 @@ class MafiaGame:
         role_info = {
             "mafia": {"title": "أنت المافيا 🔪", "desc": "اختر شخصاً للقتل كل ليلة في الخاص", "color": "#8B0000"},
             "detective": {"title": "أنت المحقق 🔍", "desc": "افحص دور شخص كل ليلة في الخاص", "color": "#1E90FF"},
-            "doctor": {"title": "أنت الدكتور ⚕️", "desc": "احمِ شخصاً كل ليلة في الخاص", "color": "#32CD32"},
+            "doctor": {"title": "أنت الدكتور 🩹", "desc": "احمِ شخصاً كل ليلة في الخاص", "color": "#32CD32"},
             "citizen": {"title": "أنت مواطن 👤", "desc": "صوّت في النهار للقضاء على المافيا", "color": "#808080"}
         }
         
