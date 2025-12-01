@@ -9,7 +9,7 @@ class UIBuilder:
     
     @staticmethod
     def welcome_card(display_name):
-        """بطاقة الترحيب - تصميم داكن"""
+        """بطاقة الترحيب - تصميم أنيق ومريح"""
         return {
             "type": "bubble",
             "size": "mega",
@@ -31,7 +31,7 @@ class UIBuilder:
                                 "type": "text",
                                 "text": "منصة الألعاب التفاعلية",
                                 "weight": "bold",
-                                "size": "xxl",
+                                "size": "xl",
                                 "color": COLORS['primary'],
                                 "align": "center",
                                 "margin": "md"
@@ -39,18 +39,19 @@ class UIBuilder:
                             {
                                 "type": "text",
                                 "text": f"مرحباً {display_name}",
-                                "size": "lg",
+                                "size": "md",
                                 "color": COLORS['text_dark'],
                                 "align": "center",
-                                "margin": "md",
+                                "margin": "sm",
                                 "wrap": True
                             }
                         ],
-                        "spacing": "sm"
+                        "spacing": "sm",
+                        "paddingAll": "lg"
                     },
                     {
                         "type": "separator",
-                        "margin": "xl",
+                        "margin": "lg",
                         "color": COLORS['border']
                     },
                     {
@@ -61,8 +62,9 @@ class UIBuilder:
                             UIBuilder._step_item("2", "اختر لعبتك", "🎯"),
                             UIBuilder._step_item("3", "اجمع النقاط", "⭐")
                         ],
-                        "spacing": "md",
-                        "margin": "xl"
+                        "spacing": "sm",
+                        "margin": "lg",
+                        "paddingAll": "md"
                     },
                     {
                         "type": "box",
@@ -70,13 +72,18 @@ class UIBuilder:
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "9 ألعاب متاحة",
+                                "text": "✨ 9 ألعاب متاحة ✨",
                                 "size": "sm",
-                                "color": COLORS['medium'],
+                                "color": COLORS['text_light'],
                                 "align": "center"
                             }
                         ],
-                        "margin": "xl"
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg",
+                        "color": COLORS['border']
                     },
                     {
                         "type": "box",
@@ -97,18 +104,19 @@ class UIBuilder:
                                 "margin": "sm"
                             }
                         ],
-                        "margin": "xl"
+                        "margin": "lg",
+                        "paddingAll": "md"
                     }
                 ],
-                "paddingAll": "xl",
+                "paddingAll": "none",
                 "backgroundColor": COLORS['card_bg'],
-                "spacing": "md"
+                "spacing": "none"
             }
         }
     
     @staticmethod
     def help_card():
-        """بطاقة المساعدة - بأزرار"""
+        """بطاقة المساعدة - تصميم أنيق بأزرار"""
         return {
             "type": "carousel",
             "contents": [
@@ -122,11 +130,18 @@ class UIBuilder:
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "⚙️ الأوامر الأساسية",
-                                "weight": "bold",
-                                "size": "xl",
-                                "color": COLORS['primary'],
+                                "text": "⚙️",
+                                "size": "4xl",
                                 "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": "الأوامر الأساسية",
+                                "weight": "bold",
+                                "size": "lg",
+                                "color": COLORS['text_dark'],
+                                "align": "center",
+                                "margin": "md"
                             },
                             {
                                 "type": "separator",
@@ -139,41 +154,43 @@ class UIBuilder:
                                 "contents": [
                                     {
                                         "type": "button",
-                                        "action": {"type": "message", "label": "انضم - التسجيل", "text": "انضم"},
+                                        "action": {"type": "message", "label": "✓ انضم", "text": "انضم"},
                                         "style": "primary",
-                                        "color": COLORS['primary'],
+                                        "color": COLORS['success'],
                                         "height": "sm"
                                     },
                                     {
                                         "type": "button",
-                                        "action": {"type": "message", "label": "نقاطي - إحصائياتك", "text": "نقاطي"},
+                                        "action": {"type": "message", "label": "📊 نقاطي", "text": "نقاطي"},
                                         "style": "secondary",
                                         "height": "sm",
                                         "margin": "sm"
                                     },
                                     {
                                         "type": "button",
-                                        "action": {"type": "message", "label": "الصدارة - أفضل اللاعبين", "text": "الصدارة"},
+                                        "action": {"type": "message", "label": "🏆 الصدارة", "text": "الصدارة"},
                                         "style": "secondary",
                                         "height": "sm",
                                         "margin": "sm"
                                     },
                                     {
                                         "type": "button",
-                                        "action": {"type": "message", "label": "إيقاف - إنهاء اللعبة", "text": "إيقاف"},
+                                        "action": {"type": "message", "label": "⏹️ إيقاف", "text": "إيقاف"},
                                         "style": "secondary",
                                         "height": "sm",
                                         "margin": "sm"
                                     }
                                 ],
-                                "margin": "lg"
+                                "margin": "lg",
+                                "paddingAll": "md"
                             }
                         ],
-                        "paddingAll": "xl",
-                        "backgroundColor": COLORS['card_bg']
+                        "paddingAll": "lg",
+                        "backgroundColor": COLORS['card_bg'],
+                        "spacing": "sm"
                     }
                 },
-                # البطاقة الثانية: الألعاب
+                # البطاقة الثانية: الألعاب الجزء 1
                 {
                     "type": "bubble",
                     "size": "mega",
@@ -183,11 +200,18 @@ class UIBuilder:
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "🎯 الألعاب المتاحة",
-                                "weight": "bold",
-                                "size": "xl",
-                                "color": COLORS['primary'],
+                                "text": "🎯",
+                                "size": "4xl",
                                 "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": "الألعاب - الجزء 1",
+                                "weight": "bold",
+                                "size": "lg",
+                                "color": COLORS['text_dark'],
+                                "align": "center",
+                                "margin": "md"
                             },
                             {
                                 "type": "separator",
@@ -200,7 +224,7 @@ class UIBuilder:
                                 "contents": [
                                     {
                                         "type": "button",
-                                        "action": {"type": "message", "label": "🎵 لعبة الأغنية", "text": "أغنية"},
+                                        "action": {"type": "message", "label": "🎵 الأغنية", "text": "أغنية"},
                                         "style": "primary",
                                         "color": COLORS['primary'],
                                         "height": "sm"
@@ -234,14 +258,16 @@ class UIBuilder:
                                         "margin": "sm"
                                     }
                                 ],
-                                "margin": "lg"
+                                "margin": "lg",
+                                "paddingAll": "md"
                             }
                         ],
-                        "paddingAll": "xl",
-                        "backgroundColor": COLORS['card_bg']
+                        "paddingAll": "lg",
+                        "backgroundColor": COLORS['card_bg'],
+                        "spacing": "sm"
                     }
                 },
-                # البطاقة الثالثة: المزيد من الألعاب
+                # البطاقة الثالثة: الألعاب الجزء 2
                 {
                     "type": "bubble",
                     "size": "mega",
@@ -251,11 +277,18 @@ class UIBuilder:
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "🎲 ألعاب إضافية",
-                                "weight": "bold",
-                                "size": "xl",
-                                "color": COLORS['primary'],
+                                "text": "🎲",
+                                "size": "4xl",
                                 "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": "الألعاب - الجزء 2",
+                                "weight": "bold",
+                                "size": "lg",
+                                "color": COLORS['text_dark'],
+                                "align": "center",
+                                "margin": "md"
                             },
                             {
                                 "type": "separator",
@@ -270,12 +303,12 @@ class UIBuilder:
                                         "type": "button",
                                         "action": {"type": "message", "label": "🔤 تكوين الكلمات", "text": "تكوين"},
                                         "style": "primary",
-                                        "color": COLORS['primary'],
+                                        "color": COLORS['info'],
                                         "height": "sm"
                                     },
                                     {
                                         "type": "button",
-                                        "action": {"type": "message", "label": "🔍 إيجاد الاختلافات", "text": "اختلاف"},
+                                        "action": {"type": "message", "label": "🔍 الاختلافات", "text": "اختلاف"},
                                         "style": "secondary",
                                         "height": "sm",
                                         "margin": "sm"
@@ -289,13 +322,19 @@ class UIBuilder:
                                     },
                                     {
                                         "type": "button",
-                                        "action": {"type": "message", "label": "🕵️ لعبة المافيا", "text": "مافيا"},
+                                        "action": {"type": "message", "label": "🕵️ المافيا", "text": "مافيا"},
                                         "style": "secondary",
                                         "height": "sm",
                                         "margin": "sm"
                                     }
                                 ],
-                                "margin": "lg"
+                                "margin": "lg",
+                                "paddingAll": "md"
+                            },
+                            {
+                                "type": "separator",
+                                "margin": "lg",
+                                "color": COLORS['border']
                             },
                             {
                                 "type": "box",
@@ -303,18 +342,28 @@ class UIBuilder:
                                 "contents": [
                                     {
                                         "type": "text",
-                                        "text": "💡 أوامر نصية: سؤال، تحدي، اعتراف، منشن",
+                                        "text": "💬 أوامر نصية",
                                         "size": "xs",
                                         "color": COLORS['text_light'],
                                         "align": "center",
-                                        "wrap": True
+                                        "weight": "bold"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "سؤال • تحدي • اعتراف • منشن",
+                                        "size": "xs",
+                                        "color": COLORS['text_light'],
+                                        "align": "center",
+                                        "margin": "xs"
                                     }
                                 ],
-                                "margin": "xl"
+                                "margin": "lg",
+                                "paddingAll": "sm"
                             }
                         ],
-                        "paddingAll": "xl",
-                        "backgroundColor": COLORS['card_bg']
+                        "paddingAll": "lg",
+                        "backgroundColor": COLORS['card_bg'],
+                        "spacing": "sm"
                     }
                 }
             ]
@@ -322,7 +371,7 @@ class UIBuilder:
     
     @staticmethod
     def stats_card(display_name, stats):
-        """بطاقة الإحصائيات"""
+        """بطاقة الإحصائيات - تصميم أنيق"""
         if not stats:
             return UIBuilder._empty_stats(display_name)
         
@@ -337,24 +386,31 @@ class UIBuilder:
                 "contents": [
                     {
                         "type": "text",
-                        "text": "📊 إحصائياتك",
-                        "weight": "bold",
-                        "size": "xxl",
-                        "color": COLORS['primary'],
+                        "text": "📊",
+                        "size": "4xl",
                         "align": "center"
                     },
                     {
                         "type": "text",
-                        "text": display_name,
+                        "text": "إحصائياتك",
+                        "weight": "bold",
                         "size": "lg",
                         "color": COLORS['text_dark'],
                         "align": "center",
-                        "margin": "sm",
+                        "margin": "md"
+                    },
+                    {
+                        "type": "text",
+                        "text": display_name,
+                        "size": "sm",
+                        "color": COLORS['text_light'],
+                        "align": "center",
+                        "margin": "xs",
                         "wrap": True
                     },
                     {
                         "type": "separator",
-                        "margin": "xl",
+                        "margin": "lg",
                         "color": COLORS['border']
                     },
                     {
@@ -372,22 +428,36 @@ class UIBuilder:
                             {
                                 "type": "text",
                                 "text": "⭐ نقطة",
-                                "size": "md",
-                                "color": COLORS['medium'],
+                                "size": "sm",
+                                "color": COLORS['text_light'],
                                 "align": "center",
-                                "margin": "sm"
+                                "margin": "xs"
                             }
                         ],
-                        "margin": "xl"
+                        "margin": "lg",
+                        "paddingAll": "md"
                     },
                     {
                         "type": "separator",
-                        "margin": "xl",
+                        "margin": "lg",
                         "color": COLORS['border']
                     },
-                    UIBuilder._stat_row("🎮 الألعاب", str(stats['games_played'])),
-                    UIBuilder._stat_row("🏆 الفوز", str(stats['wins'])),
-                    UIBuilder._stat_row("📈 معدل الفوز", f"{win_rate:.0f}%"),
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            UIBuilder._stat_row("🎮 الألعاب", str(stats['games_played'])),
+                            UIBuilder._stat_row("🏆 الفوز", str(stats['wins'])),
+                            UIBuilder._stat_row("📈 معدل الفوز", f"{win_rate:.0f}%")
+                        ],
+                        "spacing": "sm",
+                        "paddingAll": "md"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg",
+                        "color": COLORS['border']
+                    },
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -400,36 +470,41 @@ class UIBuilder:
                                 "height": "sm"
                             }
                         ],
-                        "margin": "xl"
+                        "margin": "lg",
+                        "paddingAll": "md"
                     }
                 ],
-                "paddingAll": "xl",
+                "paddingAll": "lg",
                 "backgroundColor": COLORS['card_bg'],
-                "spacing": "sm"
+                "spacing": "none"
             }
         }
     
     @staticmethod
     def leaderboard_card(leaders):
-        """لوحة الصدارة"""
+        """لوحة الصدارة - تصميم أنيق"""
         if not leaders:
             return UIBuilder._empty_leaderboard()
         
         player_items = []
         for i, leader in enumerate(leaders[:10], 1):
-            # تحديد اللون واليموجي حسب المركز
+            # تحديد اللون والأيقونة
             if i == 1:
                 emoji = "🥇"
-                color = COLORS['gold']
+                name_color = COLORS['gold']
+                points_color = COLORS['gold']
             elif i == 2:
                 emoji = "🥈"
-                color = COLORS['silver']
+                name_color = COLORS['silver']
+                points_color = COLORS['silver']
             elif i == 3:
                 emoji = "🥉"
-                color = COLORS['bronze']
+                name_color = COLORS['bronze']
+                points_color = COLORS['bronze']
             else:
                 emoji = f"{i}."
-                color = COLORS['text_dark']
+                name_color = COLORS['text_dark']
+                points_color = COLORS['primary']
             
             player_items.append({
                 "type": "box",
@@ -439,7 +514,7 @@ class UIBuilder:
                         "type": "text",
                         "text": emoji,
                         "size": "xl" if i <= 3 else "md",
-                        "color": color,
+                        "color": name_color if i <= 3 else COLORS['text_light'],
                         "weight": "bold",
                         "flex": 0
                     },
@@ -447,7 +522,7 @@ class UIBuilder:
                         "type": "text",
                         "text": leader['display_name'],
                         "size": "md",
-                        "color": COLORS['text_dark'],
+                        "color": name_color,
                         "flex": 3,
                         "margin": "md",
                         "wrap": True,
@@ -457,14 +532,15 @@ class UIBuilder:
                         "type": "text",
                         "text": f"{leader['total_points']} ⭐",
                         "size": "md",
-                        "color": COLORS['primary'],
+                        "color": points_color,
                         "flex": 2,
                         "align": "end",
                         "weight": "bold"
                     }
                 ],
                 "paddingAll": "md",
-                "margin": "sm" if i > 1 else "none"
+                "margin": "xs" if i > 1 else "none",
+                "backgroundColor": COLORS['light'] if i <= 3 else "none"
             })
         
         return {
@@ -476,18 +552,36 @@ class UIBuilder:
                 "contents": [
                     {
                         "type": "text",
-                        "text": "🏆 لوحة الصدارة",
-                        "weight": "bold",
-                        "size": "xxl",
-                        "color": COLORS['primary'],
+                        "text": "🏆",
+                        "size": "4xl",
                         "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": "لوحة الصدارة",
+                        "weight": "bold",
+                        "size": "lg",
+                        "color": COLORS['text_dark'],
+                        "align": "center",
+                        "margin": "md"
                     },
                     {
                         "type": "separator",
                         "margin": "lg",
                         "color": COLORS['border']
                     },
-                    *player_items,
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": player_items,
+                        "margin": "lg",
+                        "spacing": "xs"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg",
+                        "color": COLORS['border']
+                    },
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -499,17 +593,19 @@ class UIBuilder:
                                 "height": "sm"
                             }
                         ],
-                        "margin": "xl"
+                        "margin": "lg",
+                        "paddingAll": "md"
                     }
                 ],
-                "paddingAll": "xl",
-                "backgroundColor": COLORS['card_bg']
+                "paddingAll": "lg",
+                "backgroundColor": COLORS['card_bg'],
+                "spacing": "none"
             }
         }
     
     @staticmethod
     def registration_success(display_name):
-        """نجاح التسجيل"""
+        """نجاح التسجيل - تصميم أنيق"""
         return {
             "type": "bubble",
             "body": {
@@ -517,34 +613,41 @@ class UIBuilder:
                 "layout": "vertical",
                 "contents": [
                     {
-                        "type": "text",
-                        "text": "✓",
-                        "size": "5xl",
-                        "color": COLORS['primary'],
-                        "align": "center",
-                        "weight": "bold"
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "✓",
+                                "size": "5xl",
+                                "color": COLORS['success'],
+                                "align": "center",
+                                "weight": "bold"
+                            }
+                        ],
+                        "paddingAll": "lg"
                     },
                     {
                         "type": "text",
                         "text": "تم التسجيل بنجاح",
-                        "size": "xl",
+                        "size": "lg",
                         "weight": "bold",
-                        "color": COLORS['primary'],
+                        "color": COLORS['text_dark'],
                         "align": "center",
-                        "margin": "lg"
+                        "margin": "md"
                     },
                     {
                         "type": "text",
                         "text": display_name,
-                        "size": "lg",
-                        "color": COLORS['text_dark'],
+                        "size": "md",
+                        "color": COLORS['text_light'],
                         "align": "center",
-                        "margin": "md",
+                        "margin": "sm",
                         "wrap": True
                     },
                     {
                         "type": "separator",
-                        "margin": "xl",
+                        "margin": "lg",
                         "color": COLORS['border']
                     },
                     {
@@ -566,12 +669,14 @@ class UIBuilder:
                                 "margin": "sm"
                             }
                         ],
-                        "margin": "xl"
+                        "margin": "lg",
+                        "paddingAll": "md"
                     }
                 ],
-                "paddingAll": "xl",
+                "paddingAll": "lg",
                 "backgroundColor": COLORS['card_bg'],
-                "alignItems": "center"
+                "alignItems": "center",
+                "spacing": "none"
             }
         }
     
@@ -579,7 +684,7 @@ class UIBuilder:
     
     @staticmethod
     def _step_item(num, text, emoji):
-        """عنصر خطوة"""
+        """عنصر خطوة - أنيق"""
         return {
             "type": "box",
             "layout": "horizontal",
@@ -587,25 +692,26 @@ class UIBuilder:
                 {
                     "type": "text",
                     "text": emoji,
-                    "size": "xl",
+                    "size": "lg",
                     "color": COLORS['primary'],
                     "flex": 0
                 },
                 {
                     "type": "text",
                     "text": f"{num}. {text}",
-                    "size": "md",
+                    "size": "sm",
                     "color": COLORS['text_dark'],
                     "flex": 1,
                     "margin": "md"
                 }
             ],
-            "spacing": "sm"
+            "spacing": "sm",
+            "paddingAll": "xs"
         }
     
     @staticmethod
     def _stat_row(label, value):
-        """صف إحصائية"""
+        """صف إحصائية - أنيق"""
         return {
             "type": "box",
             "layout": "horizontal",
@@ -613,27 +719,27 @@ class UIBuilder:
                 {
                     "type": "text",
                     "text": label,
-                    "size": "md",
+                    "size": "sm",
                     "color": COLORS['text_light'],
                     "flex": 2
                 },
                 {
                     "type": "text",
                     "text": value,
-                    "size": "lg",
+                    "size": "md",
                     "color": COLORS['text_dark'],
                     "flex": 1,
                     "align": "end",
                     "weight": "bold"
                 }
             ],
-            "paddingAll": "sm",
-            "margin": "sm"
+            "paddingAll": "xs",
+            "margin": "xs"
         }
     
     @staticmethod
     def _empty_stats(display_name):
-        """إحصائيات فارغة"""
+        """إحصائيات فارغة - تصميم أنيق"""
         return {
             "type": "bubble",
             "body": {
@@ -649,18 +755,24 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": "لم تبدأ بعد",
-                        "size": "xl",
-                        "color": COLORS['text_light'],
+                        "size": "lg",
+                        "color": COLORS['text_dark'],
                         "align": "center",
-                        "margin": "lg"
+                        "margin": "lg",
+                        "weight": "bold"
                     },
                     {
                         "type": "text",
                         "text": "سجل الآن وابدأ اللعب",
                         "size": "sm",
-                        "color": COLORS['medium'],
+                        "color": COLORS['text_light'],
                         "align": "center",
-                        "margin": "md"
+                        "margin": "sm"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg",
+                        "color": COLORS['border']
                     },
                     {
                         "type": "box",
@@ -674,7 +786,8 @@ class UIBuilder:
                                 "height": "sm"
                             }
                         ],
-                        "margin": "xl"
+                        "margin": "lg",
+                        "paddingAll": "md"
                     }
                 ],
                 "paddingAll": "xl",
@@ -684,7 +797,7 @@ class UIBuilder:
     
     @staticmethod
     def _empty_leaderboard():
-        """صدارة فارغة"""
+        """صدارة فارغة - تصميم أنيق"""
         return {
             "type": "bubble",
             "body": {
@@ -700,10 +813,19 @@ class UIBuilder:
                     {
                         "type": "text",
                         "text": "لا توجد بيانات",
-                        "size": "xl",
+                        "size": "lg",
+                        "color": COLORS['text_dark'],
+                        "align": "center",
+                        "margin": "lg",
+                        "weight": "bold"
+                    },
+                    {
+                        "type": "text",
+                        "text": "كن أول من يسجل",
+                        "size": "sm",
                         "color": COLORS['text_light'],
                         "align": "center",
-                        "margin": "lg"
+                        "margin": "sm"
                     }
                 ],
                 "paddingAll": "xl",
