@@ -25,7 +25,7 @@ class UIBuilder:
                         "layout": "vertical",
                         "contents": [
                             {"type": "text", "text": f"مرحباً {display_name}", "size": "lg", "color": COLORS['text_dark'], "margin": "md"},
-                            {"type": "text", "text": "منصة ألعاب ترفيهية", "size": "sm", "color": COLORS['text_light'], "margin": "sm"}
+                            {"type": "text", "text": "يمكنك استخدام البوت في الخاص و القروبات", "size": "sm", "color": COLORS['text_light'], "margin": "sm"}
                         ],
                         "margin": "lg"
                     }
