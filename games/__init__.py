@@ -11,6 +11,7 @@ from .fast_typing_game import FastTypingGame
 from .chain_words_game import ChainWordsGame
 from .human_animal_plant_game import HumanAnimalPlantGame
 from .letters_words_game import LettersWordsGame
+from .mafia_game import MafiaGame
 
 __all__ = [
     'SongGame',
@@ -20,5 +21,6 @@ __all__ = [
     'FastTypingGame',
     'ChainWordsGame',
     'HumanAnimalPlantGame',
-    'LettersWordsGame'
+    'LettersWordsGame',
+    'MafiaGame'
 ]
