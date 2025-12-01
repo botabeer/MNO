@@ -56,9 +56,7 @@ games_lock = threading.Lock()
 Database.init()
 
 def get_user_name_from_line(user_id):
-    """
-    الحصول على اسم المستخدم من LINE
-    """
+    """الحصول على اسم المستخدم من LINE"""
     try:
         profile = line_bot_api.get_profile(user_id)
         return profile.display_name
@@ -73,9 +71,7 @@ def get_user_name_from_line(user_id):
         return f"لاعب_{user_id[-4:]}"
 
 def update_user_name_in_db(user_id):
-    """
-    تحديث اسم المستخدم في قاعدة البيانات من LINE
-    """
+    """تحديث اسم المستخدم في قاعدة البيانات من LINE"""
     try:
         line_name = get_user_name_from_line(user_id)
         Database.update_user_name(user_id, line_name, line_name)
@@ -100,7 +96,7 @@ def load_text_file(filename):
 QUESTIONS = load_text_file('questions.txt')
 CHALLENGES = load_text_file('challenges.txt')
 CONFESSIONS = load_text_file('confessions.txt')
-MENTION_QUESTIONS = load_text_file('more_questions.txt')
+MENTION_QUESTIONS = load_text_file('mentions.txt')
 
 def start_game(game_id, game_class, game_type, user_id):
     """بدء لعبة جديدة"""
@@ -180,7 +176,7 @@ def home():
     </head>
     <body>
         <div class="container">
-            <h1>بوت الألعاب</h1>
+            <h1>بوت الألعاب التفاعلية</h1>
             <div class="status">
                 <div class="status-item">
                     <span class="label">حالة الخادم</span>
@@ -195,7 +191,7 @@ def home():
                     <span class="value">9</span>
                 </div>
             </div>
-            <div class="footer">منصة ألعاب تفاعلية</div>
+            <div class="footer">منصة ألعاب تفاعلية احترافية</div>
         </div>
     </body>
     </html>
@@ -233,6 +229,7 @@ def handle_message(event):
         
         # الحصول على معرف اللعبة
         game_id = getattr(event.source, 'group_id', user_id)
+        is_group = hasattr(event.source, 'group_id')
         
         # تحديث اسم المستخدم تلقائياً
         display_name = update_user_name_in_db(user_id)
@@ -268,11 +265,16 @@ def handle_message(event):
             return
         
         if text in COMMANDS['join']:
-            # التسجيل مع حفظ الاسم من LINE
             Database.register_user(user_id, display_name, display_name)
             line_bot_api.reply_message(event.reply_token,
                 FlexSendMessage(alt_text="تم التسجيل",
                     contents=UIBuilder.registration_success(display_name)))
+            return
+        
+        if text in COMMANDS['leave']:
+            if Database.delete_user(user_id):
+                line_bot_api.reply_message(event.reply_token,
+                    TextSendMessage(text="تم إلغاء تسجيلك بنجاح"))
             return
         
         if text in COMMANDS['stop']:
@@ -324,28 +326,62 @@ def handle_message(event):
         }
         
         if text in games_map:
+            # المافيا تتطلب مجموعة
+            if text == 'مافيا' and not is_group:
+                line_bot_api.reply_message(event.reply_token,
+                    TextSendMessage(text="لعبة المافيا تتطلب مجموعة"))
+                return
+            
             response = start_game(game_id, games_map[text], text, user_id)
             if response:
-                line_bot_api.reply_message(event.reply_token, response)
+                if isinstance(response, list):
+                    line_bot_api.reply_message(event.reply_token, response)
+                else:
+                    line_bot_api.reply_message(event.reply_token, response)
             return
         
         # === معالجة إجابات الألعاب النشطة ===
         
         if game_id in active_games:
-            # التحقق من التسجيل
-            if not Database.is_user_registered(user_id):
-                return  # صامت - لا يرد على غير المسجلين
+            # التحقق من التسجيل للألعاب العادية
+            if active_games[game_id]['type'] != 'مافيا':
+                if not Database.is_user_registered(user_id):
+                    return  # صامت - لا يرد على غير المسجلين
             
             game_data = active_games[game_id]
-            
-            # التحقق من أن اللاعب لم يجب بعد
-            if user_id in game_data.get('answered_users', set()):
-                return  # صامت
-            
             game = game_data['game']
             game_type = game_data['type']
             
+            # معالجة خاصة للمافيا
+            if game_type == 'مافيا':
+                result = game.check_answer(text, user_id, display_name)
+                
+                if result:
+                    response = result.get('response')
+                    if response:
+                        line_bot_api.reply_message(event.reply_token, response)
+                    
+                    # إرسال الأدوار للاعبين في الخاص
+                    if result.get('assign_roles'):
+                        for player_id in game.players.keys():
+                            try:
+                                role_msg = game.get_role_message(player_id)
+                                if role_msg:
+                                    line_bot_api.push_message(player_id, role_msg)
+                            except Exception as e:
+                                logger.error(f"خطأ إرسال الدور: {e}")
+                        
+                        # إرسال إشعار بدء الليل في المجموعة
+                        line_bot_api.push_message(game_id,
+                            TextSendMessage(text="تم توزيع الأدوار\n\nبدأت الليلة الأولى\n\nالمافيا والمحقق والدكتور يرسلون أوامرهم للبوت في الخاص"))
+                return
+            
+            # معالجة الألعاب العادية
             try:
+                # التحقق من أن اللاعب لم يجب بعد
+                if user_id in game_data.get('answered_users', set()):
+                    return  # صامت
+                
                 result = game.check_answer(text, user_id, display_name)
                 if result:
                     # تسجيل الإجابة
@@ -358,6 +394,19 @@ def handle_message(event):
                         Database.update_user_points(user_id, display_name, points,
                             result.get('won', False), game_type)
                     
+                    # السؤال التالي
+                    if result.get('next_question', False):
+                        next_q = game.next_question()
+                        if next_q:
+                            if isinstance(result.get('response'), list):
+                                line_bot_api.reply_message(event.reply_token, 
+                                    result['response'] + [next_q])
+                            else:
+                                line_bot_api.reply_message(event.reply_token, 
+                                    [result['response'], next_q])
+                            game_data['answered_users'].clear()
+                            return
+                    
                     # إنهاء اللعبة
                     if result.get('game_over', False):
                         with games_lock:
@@ -367,7 +416,10 @@ def handle_message(event):
                     # إرسال الرد
                     response = result.get('response')
                     if response:
-                        line_bot_api.reply_message(event.reply_token, response)
+                        if isinstance(response, list):
+                            line_bot_api.reply_message(event.reply_token, response)
+                        else:
+                            line_bot_api.reply_message(event.reply_token, response)
                 return
             except Exception as e:
                 logger.error(f"خطأ معالجة إجابة: {e}")
@@ -408,9 +460,9 @@ cleanup_thread.start()
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     logger.info("="*50)
-    logger.info("بوت الألعاب - بدء التشغيل")
+    logger.info("بوت الألعاب التفاعلية - بدء التشغيل")
     logger.info(f"المنفذ: {port}")
-    logger.info(f"الألعاب: {len(active_games)}")
+    logger.info(f"الألعاب النشطة: {len(active_games)}")
     logger.info("="*50)
     
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
