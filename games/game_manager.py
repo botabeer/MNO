@@ -4,6 +4,7 @@ from games.fast_typing_game import FastTypingGame
 from games.chain_words_game import ChainWordsGame
 from games.human_animal_plant_game import HumanAnimalPlantGame
 from games.letters_words_game import LettersWordsGame
+from games.category_letter_game import CategoryLetterGame
 from games.compatibility_game import CompatibilityGame
 from games.mafia_game import MafiaGame
 import random
@@ -25,7 +26,7 @@ class GameManager:
                 with open(filepath, 'r', encoding='utf-8') as f:
                     return [line.strip() for line in f if line.strip()]
         except Exception as e:
-            print(f"خطأ تحميل {filepath}: {e}")
+            print(f"خطا تحميل {filepath}: {e}")
         return []
     
     def start_game(self, game_type, group_id):
@@ -36,6 +37,7 @@ class GameManager:
             'chain': ChainWordsGame,
             'human_animal': HumanAnimalPlantGame,
             'letters': LettersWordsGame,
+            'category': CategoryLetterGame,
             'compatibility': CompatibilityGame,
             'mafia': MafiaGame
         }
@@ -70,13 +72,13 @@ class GameManager:
         return False
     
     def get_random_question(self):
-        return random.choice(self.questions) if self.questions else "لا توجد أسئلة متاحة"
+        return random.choice(self.questions) if self.questions else "لا توجد اسئله متاحه"
     
     def get_random_challenge(self):
-        return random.choice(self.challenges) if self.challenges else "لا توجد تحديات متاحة"
+        return random.choice(self.challenges) if self.challenges else "لا توجد تحديات متاحه"
     
     def get_random_confession(self):
-        return random.choice(self.confessions) if self.confessions else "لا توجد اعترافات متاحة"
+        return random.choice(self.confessions) if self.confessions else "لا توجد اعترافات متاحه"
     
     def get_random_mention(self):
-        return random.choice(self.mentions) if self.mentions else "لا توجد منشنات متاحة"
+        return random.choice(self.mentions) if self.mentions else "لا توجد منشنات متاحه"
