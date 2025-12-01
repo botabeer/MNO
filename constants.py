@@ -1,21 +1,25 @@
 """
-Constants - ثوابت المشروع المحسنة
+Constants - ثوابت المشروع بألوان البوت الجديدة
 ===================================
 """
 
-# ألوان التصميم الموحدة
+# ألوان التصميم من صور البوت
 COLORS = {
-    'primary': '#1a1a1a',
-    'secondary': '#4a4a4a',
-    'light': '#f5f5f5',
-    'medium': '#9a9a9a',
-    'text_dark': '#2a2a2a',
-    'text_light': '#6a6a6a',
-    'white': '#ffffff',
-    'border': '#e8e8e8',
-    'background': '#f8f8f8',
-    'success': '#2a2a2a',
-    'error': '#4a4a4a'
+    'primary': '#00D9FF',      # الأزرق الفاتح المميز
+    'primary_dark': '#00B8D4',  # أزرق داكن
+    'secondary': '#1E3A5F',    # أزرق داكن للعناوين
+    'dark_bg': '#0A1929',      # خلفية داكنة
+    'light': '#E3F2FD',        # أزرق فاتح جداً
+    'medium': '#64B5F6',       # أزرق متوسط
+    'text_dark': '#1A237E',    # نص داكن
+    'text_light': '#90CAF9',   # نص فاتح
+    'white': '#FFFFFF',        # أبيض
+    'border': '#42A5F5',       # حدود زرقاء
+    'background': '#E1F5FE',   # خلفية فاتحة
+    'success': '#00E676',      # أخضر للنجاح
+    'error': '#FF5252',        # أحمر للخطأ
+    'gradient_start': '#00D9FF',
+    'gradient_end': '#1E3A5F'
 }
 
 # نظام النقاط
@@ -54,9 +58,9 @@ MESSAGES = {
     'not_registered': 'يجب التسجيل أولاً - اكتب انضم'
 }
 
-# أوامر البوت
+# أوامر البوت - تحديث "ابدأ" ليصبح "بداية"
 COMMANDS = {
-    'start': ['البداية', 'ابدأ', 'start', 'البوت', 'ابدا'],
+    'start': ['بداية', 'start', 'البوت'],
     'help': ['مساعدة', 'help', 'المساعدة'],
     'stats': ['نقاطي', 'إحصائياتي', 'احصائياتي', 'احصائيات'],
     'leaderboard': ['الصدارة', 'المتصدرين', 'المتصدرون'],
@@ -80,7 +84,7 @@ GAMES = {
     'mafia': 'مافيا'
 }
 
-# أوامر نصية (بدون Flex)
+# أوامر نصية (بدون Flex) - فقط النصوص
 TEXT_COMMANDS = {
     'question': ['سؤال', 'سوال'],
     'challenge': ['تحدي', 'challenge'],
@@ -103,9 +107,9 @@ MAX_GAME_DURATION = 900
 MAFIA_CONFIG = {
     'min_players': 4,
     'max_players': 12,
-    'discussion_time': 120,  # دقيقتان
-    'voting_time': 60,       # دقيقة
-    'night_time': 90,        # دقيقة ونصف
+    'discussion_time': 120,
+    'voting_time': 60,
+    'night_time': 90,
     'roles': {
         4: {'mafia': 1, 'detective': 1, 'doctor': 0, 'citizen': 2},
         5: {'mafia': 1, 'detective': 1, 'doctor': 1, 'citizen': 2},
@@ -123,10 +127,10 @@ MAFIA_CONFIG = {
 MAFIA_COMMANDS = {
     'join': ['انضم مافيا', 'انضم للمافيا'],
     'start': ['بدء مافيا', 'ابدأ مافيا', 'بداية مافيا'],
-    'kill': ['قتل'],  # للمافيا
-    'investigate': ['تحقق'],  # للمحقق
-    'protect': ['احم', 'حماية'],  # للدكتور
-    'vote': ['صوت'],  # للتصويت
+    'kill': ['قتل'],
+    'investigate': ['تحقق'],
+    'protect': ['احم', 'حماية'],
+    'vote': ['صوت'],
     'status': ['حالة', 'الحالة', 'وضع'],
     'alive': ['الأحياء', 'احياء']
 }
