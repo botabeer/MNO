@@ -19,14 +19,20 @@ handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 Database.init()
 game_manager = GameManager(line_bot_api)
 
+# المستخدمون المسجلون في كل مجموعة
+group_registered_users = {}
+
 def get_user_name(user_id):
+    """جلب اسم المستخدم من LINE API وتحديثه في قاعدة البيانات"""
     try:
         profile = line_bot_api.get_profile(user_id)
         display_name = profile.display_name
+        # تحديث الاسم في قاعدة البيانات تلقائياً
         Database.register_or_update_user(user_id, display_name)
         return display_name
     except Exception as e:
         logger.error(f"خطأ جلب اسم المستخدم {user_id}: {e}")
+        # محاولة جلب الاسم من قاعدة البيانات
         stats = Database.get_user_stats(user_id)
         return stats.get('display_name', 'مستخدم') if stats else 'مستخدم'
 
@@ -47,6 +53,26 @@ def get_quick_reply():
         QuickReplyButton(action=MessageAction(label="إيقاف", text="إيقاف"))
     ])
 
+def is_user_registered(group_id, user_id):
+    """التحقق من تسجيل المستخدم في المجموعة"""
+    if group_id not in group_registered_users:
+        return False
+    return user_id in group_registered_users[group_id]
+
+def register_user(group_id, user_id, display_name):
+    """تسجيل المستخدم في المجموعة"""
+    if group_id not in group_registered_users:
+        group_registered_users[group_id] = {}
+    group_registered_users[group_id][user_id] = display_name
+    Database.register_or_update_user(user_id, display_name)
+
+def unregister_user(group_id, user_id):
+    """إلغاء تسجيل المستخدم من المجموعة"""
+    if group_id in group_registered_users and user_id in group_registered_users[group_id]:
+        del group_registered_users[group_id][user_id]
+        return True
+    return False
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
@@ -62,11 +88,42 @@ def handle_message(event):
     text = event.message.text.strip()
     user_id = event.source.user_id
     group_id = getattr(event.source, 'group_id', None) or user_id
+    
+    # جلب اسم المستخدم من LINE API وتحديثه تلقائياً مع كل رسالة
     display_name = get_user_name(user_id)
+    
     quick_reply = get_quick_reply()
 
+    # قائمة الأوامر المسموحة فقط
+    allowed_commands = [
+        "بداية", "start", "ابدأ",
+        "مساعدة", "help",
+        "انضم", "تسجيل",
+        "انسحب", "إلغاء",
+        "نقاطي", "إحصائياتي",
+        "الصدارة", "المتصدرين",
+        "إيقاف", "stop",
+        "أغنية", "لعبة", "سلسلة", "أسرع", "ضد", "تكوين", "توافق", "مافيا",
+        "سؤال", "سوال", "تحدي", "اعتراف", "منشن",
+        "لمح", "تلميح", "جاوب", "الجواب",
+        "انضم مافيا", "بدء مافيا", "شرح مافيا", "حالة مافيا", "تصويت مافيا", "إنهاء تصويت"
+    ]
+
+    # التحقق من الأوامر التي تبدأ بـ "صوت"
+    is_vote_command = text.startswith("صوت ")
+    
+    # التحقق إذا كانت اللعبة نشطة
+    game = game_manager.get_game(group_id)
+    
+    # إذا لم يكن الأمر في القائمة المسموحة ولا يوجد لعبة نشطة، لا ترد
+    if not any(text.lower().startswith(cmd.lower()) for cmd in allowed_commands) and not is_vote_command and not game:
+        return
+
+    # أوامر لا تحتاج تسجيل
+    no_registration_commands = ["سؤال", "سوال", "تحدي", "اعتراف", "منشن", "توافق"]
+    
     if text.lower() in ["بداية", "start", "ابدأ"]:
-        flex = FlexSendMessage(alt_text="مرحباً", contents=UIBuilder.welcome_card(display_name))
+        flex = FlexSendMessage(alt_text="مرحباً", contents=UIBuilder.welcome_card(display_name, is_user_registered(group_id, user_id)))
         line_bot_api.reply_message(event.reply_token, flex)
         return
 
@@ -76,13 +133,28 @@ def handle_message(event):
         return
 
     if text in ["انضم", "تسجيل"]:
-        success = Database.register_or_update_user(user_id, display_name)
-        msg = "تم التسجيل بنجاح" if success else "أنت مسجل بالفعل"
-        flex = FlexSendMessage(alt_text=msg, contents=UIBuilder.registration_success(display_name))
-        line_bot_api.reply_message(event.reply_token, flex)
+        if is_user_registered(group_id, user_id):
+            msg = TextSendMessage(text="أنت مسجل بالفعل", quick_reply=quick_reply)
+        else:
+            register_user(group_id, user_id, display_name)
+            flex = FlexSendMessage(alt_text="تم التسجيل", contents=UIBuilder.registration_success(display_name))
+            msg = flex
+        line_bot_api.reply_message(event.reply_token, msg)
+        return
+
+    if text in ["انسحب", "إلغاء"]:
+        if unregister_user(group_id, user_id):
+            msg = TextSendMessage(text="تم إلغاء تسجيلك بنجاح", quick_reply=quick_reply)
+        else:
+            msg = TextSendMessage(text="أنت غير مسجل", quick_reply=quick_reply)
+        line_bot_api.reply_message(event.reply_token, msg)
         return
 
     if text in ["نقاطي", "إحصائياتي"]:
+        if not is_user_registered(group_id, user_id):
+            msg = TextSendMessage(text="يجب التسجيل أولاً باستخدام أمر 'انضم'", quick_reply=quick_reply)
+            line_bot_api.reply_message(event.reply_token, msg)
+            return
         stats = Database.get_user_stats(user_id)
         flex = FlexSendMessage(alt_text="إحصائياتك", contents=UIBuilder.stats_card(display_name, stats))
         line_bot_api.reply_message(event.reply_token, flex)
@@ -100,41 +172,46 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token, msg)
         return
 
+    # الأوامر التي لا تحتاج تسجيل (سؤال، تحدي، اعتراف، منشن، توافق)
+    if text.lower() in no_registration_commands:
+        if text in ["سؤال", "سوال"]:
+            msg = TextSendMessage(text=game_manager.get_random_question(), quick_reply=quick_reply)
+        elif text == "تحدي":
+            msg = TextSendMessage(text=game_manager.get_random_challenge(), quick_reply=quick_reply)
+        elif text == "اعتراف":
+            msg = TextSendMessage(text=game_manager.get_random_confession(), quick_reply=quick_reply)
+        elif text.startswith("منشن"):
+            msg = TextSendMessage(text=game_manager.get_random_mention(), quick_reply=quick_reply)
+        elif text == "توافق":
+            response = game_manager.start_game("compatibility", group_id)
+            msg = response if response else TextSendMessage(text="خطأ في بدء اللعبة", quick_reply=quick_reply)
+        
+        line_bot_api.reply_message(event.reply_token, msg)
+        return
+
+    # الألعاب التي تحتاج تسجيل
     game_commands = {
         "أغنية": "song", "لعبة": "human_animal", "سلسلة": "chain",
         "أسرع": "fast_typing", "ضد": "opposite", "تكوين": "letters",
-        "توافق": "compatibility", "مافيا": "mafia"
+        "مافيا": "mafia"
     }
 
     if text in game_commands:
+        if not is_user_registered(group_id, user_id):
+            msg = TextSendMessage(text="يجب التسجيل أولاً باستخدام أمر 'انضم'", quick_reply=quick_reply)
+            line_bot_api.reply_message(event.reply_token, msg)
+            return
+        
         response = game_manager.start_game(game_commands[text], group_id)
         if response:
             line_bot_api.reply_message(event.reply_token, response)
         return
 
-    if text in ["سؤال", "سوال"]:
-        msg = TextSendMessage(text=game_manager.get_random_question(), quick_reply=quick_reply)
-        line_bot_api.reply_message(event.reply_token, msg)
-        return
-
-    if text == "تحدي":
-        msg = TextSendMessage(text=game_manager.get_random_challenge(), quick_reply=quick_reply)
-        line_bot_api.reply_message(event.reply_token, msg)
-        return
-
-    if text == "اعتراف":
-        msg = TextSendMessage(text=game_manager.get_random_confession(), quick_reply=quick_reply)
-        line_bot_api.reply_message(event.reply_token, msg)
-        return
-
-    if text.startswith("منشن"):
-        msg = TextSendMessage(text=game_manager.get_random_mention(), quick_reply=quick_reply)
-        line_bot_api.reply_message(event.reply_token, msg)
-        return
-
+    # التحقق من الإجابات في الألعاب
     result = game_manager.check_answer(group_id, text, user_id, display_name)
     if result:
-        if result.get('correct') and result.get('points', 0) > 0 and Database.is_user_registered(user_id):
+        # حساب النقاط فقط للمسجلين
+        if result.get('correct') and result.get('points', 0) > 0 and is_user_registered(group_id, user_id):
             Database.update_user_points(user_id, result['points'], result.get('won', False), game_manager.active_games.get(group_id, {}).get('type', 'unknown'))
 
         response = result.get('response')
