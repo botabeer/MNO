@@ -139,7 +139,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "أوامر مجانية بدون تسجيل", "size": "md", "color": COLORS['primary'], "weight": "bold"},
+                            {"type": "text", "text": "أوامر بدون تسجيل", "size": "md", "color": COLORS['primary'], "weight": "bold"},
                             {"type": "text", "text": "سؤال - سؤال عشوائي", "size": "sm", "color": COLORS['text_light'], "margin": "sm"},
                             {"type": "text", "text": "تحدي - تحدي عشوائي", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                             {"type": "text", "text": "اعتراف - اعتراف عشوائي", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
