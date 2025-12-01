@@ -2,236 +2,173 @@ from constants import COLORS
 
 class UIBuilder:
 
-    # =========================
-    # نافذة البداية
-    # =========================
     @staticmethod
-    def start_card():
+    def welcome_card(display_name):
         return {
             "type": "bubble",
-            "size": "mega",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": COLORS["background"],
-                "paddingAll": "24px",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "بوت الحوت",
-                        "size": "xxl",
-                        "weight": "bold",
-                        "color": COLORS["primary"],
-                        "align": "center"
-                    }
-                ]
-            },
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": COLORS["card_bg"],
-                "paddingAll": "24px",
-                "spacing": "lg",
                 "contents": [
                     {
-                        "type": "text",
-                        "text": "منصة ألعاب ترفيهية بدون تسجيل",
-                        "color": COLORS["text_light"],
-                        "align": "center",
-                        "wrap": True
-                    },
-                    {
-                        "type": "text",
-                        "text": "أوامر اللعب: اسم اللعبة - لمح - جاوب - إيقاف",
-                        "color": COLORS["text_light"],
-                        "size": "sm",
-                        "align": "center",
-                        "wrap": True
-                    },
-                    {
-                        "type": "text",
-                        "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025",
-                        "size": "xs",
-                        "color": COLORS["text_light"],
-                        "align": "center"
-                    }
-                ]
-            },
-            "footer": {
-                "type": "box",
-                "layout": "horizontal",
-                "backgroundColor": COLORS["background_medium"],
-                "paddingAll": "16px",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "انضم", "text": "انضم"},
-                        "style": "primary",
-                        "color": COLORS["primary"]
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
-                        "style": "secondary"
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"},
-                        "style": "secondary"
-                    }
-                ]
-            }
-        }
-
-    # =========================
-    # نافذة المساعدة
-    # =========================
-    @staticmethod
-    def help_card():
-        return {
-            "type": "bubble",
-            "size": "mega",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": COLORS["background"],
-                "paddingAll": "24px",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "مساعدة",
-                        "size": "xxl",
-                        "weight": "bold",
-                        "color": COLORS["primary"],
-                        "align": "center"
-                    }
-                ]
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": COLORS["card_bg"],
-                "paddingAll": "24px",
-                "spacing": "md",
-                "contents": [
-                    {"type": "text", "text": "الألعاب تعمل بدون تسجيل", "color": COLORS["text_light"]},
-                    {"type": "text", "text": "لمح للحصول على تلميح", "color": COLORS["text_light"]},
-                    {"type": "text", "text": "جاوب لإرسال الإجابة", "color": COLORS["text_light"]},
-                    {"type": "text", "text": "إيقاف لإنهاء اللعبة الحالية", "color": COLORS["text_light"]},
-                    {"type": "separator"},
-                    {
-                        "type": "text",
-                        "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025",
-                        "size": "xs",
-                        "color": COLORS["text_light"],
-                        "align": "center"
-                    }
-                ]
-            },
-            "footer": {
-                "type": "box",
-                "layout": "horizontal",
-                "backgroundColor": COLORS["background_medium"],
-                "paddingAll": "16px",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "انضم", "text": "انضم"},
-                        "style": "primary",
-                        "color": COLORS["primary"]
-                    }
-                ]
-            }
-        }
-
-    # =========================
-    # نافذة اللعب الموحدة
-    # =========================
-    @staticmethod
-    def game_play_card(game_name, question, progress_ratio, vibration=False, win_flash=False):
-        bar_width = int(progress_ratio * 100)
-
-        effect_color = COLORS["success"] if win_flash else COLORS["primary"]
-        border_color = COLORS["warning"] if vibration else COLORS["border"]
-
-        return {
-            "type": "bubble",
-            "size": "mega",
-            "styles": {"body": {"backgroundColor": COLORS["background"]}},
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "paddingAll": "24px",
-                "spacing": "lg",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": game_name,
-                        "size": "xl",
-                        "weight": "bold",
-                        "color": effect_color,
-                        "align": "center"
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "بوت الحوت", "weight": "bold", "size": "xl", "color": COLORS['white']}
+                        ],
+                        "backgroundColor": COLORS['primary'],
+                        "paddingAll": "20px",
+                        "cornerRadius": "10px"
                     },
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "paddingAll": "20px",
-                        "backgroundColor": COLORS["background_medium"],
-                        "cornerRadius": "lg",
-                        "borderWidth": "2px",
-                        "borderColor": border_color,
                         "contents": [
-                            {
-                                "type": "text",
-                                "text": question,
-                                "wrap": True,
-                                "align": "center",
-                                "size": "lg",
-                                "color": COLORS["white"]
-                            }
-                        ]
+                            {"type": "text", "text": f"مرحباً {display_name}", "size": "lg", "color": COLORS['text_dark'], "margin": "md"},
+                            {"type": "text", "text": "منصة ألعاب ترفيهية", "size": "sm", "color": COLORS['text_light'], "margin": "sm"}
+                        ],
+                        "margin": "lg"
+                    }
+                ],
+                "backgroundColor": COLORS['card_bg'],
+                "paddingAll": "20px"
+            }
+        }
+
+    @staticmethod
+    def help_card():
+        return {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "المساعدة", "weight": "bold", "size": "xl", "color": COLORS['white']}
+                        ],
+                        "backgroundColor": COLORS['primary'],
+                        "paddingAll": "20px",
+                        "cornerRadius": "10px"
                     },
                     {
                         "type": "box",
-                        "layout": "horizontal",
-                        "height": "10px",
-                        "backgroundColor": COLORS["border"],
-                        "cornerRadius": "lg",
+                        "layout": "vertical",
                         "contents": [
-                            {
-                                "type": "box",
-                                "layout": "horizontal",
-                                "width": f"{bar_width}%",
-                                "backgroundColor": COLORS["primary"],
-                                "cornerRadius": "lg",
-                                "contents": []
-                            }
-                        ]
+                            {"type": "text", "text": "الأوامر المتاحة", "size": "md", "color": COLORS['text_dark'], "margin": "md"},
+                            {"type": "text", "text": "لمح - تلميح", "size": "sm", "color": COLORS['text_light'], "margin": "sm"},
+                            {"type": "text", "text": "جاوب - الإجابة", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
+                            {"type": "text", "text": "إيقاف - إنهاء اللعبة", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}
+                        ],
+                        "margin": "lg"
                     }
-                ]
-            },
-            "footer": {
+                ],
+                "backgroundColor": COLORS['card_bg'],
+                "paddingAll": "20px"
+            }
+        }
+
+    @staticmethod
+    def registration_success(display_name):
+        return {
+            "type": "bubble",
+            "body": {
                 "type": "box",
-                "layout": "horizontal",
-                "backgroundColor": COLORS["background_medium"],
-                "paddingAll": "16px",
+                "layout": "vertical",
                 "contents": [
                     {
-                        "type": "button",
-                        "action": {"type": "message", "label": "لمح", "text": "لمح"},
-                        "style": "secondary"
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "تم التسجيل", "weight": "bold", "size": "xl", "color": COLORS['white']}
+                        ],
+                        "backgroundColor": COLORS['primary'],
+                        "paddingAll": "20px",
+                        "cornerRadius": "10px"
                     },
                     {
-                        "type": "button",
-                        "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
-                        "style": "primary",
-                        "color": COLORS["primary"]
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"},
-                        "style": "secondary"
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": f"مرحباً {display_name}", "size": "lg", "color": COLORS['text_dark'], "margin": "md"}
+                        ],
+                        "margin": "lg"
                     }
-                ]
+                ],
+                "backgroundColor": COLORS['card_bg'],
+                "paddingAll": "20px"
+            }
+        }
+
+    @staticmethod
+    def stats_card(display_name, stats):
+        if not stats:
+            stats = {'total_points': 0, 'games_played': 0, 'wins': 0}
+        return {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "إحصائياتك", "weight": "bold", "size": "xl", "color": COLORS['white']}
+                        ],
+                        "backgroundColor": COLORS['primary'],
+                        "paddingAll": "20px",
+                        "cornerRadius": "10px"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": display_name, "size": "lg", "color": COLORS['text_dark'], "margin": "md"},
+                            {"type": "text", "text": f"النقاط: {stats['total_points']}", "size": "md", "color": COLORS['text_light'], "margin": "sm"},
+                            {"type": "text", "text": f"الألعاب: {stats['games_played']}", "size": "md", "color": COLORS['text_light'], "margin": "xs"},
+                            {"type": "text", "text": f"الفوز: {stats['wins']}", "size": "md", "color": COLORS['text_light'], "margin": "xs"}
+                        ],
+                        "margin": "lg"
+                    }
+                ],
+                "backgroundColor": COLORS['card_bg'],
+                "paddingAll": "20px"
+            }
+        }
+
+    @staticmethod
+    def leaderboard_card(leaders):
+        leader_contents = [
+            {"type": "text", "text": f"{i+1}. {l['display_name']} - {l['total_points']} نقطة", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}
+            for i, l in enumerate(leaders)
+        ]
+        return {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "لوحة الصدارة", "weight": "bold", "size": "xl", "color": COLORS['white']}
+                        ],
+                        "backgroundColor": COLORS['primary'],
+                        "paddingAll": "20px",
+                        "cornerRadius": "10px"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": leader_contents,
+                        "margin": "lg"
+                    }
+                ],
+                "backgroundColor": COLORS['card_bg'],
+                "paddingAll": "20px"
             }
         }
