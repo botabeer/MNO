@@ -13,6 +13,7 @@ import os
 import logging
 import re
 import atexit
+import time
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,7 +45,6 @@ waiting_for_registration = {}
 waiting_for_name_change = {}
 
 def get_quick_reply():
-    """Quick Reply ثابت لجميع الرسائل - بدون ايموجي"""
     return QuickReply(items=[
         QuickReplyButton(action=MessageAction(label="سؤال", text="سؤال")),
         QuickReplyButton(action=MessageAction(label="منشن", text="منشن")),
@@ -159,7 +159,6 @@ def handle_message(event):
         
         Database.update_last_activity(user_id)
 
-        # معالجة التسجيل
         if user_id in waiting_for_registration:
             if text.lower() in ["الغاء", "إلغاء"]:
                 del waiting_for_registration[user_id]
@@ -180,7 +179,6 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, msg)
             return
         
-        # معالجة تغيير الاسم
         if user_id in waiting_for_name_change:
             if text.lower() in ["الغاء", "إلغاء"]:
                 del waiting_for_name_change[user_id]
@@ -203,7 +201,6 @@ def handle_message(event):
 
         display_name = get_user_display_name(group_id, user_id) or "مستخدم"
 
-        # الأوامر الأساسية
         if text.lower() in ["بدايه", "start", "ابدا", "بداية"]:
             flex = FlexSendMessage(
                 alt_text="مرحبا", 
@@ -300,7 +297,6 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, msg)
             return
 
-        # الأوامر بدون تسجيل
         if text in ["سؤال", "سوال"]:
             msg = TextSendMessage(text=game_manager.get_random_question(), quick_reply=get_quick_reply())
             line_bot_api.reply_message(event.reply_token, msg)
@@ -328,7 +324,6 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, response)
             return
 
-        # الألعاب
         game_commands = {
             "اغنيه": "song", "لعبه": "human_animal", "سلسله": "chain",
             "اسرع": "fast_typing", "ضد": "opposite", "تكوين": "letters",
@@ -350,7 +345,6 @@ def handle_message(event):
                 line_bot_api.reply_message(event.reply_token, response)
             return
 
-        # معالجة اللعب
         game = game_manager.get_game(group_id)
         if game:
             if not is_user_registered(group_id, user_id):
@@ -368,20 +362,26 @@ def handle_message(event):
 
                 response = result.get('response')
                 if response:
-                    if isinstance(response, FlexSendMessage):
-                        response.quick_reply = get_quick_reply()
-                    elif isinstance(response, TextSendMessage):
-                        response.quick_reply = get_quick_reply()
-                    line_bot_api.reply_message(event.reply_token, response)
+                    if isinstance(response, list):
+                        for r in response:
+                            if isinstance(r, FlexSendMessage):
+                                r.quick_reply = get_quick_reply()
+                            elif isinstance(r, TextSendMessage):
+                                r.quick_reply = get_quick_reply()
+                        line_bot_api.reply_message(event.reply_token, response)
+                    else:
+                        if isinstance(response, FlexSendMessage):
+                            response.quick_reply = get_quick_reply()
+                        elif isinstance(response, TextSendMessage):
+                            response.quick_reply = get_quick_reply()
+                        line_bot_api.reply_message(event.reply_token, response)
 
-                # الانتقال التلقائي للسؤال التالي
                 if result.get('next_question') and not result.get('game_over'):
                     next_q = game_manager.next_question(group_id)
                     if next_q:
                         try:
                             if isinstance(next_q, FlexSendMessage):
                                 next_q.quick_reply = get_quick_reply()
-                            import time
                             time.sleep(1)
                             line_bot_api.push_message(group_id, next_q)
                         except Exception as e:
