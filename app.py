@@ -51,14 +51,14 @@ def get_quick_reply():
         QuickReplyButton(action=MessageAction(label="اعتراف", text="اعتراف")),
         QuickReplyButton(action=MessageAction(label="تحدي", text="تحدي")),
         QuickReplyButton(action=MessageAction(label="توافق", text="توافق")),
-        QuickReplyButton(action=MessageAction(label="اسرع", text="اسرع")),
-        QuickReplyButton(action=MessageAction(label="سلسلة", text="سلسله")),
-        QuickReplyButton(action=MessageAction(label="مافيا", text="مافيا")),
-        QuickReplyButton(action=MessageAction(label="فئة", text="فئه")),
         QuickReplyButton(action=MessageAction(label="اغنية", text="اغنيه")),
         QuickReplyButton(action=MessageAction(label="ضد", text="ضد")),
         QuickReplyButton(action=MessageAction(label="تكوين", text="تكوين")),
-        QuickReplyButton(action=MessageAction(label="لعبه", text="لعبه"))
+        QuickReplyButton(action=MessageAction(label="سلسلة", text="سلسله")),
+        QuickReplyButton(action=MessageAction(label="اسرع", text="اسرع")),
+        QuickReplyButton(action=MessageAction(label="لعبه", text="لعبه")),
+        QuickReplyButton(action=MessageAction(label="فئة", text="فئه")),
+        QuickReplyButton(action=MessageAction(label="مافيا", text="مافيا"))
     ])
 
 class NameFilter:
