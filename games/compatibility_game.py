@@ -15,15 +15,41 @@ class CompatibilityGame:
                 "body": {
                     "type": "box",
                     "layout": "vertical",
+                    "spacing": "md",
                     "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "نسبة التوافق", "weight": "bold", "size": "xl", "color": COLORS['white']}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "10px"},
-                        {"type": "box", "layout": "vertical", "contents": [
-                            {"type": "text", "text": "اكتب اسمين بهذا الشكل:", "size": "md", "color": COLORS['text_dark'], "wrap": True},
-                            {"type": "text", "text": "اسم و اسم", "size": "lg", "color": COLORS['primary'], "margin": "md", "weight": "bold", "align": "center"},
-                            {"type": "text", "text": "مثال: الحُوت و عبير", "size": "sm", "color": COLORS['text_light'], "margin": "sm"},
-                            {"type": "text", "text": "مثال: الحُوت و القوس", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
-                            {"type": "text", "text": "مثال: أبو فلان و أم فلان", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}
-                        ], "margin": "lg", "spacing": "sm"}
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "🖤", "size": "xxl", "align": "center"},
+                                {"type": "text", "text": "نسبة التوافق", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
+                            ],
+                            "backgroundColor": COLORS['primary'],
+                            "paddingAll": "20px",
+                            "cornerRadius": "12px"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "اكتب اسمين بهذا الشكل:", "size": "md", "color": COLORS['text_dark'], "wrap": True, "weight": "bold", "align": "center"},
+                                {"type": "text", "text": "اسم و اسم", "size": "xl", "color": COLORS['primary'], "margin": "md", "weight": "bold", "align": "center"}
+                            ],
+                            "margin": "lg",
+                            "spacing": "sm"
+                        },
+                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "📝 أمثلة:", "size": "sm", "color": COLORS['text_light'], "weight": "bold"},
+                                {"type": "text", "text": "• الحُوت و عبير", "size": "sm", "color": COLORS['text_light'], "margin": "sm"},
+                                {"type": "text", "text": "• الحُوت و القوس", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
+                                {"type": "text", "text": "• اسم و اسم", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}
+                            ],
+                            "margin": "lg"
+                        }
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
@@ -35,7 +61,6 @@ class CompatibilityGame:
         """استخراج الاسمين من النص بذكاء"""
         text = text.strip()
         
-        # البحث عن " و " كفاصل
         if " و " in text:
             parts = text.split(" و ")
             if len(parts) >= 2:
@@ -43,10 +68,9 @@ class CompatibilityGame:
                 name2 = " ".join(parts[1:]).strip()
                 return name1, name2
         
-        # إذا لم يجد " و "، حاول البحث عن "و" محاطة بمسافات
         if " و" in text or "و " in text:
             text = text.replace(" و", " و ").replace("و ", " و ")
-            text = " ".join(text.split())  # تنظيف المسافات المتعددة
+            text = " ".join(text.split())
             if " و " in text:
                 parts = text.split(" و ")
                 if len(parts) >= 2:
@@ -58,28 +82,33 @@ class CompatibilityGame:
 
     def calculate_compatibility(self, name1, name2):
         """حساب نسبة التوافق بشكل ثابت لنفس الاسمين"""
-        # ترتيب الأسماء أبجدياً لضمان نفس النتيجة سواء كان (أ و ب) أو (ب و أ)
         names = sorted([name1.lower().strip(), name2.lower().strip()])
         combined = "".join(names)
-        
-        # استخدام hash للحصول على نتيجة ثابتة
         hash_value = int(hashlib.md5(combined.encode()).hexdigest(), 16)
-        
-        # توليد نسبة بين 50 و 100
         compatibility = 50 + (hash_value % 51)
-        
         return compatibility
 
     def get_compatibility_message(self, compatibility):
         """الحصول على رسالة مناسبة للنسبة"""
         if compatibility >= 90:
-            return "توافق مثالي"
+            return "توافق مثالي "
         elif compatibility >= 75:
-            return "توافق ممتاز"
+            return "توافق ممتاز "
         elif compatibility >= 60:
-            return "توافق جيد"
+            return "توافق جيد "
         else:
-            return "توافق متوسط"
+            return "توافق متوسط "
+
+    def get_compatibility_color(self, compatibility):
+        """تحديد اللون حسب النسبة"""
+        if compatibility >= 90:
+            return "#FF1493"  # وردي غامق
+        elif compatibility >= 75:
+            return "#FF69B4"  # وردي
+        elif compatibility >= 60:
+            return "#FFB6C1"  # وردي فاتح
+        else:
+            return COLORS['text_light']
 
     def check_answer(self, answer, user_id, display_name):
         if not self.waiting_for_names:
@@ -89,18 +118,28 @@ class CompatibilityGame:
 
         if not name1 or not name2:
             return {
-                'response': TextSendMessage(text="يرجى كتابة اسمين بالشكل الصحيح:\nاسم و اسم\n\nمثال: محمد و فاطمة"),
+                'response': TextSendMessage(text="⚠️ يرجى كتابة اسمين بالشكل الصحيح:\n\n📝 اسم و اسم\n\n💡 مثال: اسم و اسم"),
                 'points': 0,
                 'correct': False,
                 'won': False,
                 'game_over': False
             }
 
-        # حساب نسبة التوافق
         compatibility = self.calculate_compatibility(name1, name2)
         message = self.get_compatibility_message(compatibility)
+        comp_color = self.get_compatibility_color(compatibility)
 
         self.waiting_for_names = False
+
+        # إضافة نص إضافي حسب النسبة
+        if compatibility >= 90:
+            extra_text = "علاقة رائعة ومميزة!"
+        elif compatibility >= 75:
+            extra_text = "علاقة قوية ومتينة!"
+        elif compatibility >= 60:
+            extra_text = "علاقة جيدة ومستقرة"
+        else:
+            extra_text = "علاقة تحتاج لبعض الجهد"
 
         result_card = FlexSendMessage(
             alt_text="نتيجة التوافق",
@@ -109,15 +148,80 @@ class CompatibilityGame:
                 "body": {
                     "type": "box",
                     "layout": "vertical",
+                    "spacing": "md",
                     "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "نسبة التوافق", "weight": "bold", "size": "xl", "color": COLORS['white']}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "10px"},
-                        {"type": "box", "layout": "vertical", "contents": [
-                            {"type": "text", "text": f"{name1} و {name2}", "size": "lg", "color": COLORS['text_dark'], "align": "center", "wrap": True},
-                            {"type": "text", "text": f"{compatibility}%", "size": "5xl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "lg"},
-                            {"type": "text", "text": message, "size": "lg", "color": COLORS['text_dark'], "align": "center", "margin": "md"}
-                        ], "margin": "lg", "spacing": "sm"},
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "🖤", "size": "xxl", "align": "center"},
+                                {"type": "text", "text": "نتيجة التوافق", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
+                            ],
+                            "backgroundColor": COLORS['primary'],
+                            "paddingAll": "20px",
+                            "cornerRadius": "12px"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": f"{name1} و {name2}", "size": "lg", "color": COLORS['text_dark'], "align": "center", "wrap": True, "weight": "bold"}
+                            ],
+                            "margin": "lg"
+                        },
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "button", "action": {"type": "message", "label": "إعادة", "text": "توافق"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "box",
+                                    "layout": "vertical",
+                                    "contents": [
+                                        {"type": "text", "text": f"{compatibility}%", "size": "5xl", "color": comp_color, "weight": "bold", "align": "center"}
+                                    ],
+                                    "backgroundColor": f"{comp_color}1A",
+                                    "paddingAll": "20px",
+                                    "cornerRadius": "12px"
+                                },
+                                {"type": "text", "text": message, "size": "xl", "color": comp_color, "weight": "bold", "align": "center", "margin": "lg"},
+                                {"type": "text", "text": extra_text, "size": "sm", "color": COLORS['text_light'], "align": "center", "margin": "sm"}
+                            ],
+                            "margin": "lg",
+                            "spacing": "sm"
+                        },
+                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "نفس النتيجة تظهر دائماً لنفس الأسماء", "size": "xs", "color": COLORS['text_light'], "align": "center", "wrap": True}
+                            ],
+                            "margin": "md"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "button",
+                                    "action": {"type": "message", "label": "🔄 إعادة", "text": "توافق"},
+                                    "style": "primary",
+                                    "color": COLORS['primary'],
+                                    "height": "sm",
+                                    "flex": 1
+                                },
+                                {
+                                    "type": "button",
+                                    "action": {"type": "message", "label": "🏠 بداية", "text": "بداية"},
+                                    "style": "secondary",
+                                    "height": "sm",
+                                    "flex": 1
+                                }
+                            ],
+                            "spacing": "sm",
+                            "margin": "lg"
+                        }
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
