@@ -11,4 +11,4 @@ services:
       - key: LINE_CHANNEL_SECRET
         sync: false
       - key: PYTHON_VERSION
-        value: 3.11.6
+        value: 3.11.7
