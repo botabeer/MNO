@@ -30,7 +30,7 @@ class UIBuilder:
                 "spacing": "md",
                 "contents": [
                     {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "بوت الحوت", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "يمكنك استخدام البوت في الخاص و في القروبات", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"}, {"type": "text", "text": registration_status, "size": "md", "color": status_color, "margin": "xs", "align": "center", "weight": "bold"}], "margin": "lg"},
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "يعمل بالخاص والقروبات", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"}, {"type": "text", "text": registration_status, "size": "md", "color": status_color, "margin": "xs", "align": "center", "weight": "bold"}], "margin": "lg"},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {"type": "box", "layout": "vertical", "spacing": "sm", "contents": [{"type": "text", "text": "الحساب", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, registration_buttons]},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
