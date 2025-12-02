@@ -65,7 +65,6 @@ class Database:
     
     @staticmethod
     def update_last_activity(user_id):
-        """تحديث آخر نشاط للمستخدم"""
         with Database._lock:
             try:
                 conn = sqlite3.connect(Database.DB_NAME)
@@ -81,7 +80,6 @@ class Database:
     
     @staticmethod
     def cleanup_inactive_users():
-        """حذف المستخدمين غير النشطين لمدة أسبوع"""
         with Database._lock:
             try:
                 conn = sqlite3.connect(Database.DB_NAME)
@@ -186,7 +184,6 @@ class Database:
     
     @staticmethod
     def get_all_players():
-        """الحصول على جميع اللاعبين"""
         try:
             conn = sqlite3.connect(Database.DB_NAME)
             cursor = conn.cursor()
