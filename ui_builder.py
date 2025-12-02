@@ -4,38 +4,75 @@ class UIBuilder:
 
     @staticmethod
     def welcome_card(display_name, is_registered=False):
-        """نافذة البداية"""
+        """نافذة البداية - تصميم احترافي"""
+        # أزرار التسجيل الثلاثة
         if is_registered:
-            register_button = {
-                "type": "button",
-                "action": {"type": "message", "label": "تغيير الاسم ", "text": "تغيير الاسم"},
-                "style": "secondary",
-                "height": "sm"
-            }
-            unregister_button = {
-                "type": "button",
-                "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
-                "style": "secondary",
-                "height": "sm",
-                "margin": "sm"
-            }
-            registration_status = f"مسجل باسم: {display_name}"
+            registration_status = f"مسجل | {display_name}"
             status_color = COLORS['success']
-        else:
-            register_button = {
-                "type": "button",
-                "action": {"type": "message", "label": "تسجيل جديد 📝", "text": "تسجيل"},
-                "style": "primary",
-                "color": COLORS['primary'],
-                "height": "sm"
+            registration_buttons = {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"},
+                        "style": "secondary",
+                        "height": "sm",
+                        "flex": 1
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "تغيير الاسم", "text": "تغيير الاسم"},
+                        "style": "secondary",
+                        "height": "sm",
+                        "flex": 1,
+                        "margin": "xs"
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
+                        "style": "secondary",
+                        "height": "sm",
+                        "flex": 1,
+                        "margin": "xs"
+                    }
+                ],
+                "spacing": "xs"
             }
-            unregister_button = None
+        else:
             registration_status = "غير مسجل"
-            status_color = COLORS['text_light']
-        
-        button_contents = [register_button]
-        if unregister_button:
-            button_contents.append(unregister_button)
+            status_color = COLORS['warning']
+            registration_buttons = {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"},
+                        "style": "primary",
+                        "color": COLORS['primary'],
+                        "height": "sm",
+                        "flex": 2
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "تغيير الاسم", "text": "تغيير الاسم"},
+                        "style": "secondary",
+                        "height": "sm",
+                        "flex": 1,
+                        "margin": "xs"
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
+                        "style": "secondary",
+                        "height": "sm",
+                        "flex": 1,
+                        "margin": "xs"
+                    }
+                ],
+                "spacing": "xs"
+            }
         
         return {
             "type": "bubble",
@@ -48,8 +85,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text","size": "xxl", "align": "center"},
-                            {"type": "text", "text": "بوت الحوت", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
+                            {"type": "text", "text": "بوت الحوت", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
                         ],
                         "backgroundColor": COLORS['primary'],
                         "paddingAll": "20px",
@@ -59,54 +95,55 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "مرحباً ", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"},
-                            {"type": "text", "text": registration_status, "size": "sm", "color": status_color, "margin": "xs", "align": "center"},
-                            {"type": "separator", "margin": "md", "color": COLORS['border']},
-                            {"type": "text", "text": "يمكنك استخدام البوت في الخاص والقروبات", "size": "xs", "color": COLORS['text_light'], "margin": "md", "wrap": True, "align": "center"}
+                            {"type": "text", "text": "مرحباً", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"},
+                            {"type": "text", "text": registration_status, "size": "md", "color": status_color, "margin": "xs", "align": "center", "weight": "bold"}
                         ],
                         "margin": "lg"
                     },
+                    {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "🎮 التسجيل", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
-                            *button_contents
+                            {"type": "text", "text": "الحساب", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                            registration_buttons
                         ],
                         "margin": "lg",
                         "spacing": "sm"
                     },
+                    {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "📊 الإحصائيات", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                            {"type": "text", "text": "الإحصائيات", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
                             {
                                 "type": "box",
                                 "layout": "horizontal",
                                 "contents": [
                                     {"type": "button", "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "flex": 1},
-                                    {"type": "button", "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"}, "style": "secondary", "height": "sm", "flex": 1}
+                                    {"type": "button", "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"}
                                 ],
-                                "spacing": "sm",
+                                "spacing": "xs",
                                 "margin": "sm"
                             }
                         ],
                         "margin": "md"
                     },
+                    {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "🎲 القوائم", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                            {"type": "text", "text": "القوائم", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
                             {
                                 "type": "box",
                                 "layout": "horizontal",
                                 "contents": [
-                                    {"type": "button", "action": {"type": "message", "label": "الألعاب", "text": "ألعاب"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1},
-                                    {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "flex": 1}
+                                    {"type": "button", "action": {"type": "message", "label": "ألعاب", "text": "ألعاب"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1},
+                                    {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"}
                                 ],
-                                "spacing": "sm",
+                                "spacing": "xs",
                                 "margin": "sm"
                             }
                         ],
@@ -120,29 +157,42 @@ class UIBuilder:
 
     @staticmethod
     def games_menu_card(is_registered):
-        """قائمة الألعاب"""
-        game_buttons = [
-            {"label": "🎵 أغنية", "text": "اغنيه"},
-            {"label": "🔄 ضد", "text": "ضد"},
-            {"label": "🔤 تكوين", "text": "تكوين"},
-            {"label": "🔗 سلسلة", "text": "سلسله"},
-            {"label": "⚡ أسرع", "text": "اسرع"},
-            {"label": "🌍 لعبة", "text": "لعبه"},
-            {"label": "🎯 فئة", "text": "فئه"},
-            {"label": "🕵️ مافيا", "text": "مافيا"}
-        ]
+        """قائمة الألعاب - تصميم شبكي أنيق"""
+        game_buttons_row1 = {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {"type": "button", "action": {"type": "message", "label": "اغنيه", "text": "اغنيه"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "ضد", "text": "ضد"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"},
+                {"type": "button", "action": {"type": "message", "label": "تكوين", "text": "تكوين"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"}
+            ],
+            "spacing": "xs"
+        }
         
-        buttons = []
-        for i, btn in enumerate(game_buttons):
-            buttons.append({
-                "type": "button",
-                "action": {"type": "message", "label": btn["label"], "text": btn["text"]},
-                "style": "secondary",
-                "height": "sm",
-                "margin": "xs" if i > 0 else "none"
-            })
+        game_buttons_row2 = {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {"type": "button", "action": {"type": "message", "label": "سلسله", "text": "سلسله"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "اسرع", "text": "اسرع"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"},
+                {"type": "button", "action": {"type": "message", "label": "لعبه", "text": "لعبه"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"}
+            ],
+            "spacing": "xs",
+            "margin": "xs"
+        }
         
-        note_text = "⚠️ تحتاج للتسجيل أولاً" if not is_registered else "✅ استمتع باللعب!"
+        game_buttons_row3 = {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {"type": "button", "action": {"type": "message", "label": "فئة", "text": "فئه"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "مافيا", "text": "مافيا"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1, "margin": "xs"}
+            ],
+            "spacing": "xs",
+            "margin": "xs"
+        }
+        
+        note_text = "تحتاج للتسجيل أولاً" if not is_registered else "استمتع باللعب"
         note_color = COLORS['error'] if not is_registered else COLORS['success']
         
         return {
@@ -156,8 +206,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "🎮", "size": "xxl", "align": "center"},
-                            {"type": "text", "text": "قائمة الألعاب", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
+                            {"type": "text", "text": "قائمة الألعاب", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
                         ],
                         "backgroundColor": COLORS['primary'],
                         "paddingAll": "20px",
@@ -175,14 +224,17 @@ class UIBuilder:
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "contents": buttons,
-                        "margin": "md",
-                        "spacing": "xs"
+                        "contents": [
+                            game_buttons_row1,
+                            game_buttons_row2,
+                            game_buttons_row3
+                        ],
+                        "margin": "md"
                     },
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {
                         "type": "button",
-                        "action": {"type": "message", "label": "🏠 العودة للبداية", "text": "بداية"},
+                        "action": {"type": "message", "label": "العودة للبداية", "text": "بداية"},
                         "style": "primary",
                         "color": COLORS['primary'],
                         "height": "sm",
@@ -196,7 +248,7 @@ class UIBuilder:
 
     @staticmethod
     def help_card():
-        """نافذة المساعدة"""
+        """نافذة المساعدة - منظمة ومرتبة"""
         return {
             "type": "bubble",
             "body": {
@@ -208,8 +260,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "❓", "size": "xxl", "align": "center"},
-                            {"type": "text", "text": "دليل الأوامر", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
+                            {"type": "text", "text": "دليل الأوامر", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
                         ],
                         "backgroundColor": COLORS['primary'],
                         "paddingAll": "20px",
@@ -219,7 +270,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "الأوامر الأساسية", "size": "md", "color": COLORS['primary'], "weight": "bold"},
+                            {"type": "text", "text": "الأساسية", "size": "md", "color": COLORS['primary'], "weight": "bold"},
                             {"type": "text", "text": "بداية • تسجيل • نقاطي • الصدارة", "size": "sm", "color": COLORS['text_light'], "margin": "sm", "wrap": True}
                         ],
                         "margin": "lg"
@@ -229,7 +280,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "أوامر بدون تسجيل", "size": "md", "color": COLORS['primary'], "weight": "bold"},
+                            {"type": "text", "text": "بدون تسجيل", "size": "md", "color": COLORS['primary'], "weight": "bold"},
                             {"type": "text", "text": "سؤال • تحدي • اعتراف • منشن • توافق", "size": "sm", "color": COLORS['text_light'], "margin": "sm", "wrap": True}
                         ],
                         "margin": "md"
@@ -239,7 +290,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "الألعاب مع نقاط", "size": "md", "color": COLORS['primary'], "weight": "bold"},
+                            {"type": "text", "text": "الألعاب", "size": "md", "color": COLORS['primary'], "weight": "bold"},
                             {"type": "text", "text": "فئة • أغنية • ضد • تكوين • سلسلة • أسرع • لعبة • مافيا", "size": "sm", "color": COLORS['text_light'], "margin": "sm", "wrap": True}
                         ],
                         "margin": "md"
@@ -259,15 +310,15 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "نظام النقاط", "size": "md", "color": COLORS['success'], "weight": "bold"},
-                            {"type": "text", "text": "✅ إجابة صحيحة = 1 نقطة\n⚠️ تلميح / جاوب = 0 نقطة", "size": "xs", "color": COLORS['text_light'], "margin": "sm", "wrap": True}
+                            {"type": "text", "text": "النقاط", "size": "md", "color": COLORS['success'], "weight": "bold"},
+                            {"type": "text", "text": "إجابة صحيحة = 1 نقطة\nتلميح أو جاوب = 0 نقطة", "size": "xs", "color": COLORS['text_light'], "margin": "sm", "wrap": True}
                         ],
                         "margin": "md"
                     },
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {
                         "type": "button",
-                        "action": {"type": "message", "label": "🏠 العودة للبداية", "text": "بداية"},
+                        "action": {"type": "message", "label": "العودة للبداية", "text": "بداية"},
                         "style": "primary",
                         "color": COLORS['primary'],
                         "height": "sm",
@@ -281,7 +332,7 @@ class UIBuilder:
 
     @staticmethod
     def stats_card(display_name, stats):
-        """نافذة الإحصائيات"""
+        """نافذة الإحصائيات - عرض جذاب"""
         if not stats:
             stats = {'total_points': 0, 'games_played': 0, 'wins': 0}
         
@@ -298,8 +349,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "📊", "size": "xxl", "align": "center"},
-                            {"type": "text", "text": "إحصائياتك", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
+                            {"type": "text", "text": "إحصائياتك", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
                         ],
                         "backgroundColor": COLORS['primary'],
                         "paddingAll": "20px",
@@ -362,19 +412,17 @@ class UIBuilder:
 
     @staticmethod
     def leaderboard_card(leaders):
-        """نافذة لوحة الصدارة"""
+        """نافذة لوحة الصدارة - تصميم أنيق"""
         leader_contents = []
         
-        medals = ["🥇", "🥈", "🥉"]
-        
         for i, l in enumerate(leaders[:20]):
-            medal = medals[i] if i < 3 else f"{i+1}."
+            rank = f"{i+1}."
             
             leader_contents.append({
                 "type": "box",
                 "layout": "baseline",
                 "contents": [
-                    {"type": "text", "text": medal, "size": "sm", "flex": 0, "margin": "none"},
+                    {"type": "text", "text": rank, "size": "sm", "flex": 0, "margin": "none"},
                     {"type": "text", "text": l['display_name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"},
                     {"type": "text", "text": str(l['total_points']), "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 1}
                 ],
@@ -401,8 +449,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "🏆", "size": "xxl", "align": "center"},
-                            {"type": "text", "text": "لوحة الصدارة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
+                            {"type": "text", "text": "لوحة الصدارة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
                         ],
                         "backgroundColor": COLORS['primary'],
                         "paddingAll": "20px",
@@ -426,7 +473,7 @@ class UIBuilder:
         player_contents = []
         
         for i, p in enumerate(players[:30]):
-            status = "✅" if p.get('active', True) else "💤"
+            status = "نشط" if p.get('active', True) else "غير نشط"
             
             player_contents.append({
                 "type": "box",
@@ -459,8 +506,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "👥", "size": "xxl", "align": "center"},
-                            {"type": "text", "text": "جميع اللاعبين", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
+                            {"type": "text", "text": "جميع اللاعبين", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
                         ],
                         "backgroundColor": COLORS['primary'],
                         "paddingAll": "20px",
@@ -470,8 +516,8 @@ class UIBuilder:
                         "type": "box",
                         "layout": "baseline",
                         "contents": [
-                            {"type": "text", "text": "✅ نشط", "size": "xs", "color": COLORS['success'], "flex": 1},
-                            {"type": "text", "text": "💤 غير نشط", "size": "xs", "color": COLORS['text_light'], "flex": 1}
+                            {"type": "text", "text": "نشط", "size": "xs", "color": COLORS['success'], "flex": 1},
+                            {"type": "text", "text": "غير نشط", "size": "xs", "color": COLORS['text_light'], "flex": 1}
                         ],
                         "margin": "lg"
                     },
