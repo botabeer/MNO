@@ -4,25 +4,41 @@ class UIBuilder:
 
     @staticmethod
     def welcome_card(display_name, is_registered=False):
-        """نافذة البداية مع أزرار منظمة - زرين جنب بعض"""
+        """نافذة البداية مع زر التسجيل أو تغيير الاسم"""
         
-        # صف الأزرار الأول: انضم + انسحب
-        first_row = [
-            {
+        # تحديد نص وأمر الزر حسب حالة التسجيل
+        if is_registered:
+            register_button = {
                 "type": "button",
-                "action": {"type": "message", "label": "انضم", "text": "انضم"},
+                "action": {"type": "message", "label": "تغيير الاسم ✏️", "text": "تغيير الاسم"},
                 "style": "secondary",
-                "height": "sm",
-                "flex": 1
-            },
-            {
+                "height": "sm"
+            }
+            unregister_button = {
                 "type": "button",
                 "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
                 "style": "secondary",
                 "height": "sm",
-                "flex": 1
+                "margin": "sm"
             }
-        ]
+            registration_status = f"مسجل باسم: {display_name}"
+            status_color = COLORS['primary']
+        else:
+            register_button = {
+                "type": "button",
+                "action": {"type": "message", "label": "تسجيل جديد 📝", "text": "تسجيل"},
+                "style": "primary",
+                "color": COLORS['primary'],
+                "height": "sm"
+            }
+            unregister_button = None
+            registration_status = "غير مسجل"
+            status_color = COLORS['text_light']
+        
+        # بناء محتوى الأزرار
+        button_contents = [register_button]
+        if unregister_button:
+            button_contents.append(unregister_button)
         
         return {
             "type": "bubble",
@@ -44,8 +60,9 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": f"مرحباً {display_name}", "size": "lg", "color": COLORS['text_dark'], "margin": "md", "weight": "bold"},
-                            {"type": "text", "text": "يمكنك استخدام البوت في الخاص والقروبات", "size": "sm", "color": COLORS['text_light'], "margin": "sm", "wrap": True}
+                            {"type": "text", "text": f"مرحباً 👋", "size": "lg", "color": COLORS['text_dark'], "margin": "md", "weight": "bold", "align": "center"},
+                            {"type": "text", "text": registration_status, "size": "sm", "color": status_color, "margin": "xs", "align": "center"},
+                            {"type": "text", "text": "يمكنك استخدام البوت في الخاص والقروبات", "size": "xs", "color": COLORS['text_light'], "margin": "sm", "wrap": True, "align": "center"}
                         ],
                         "margin": "lg"
                     },
@@ -54,14 +71,17 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            # صف أول: انضم + انسحب
-                            {
-                                "type": "box",
-                                "layout": "horizontal",
-                                "contents": first_row,
-                                "spacing": "sm"
-                            },
-                            # صف ثاني: نقاطي + الصدارة
+                            {"type": "text", "text": "🎮 التسجيل", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                            *button_contents
+                        ],
+                        "margin": "lg"
+                    },
+                    {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "📊 الإحصائيات", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
                             {
                                 "type": "box",
                                 "layout": "horizontal",
@@ -83,8 +103,16 @@ class UIBuilder:
                                 ],
                                 "spacing": "sm",
                                 "margin": "sm"
-                            },
-                            # صف ثالث: سؤال + منشن
+                            }
+                        ],
+                        "margin": "md"
+                    },
+                    {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "🎲 أوامر سريعة", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
                             {
                                 "type": "box",
                                 "layout": "horizontal",
@@ -107,7 +135,6 @@ class UIBuilder:
                                 "spacing": "sm",
                                 "margin": "sm"
                             },
-                            # صف رابع: اعتراف + تحدي
                             {
                                 "type": "box",
                                 "layout": "horizontal",
@@ -130,7 +157,6 @@ class UIBuilder:
                                 "spacing": "sm",
                                 "margin": "sm"
                             },
-                            # صف خامس: توافق + مساعدة
                             {
                                 "type": "box",
                                 "layout": "horizontal",
@@ -154,7 +180,7 @@ class UIBuilder:
                                 "margin": "sm"
                             }
                         ],
-                        "margin": "lg"
+                        "margin": "md"
                     },
                     {"type": "separator", "margin": "lg", "color": COLORS['border']},
                     {
@@ -199,7 +225,8 @@ class UIBuilder:
                             {"type": "text", "text": "الأوامر الأساسية", "size": "md", "color": COLORS['primary'], "weight": "bold"},
                             {"type": "text", "text": "بداية - عرض القائمة الرئيسية", "size": "sm", "color": COLORS['text_light'], "margin": "sm"},
                             {"type": "text", "text": "مساعدة - عرض هذه القائمة", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
-                            {"type": "text", "text": "انضم - التسجيل في الألعاب", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
+                            {"type": "text", "text": "تسجيل - التسجيل بإدخال اسمك", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
+                            {"type": "text", "text": "تغيير الاسم - تغيير اسمك", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                             {"type": "text", "text": "انسحب - إلغاء التسجيل", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                             {"type": "text", "text": "نقاطي - عرض إحصائياتك", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                             {"type": "text", "text": "الصدارة - عرض المتصدرين", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
@@ -269,41 +296,6 @@ class UIBuilder:
                         "contents": [
                             {"type": "text", "text": "تم إنشاء هذا البوت بواسطة", "size": "xxs", "color": COLORS['text_light'], "align": "center"},
                             {"type": "text", "text": "عبير الدوسري @ 2025", "size": "xs", "color": COLORS['text_light'], "align": "center", "margin": "xs"}
-                        ],
-                        "margin": "lg"
-                    }
-                ],
-                "backgroundColor": COLORS['card_bg'],
-                "paddingAll": "20px"
-            }
-        }
-
-    @staticmethod
-    def registration_success(display_name):
-        """نافذة نجاح التسجيل"""
-        return {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "بوت الحوت", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"},
-                            {"type": "text", "text": "تم التسجيل بنجاح", "size": "md", "color": COLORS['white'], "align": "center", "margin": "xs"}
-                        ],
-                        "backgroundColor": COLORS['primary'],
-                        "paddingAll": "20px",
-                        "cornerRadius": "10px"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": f"مرحباً {display_name}", "size": "lg", "color": COLORS['text_dark'], "margin": "md", "align": "center"},
-                            {"type": "text", "text": "يمكنك الآن المشاركة في جميع الألعاب وكسب النقاط", "size": "sm", "color": COLORS['text_light'], "margin": "sm", "align": "center", "wrap": True}
                         ],
                         "margin": "lg"
                     }
