@@ -1,5 +1,5 @@
 COLORS = {
-    'primary': '#6B9BD1',  # أزرق هادئ
+    'primary': '#6B9BD1',
     'primary_dark': '#4A7BA7',
     'background': '#F5F7FA',
     'background_light': '#FFFFFF',
@@ -9,9 +9,9 @@ COLORS = {
     'text_secondary': '#7F8C8D',
     'text_light': '#95A5A6',
     'text_dark': '#2C3E50',
-    'success': '#52C5B6',  # تركواز ناعم
-    'warning': '#F39C6B',  # برتقالي فاتح
-    'error': '#E17B7B',  # أحمر ناعم
+    'success': '#52C5B6',
+    'warning': '#F39C6B',
+    'error': '#E17B7B',
     'border': '#E8ECEF',
     'progress_bg': '#E8ECEF',
     'progress_fill': '#6B9BD1',
