@@ -36,7 +36,7 @@ QUESTIONS_PER_GAME = 5
 
 # إعدادات لعبة المافيا
 MAFIA_CONFIG = {
-    'min_players': 5,
+    'min_players': 4,  # تم التغيير من 5 إلى 4
     'max_players': 20,
     'roles': {
         'mafia': 1,
