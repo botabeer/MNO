@@ -1,6 +1,8 @@
 import sqlite3
 import logging
 from threading import Lock
+from datetime import datetime, timedelta
+from constants import INACTIVITY_DAYS
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ class Database:
                 total_points INTEGER DEFAULT 0,
                 games_played INTEGER DEFAULT 0,
                 wins INTEGER DEFAULT 0,
+                last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )''')
@@ -46,10 +49,11 @@ class Database:
             try:
                 conn = sqlite3.connect(Database.DB_NAME)
                 cursor = conn.cursor()
-                cursor.execute('''INSERT INTO users (user_id, display_name)
-                    VALUES (?, ?)
+                cursor.execute('''INSERT INTO users (user_id, display_name, last_activity)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
                     ON CONFLICT(user_id) DO UPDATE SET
                     display_name = excluded.display_name,
+                    last_activity = CURRENT_TIMESTAMP,
                     updated_at = CURRENT_TIMESTAMP
                 ''', (user_id, display_name))
                 conn.commit()
@@ -58,6 +62,47 @@ class Database:
             except Exception as e:
                 logger.error(f"خطأ تسجيل: {e}")
                 return False
+    
+    @staticmethod
+    def update_last_activity(user_id):
+        """تحديث آخر نشاط للمستخدم"""
+        with Database._lock:
+            try:
+                conn = sqlite3.connect(Database.DB_NAME)
+                cursor = conn.cursor()
+                cursor.execute('''UPDATE users SET last_activity = CURRENT_TIMESTAMP 
+                    WHERE user_id = ?''', (user_id,))
+                conn.commit()
+                conn.close()
+                return True
+            except Exception as e:
+                logger.error(f"خطأ تحديث النشاط: {e}")
+                return False
+    
+    @staticmethod
+    def cleanup_inactive_users():
+        """حذف المستخدمين غير النشطين لمدة أسبوع"""
+        with Database._lock:
+            try:
+                conn = sqlite3.connect(Database.DB_NAME)
+                cursor = conn.cursor()
+                cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
+                
+                cursor.execute('''DELETE FROM users 
+                    WHERE last_activity < ? AND games_played = 0''', 
+                    (cutoff_date.strftime('%Y-%m-%d %H:%M:%S'),))
+                
+                deleted_count = cursor.rowcount
+                conn.commit()
+                conn.close()
+                
+                if deleted_count > 0:
+                    logger.info(f"تم حذف {deleted_count} مستخدم غير نشط")
+                
+                return deleted_count
+            except Exception as e:
+                logger.error(f"خطأ تنظيف المستخدمين: {e}")
+                return 0
     
     @staticmethod
     def is_user_registered(user_id):
@@ -83,6 +128,7 @@ class Database:
                     SET total_points = total_points + ?,
                         games_played = games_played + 1,
                         wins = wins + ?,
+                        last_activity = CURRENT_TIMESTAMP,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ?
                 ''', (points, 1 if won else 0, user_id))
@@ -121,7 +167,7 @@ class Database:
             return None
     
     @staticmethod
-    def get_leaderboard(limit=10):
+    def get_leaderboard(limit=20):
         try:
             conn = sqlite3.connect(Database.DB_NAME)
             cursor = conn.cursor()
@@ -136,4 +182,33 @@ class Database:
             return [{'display_name': r[0], 'total_points': r[1], 'games_played': r[2], 'wins': r[3]} for r in results]
         except Exception as e:
             logger.error(f"خطأ صدارة: {e}")
+            return []
+    
+    @staticmethod
+    def get_all_players():
+        """الحصول على جميع اللاعبين"""
+        try:
+            conn = sqlite3.connect(Database.DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute('''SELECT display_name, total_points, games_played, last_activity
+                FROM users
+                ORDER BY total_points DESC
+            ''')
+            results = cursor.fetchall()
+            conn.close()
+            
+            cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
+            players = []
+            for r in results:
+                last_activity = datetime.strptime(r[3], '%Y-%m-%d %H:%M:%S')
+                active = last_activity >= cutoff_date
+                players.append({
+                    'display_name': r[0],
+                    'total_points': r[1],
+                    'games_played': r[2],
+                    'active': active
+                })
+            return players
+        except Exception as e:
+            logger.error(f"خطأ جلب اللاعبين: {e}")
             return []
