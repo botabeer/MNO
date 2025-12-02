@@ -8,7 +8,7 @@ class UIBuilder:
         if is_registered:
             register_button = {
                 "type": "button",
-                "action": {"type": "message", "label": "تغيير الاسم ✏️", "text": "تغيير الاسم"},
+                "action": {"type": "message", "label": "تغيير الاسم ", "text": "تغيير الاسم"},
                 "style": "secondary",
                 "height": "sm"
             }
@@ -59,7 +59,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "مرحباً 👋", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"},
+                            {"type": "text", "text": "مرحباً ", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"},
                             {"type": "text", "text": registration_status, "size": "sm", "color": status_color, "margin": "xs", "align": "center"},
                             {"type": "separator", "margin": "md", "color": COLORS['border']},
                             {"type": "text", "text": "يمكنك استخدام البوت في الخاص والقروبات", "size": "xs", "color": COLORS['text_light'], "margin": "md", "wrap": True, "align": "center"}
