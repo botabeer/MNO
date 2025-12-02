@@ -1,159 +1,177 @@
 from constants import COLORS
 
-class UIBuilder:
+@staticmethod
+def welcome_card(display_name, is_registered=False):
+    """نافذة البداية مع حقوق وأيقونة ثيم"""
+    
+    # ===== الأزرار بنفس الحجم =====
+    if is_registered:
+        registration_status = f"مسجل | {display_name}"
+        status_color = COLORS['success']
+    else:
+        registration_status = "غير مسجل"
+        status_color = COLORS['warning']
 
-    @staticmethod
-    def welcome_card(display_name, is_registered=False):
-        """نافذة البداية - تصميم احترافي"""
-        # أزرار التسجيل الثلاثة
-        if is_registered:
-            registration_status = f"مسجل | {display_name}"
-            status_color = COLORS['success']
-            registration_buttons = {
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"},
-                        "style": "secondary",
-                        "height": "sm",
-                        "flex": 1
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "تغيير", "text": "تغيير"},
-                        "style": "secondary",
-                        "height": "sm",
-                        "flex": 1,
-                        "margin": "xs"
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
-                        "style": "secondary",
-                        "height": "sm",
-                        "flex": 1,
-                        "margin": "xs"
-                    }
-                ],
-                "spacing": "xs"
+    registration_buttons = {
+        "type": "box",
+        "layout": "horizontal",
+        "spacing": "xs",
+        "contents": [
+            {
+                "type": "button",
+                "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"},
+                "style": "primary",
+                "color": COLORS['primary'],
+                "height": "sm",
+                "flex": 1
+            },
+            {
+                "type": "button",
+                "action": {"type": "message", "label": "تغيير", "text": "تغيير"},
+                "style": "secondary",
+                "height": "sm",
+                "flex": 1
+            },
+            {
+                "type": "button",
+                "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
+                "style": "secondary",
+                "height": "sm",
+                "flex": 1
             }
-        else:
-            registration_status = "غير مسجل"
-            status_color = COLORS['warning']
-            registration_buttons = {
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"},
-                        "style": "primary",
-                        "color": COLORS['primary'],
-                        "height": "sm",
-                        "flex": 2
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "تغيير", "text": "تغيير"},
-                        "style": "secondary",
-                        "height": "sm",
-                        "flex": 1,
-                        "margin": "xs"
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
-                        "style": "secondary",
-                        "height": "sm",
-                        "flex": 1,
-                        "margin": "xs"
-                    }
-                ],
-                "spacing": "xs"
-            }
-        
-        return {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "md",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "بوت الحوت", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
-                        ],
-                        "backgroundColor": COLORS['primary'],
-                        "paddingAll": "20px",
-                        "cornerRadius": "12px"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "مرحباً", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"},
-                            {"type": "text", "text": registration_status, "size": "md", "color": status_color, "margin": "xs", "align": "center", "weight": "bold"}
-                        ],
-                        "margin": "lg"
-                    },
-                    {"type": "separator", "margin": "md", "color": COLORS['border']},
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "الحساب", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
-                            registration_buttons
-                        ],
-                        "margin": "lg",
-                        "spacing": "sm"
-                    },
-                    {"type": "separator", "margin": "md", "color": COLORS['border']},
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "الإحصائيات", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
-                            {
-                                "type": "box",
-                                "layout": "horizontal",
-                                "contents": [
-                                    {"type": "button", "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "flex": 1},
-                                    {"type": "button", "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"}
-                                ],
-                                "spacing": "xs",
-                                "margin": "sm"
-                            }
-                        ],
-                        "margin": "md"
-                    },
-                    {"type": "separator", "margin": "md", "color": COLORS['border']},
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "القوائم", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
-                            {
-                                "type": "box",
-                                "layout": "horizontal",
-                                "contents": [
-                                    {"type": "button", "action": {"type": "message", "label": "ألعاب", "text": "ألعاب"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1},
-                                    {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"}
-                                ],
-                                "spacing": "xs",
-                                "margin": "sm"
-                            }
-                        ],
-                        "margin": "md"
-                    }
-                ],
-                "backgroundColor": COLORS['card_bg'],
-                "paddingAll": "20px"
-            }
+        ]
+    }
+
+    return {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+
+                # ===== العنوان + أيقونة الثيم =====
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "بوت الحوت",
+                            "weight": "bold",
+                            "size": "xl",
+                            "color": COLORS['white'],
+                            "flex": 4
+                        },
+                        {
+                            "type": "image",
+                            "url": "https://cdn-icons-png.flaticon.com/512/1163/1163661.png",
+                            "size": "xxs",
+                            "aspectMode": "fit"
+                        }
+                    ],
+                    "backgroundColor": COLORS['primary'],
+                    "paddingAll": "20px",
+                    "cornerRadius": "12px"
+                },
+
+                # ===== الحالة =====
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": "مرحباً", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"},
+                        {"type": "text", "text": registration_status, "size": "md", "color": status_color, "margin": "xs", "align": "center", "weight": "bold"}
+                    ],
+                    "margin": "lg"
+                },
+
+                {"type": "separator", "margin": "md", "color": COLORS['border']},
+
+                # ===== الحساب =====
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": [
+                        {"type": "text", "text": "الحساب", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                        registration_buttons
+                    ]
+                },
+
+                {"type": "separator", "margin": "md", "color": COLORS['border']},
+
+                # ===== الإحصائيات =====
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": [
+                        {"type": "text", "text": "الإحصائيات", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "spacing": "xs",
+                            "contents": [
+                                {"type": "button", "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"}, "style": "secondary", "height": "sm", "flex": 1}
+                            ]
+                        }
+                    ]
+                },
+
+                {"type": "separator", "margin": "md", "color": COLORS['border']},
+
+                # ===== القوائم =====
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": [
+                        {"type": "text", "text": "القوائم", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "spacing": "xs",
+                            "contents": [
+                                {"type": "button", "action": {"type": "message", "label": "ألعاب", "text": "ألعاب"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "flex": 1}
+                            ]
+                        }
+                    ]
+                },
+
+                {"type": "separator", "margin": "lg", "color": COLORS['border']},
+
+                # ===== الحقوق =====
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025",
+                            "size": "xs",
+                            "color": COLORS['text_light'],
+                            "align": "center",
+                            "wrap": True,
+                            "flex": 5
+                        },
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "🌓", "text": "تبديل الثيم"},
+                            "style": "secondary",
+                            "height": "sm",
+                            "flex": 1
+                        }
+                    ],
+                    "margin": "sm"
+                }
+            ],
+            "backgroundColor": COLORS['card_bg'],
+            "paddingAll": "20px"
         }
+    }
 
     @staticmethod
     def games_menu_card(is_registered):
