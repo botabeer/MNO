@@ -44,7 +44,7 @@ waiting_for_registration = {}
 waiting_for_name_change = {}
 
 def get_quick_reply():
-    """Quick Reply ثابت لجميع الرسائل"""
+    """Quick Reply ثابت لجميع الرسائل - بدون ايموجي"""
     return QuickReply(items=[
         QuickReplyButton(action=MessageAction(label="سؤال", text="سؤال")),
         QuickReplyButton(action=MessageAction(label="منشن", text="منشن")),
@@ -57,7 +57,8 @@ def get_quick_reply():
         QuickReplyButton(action=MessageAction(label="فئة", text="فئه")),
         QuickReplyButton(action=MessageAction(label="اغنية", text="اغنيه")),
         QuickReplyButton(action=MessageAction(label="ضد", text="ضد")),
-        QuickReplyButton(action=MessageAction(label="تكوين", text="تكوين"))
+        QuickReplyButton(action=MessageAction(label="تكوين", text="تكوين")),
+        QuickReplyButton(action=MessageAction(label="لعبه", text="لعبه"))
     ])
 
 class NameFilter:
@@ -85,8 +86,8 @@ class NameFilter:
         if not name or name.strip() == "":
             return False, "الاسم لا يمكن ان يكون فارغا"
         
-        if len(name.strip()) < 2:
-            return False, "الاسم قصير جدا الحد الادنى حرفين"
+        if len(name.strip()) < 1:
+            return False, "الاسم قصير جدا"
         
         if len(name.strip()) > 30:
             return False, "الاسم طويل جدا الحد الاقصى 30 حرف"
@@ -235,11 +236,11 @@ def handle_message(event):
                 msg = TextSendMessage(text=f"انت مسجل بالفعل باسم {display_name}", quick_reply=get_quick_reply())
             else:
                 waiting_for_registration[user_id] = group_id
-                msg = TextSendMessage(text="مرحبا بك في التسجيل\n\nالرجاء كتابة اسمك\n\nالشروط\nمن 2 الى 30 حرف\nلا يحتوي على كلمات غير لائقة\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
+                msg = TextSendMessage(text="مرحبا بك في التسجيل\n\nالرجاء كتابة اسمك\n\nالشروط\nمن حرف الى 30 حرف\nلا يحتوي على كلمات غير لائقة\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
             line_bot_api.reply_message(event.reply_token, msg)
             return
 
-        if text == "تغيير الاسم":
+        if text == "تغيير" or text == "تغيير الاسم":
             if not is_user_registered(group_id, user_id):
                 msg = TextSendMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
             else:
@@ -373,12 +374,15 @@ def handle_message(event):
                         response.quick_reply = get_quick_reply()
                     line_bot_api.reply_message(event.reply_token, response)
 
-                if result.get('next_question'):
+                # الانتقال التلقائي للسؤال التالي
+                if result.get('next_question') and not result.get('game_over'):
                     next_q = game_manager.next_question(group_id)
                     if next_q:
                         try:
                             if isinstance(next_q, FlexSendMessage):
                                 next_q.quick_reply = get_quick_reply()
+                            import time
+                            time.sleep(1)
                             line_bot_api.push_message(group_id, next_q)
                         except Exception as e:
                             logger.error(f"خطأ في إرسال السؤال التالي: {e}")
