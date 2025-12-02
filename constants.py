@@ -1,20 +1,22 @@
 COLORS = {
-    'primary': '#00D9FF',
-    'primary_dark': '#0099CC',
-    'background': '#0A0E27',
-    'background_light': '#151B3D',
-    'card_bg': '#1A2145',
+    'primary': '#00E5FF',
+    'primary_dark': '#008B9E',
+    'background': '#0A1628',
+    'background_light': '#0D1B2E',
+    'card_bg': '#0F1F35',
     'text': '#FFFFFF',
     'white': '#FFFFFF',
-    'text_secondary': '#8B95C9',
-    'text_light': '#8B95C9',
-    'text_dark': '#FFFFFF',
-    'success': '#00FF9D',
+    'text_secondary': '#7FA8C9',
+    'text_light': '#7FA8C9',
+    'text_dark': '#E0F7FF',
+    'success': '#00FFD4',
     'warning': '#FFB800',
     'error': '#FF4757',
-    'border': '#2D3561',
-    'progress_bg': '#1E2749',
-    'progress_fill': '#00D9FF'
+    'border': '#1A3A52',
+    'progress_bg': '#0D2438',
+    'progress_fill': '#00E5FF',
+    'glow': '#00E5FF',
+    'shadow': 'rgba(0, 229, 255, 0.3)'
 }
 
 POINTS = {
