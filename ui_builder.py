@@ -174,95 +174,112 @@ def welcome_card(display_name, is_registered=False):
     }
 
     @staticmethod
-    def games_menu_card(is_registered):
-        """قائمة الألعاب - تصميم شبكي أنيق"""
-        game_buttons_row1 = {
+def games_menu_card(is_registered):
+
+    return {
+        "type": "bubble",
+        "body": {
             "type": "box",
-            "layout": "horizontal",
+            "layout": "vertical",
+            "spacing": "md",
             "contents": [
-                {"type": "button", "action": {"type": "message", "label": "اغنيه", "text": "اغنيه"}, "style": "secondary", "height": "sm", "flex": 1},
-                {"type": "button", "action": {"type": "message", "label": "ضد", "text": "ضد"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"},
-                {"type": "button", "action": {"type": "message", "label": "تكوين", "text": "تكوين"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"}
+
+                # ✅ عنوان
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "backgroundColor": COLORS['primary'],
+                    "paddingAll": "20px",
+                    "cornerRadius": "12px",
+                    "contents": [
+                        {"type": "text", "text": "بوت الحوت", "size": "lg", "weight": "bold", "color": COLORS['white'], "align": "center"},
+                        {"type": "text", "text": "قائمة الألعاب", "size": "sm", "color": COLORS['white'], "align": "center"}
+                    ]
+                },
+
+                {"type": "text", "text": "استمتع باللعب", "align": "center", "color": COLORS['success']},
+
+                # ✅ الألعاب بالنقاط
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {"type": "button", "action": {"type": "message", "label": "اغنيه", "text": "اغنيه"}, "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "ضد", "text": "ضد"}, "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "تكوين", "text": "تكوين"}, "flex": 1}
+                            ]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {"type": "button", "action": {"type": "message", "label": "سلسله", "text": "سلسله"}, "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "اسرع", "text": "اسرع"}, "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "لعبه", "text": "لعبه"}, "flex": 1}
+                            ]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {"type": "button", "action": {"type": "message", "label": "فئة", "text": "فئه"}, "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "مافيا", "text": "مافيا"}, "style": "primary", "color": COLORS['primary'], "flex": 1}
+                            ]
+                        }
+                    ]
+                },
+
+                {"type": "separator", "margin": "md"},
+
+                # ✅ الترفيه بدون تسجيل
+                {"type": "text", "text": "ألعاب ترفيهية بدون تسجيل", "align": "center", "color": COLORS['warning']},
+
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "button", "action": {"type": "message", "label": "توافق", "text": "توافق"}, "flex": 1},
+                        {"type": "button", "action": {"type": "message", "label": "سؤال", "text": "سؤال"}, "flex": 1},
+                        {"type": "button", "action": {"type": "message", "label": "منشن", "text": "منشن"}, "flex": 1}
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "button", "action": {"type": "message", "label": "تحدي", "text": "تحدي"}, "flex": 1},
+                        {"type": "button", "action": {"type": "message", "label": "اعتراف", "text": "اعتراف"}, "flex": 1}
+                    ]
+                },
+
+                {"type": "separator", "margin": "md"},
+
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "العودة للبداية", "text": "بداية"},
+                    "style": "primary",
+                    "color": COLORS['primary']
+                },
+
+                # ✅ الحقوق أسفل قائمة الألعاب
+                {
+                    "type": "text",
+                    "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025",
+                    "size": "xs",
+                    "color": COLORS['text_light'],
+                    "align": "center",
+                    "margin": "lg"
+                }
             ],
-            "spacing": "xs"
+            "backgroundColor": COLORS['card_bg'],
+            "paddingAll": "20px"
         }
-        
-        game_buttons_row2 = {
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [
-                {"type": "button", "action": {"type": "message", "label": "سلسله", "text": "سلسله"}, "style": "secondary", "height": "sm", "flex": 1},
-                {"type": "button", "action": {"type": "message", "label": "اسرع", "text": "اسرع"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"},
-                {"type": "button", "action": {"type": "message", "label": "لعبه", "text": "لعبه"}, "style": "secondary", "height": "sm", "flex": 1, "margin": "xs"}
-            ],
-            "spacing": "xs",
-            "margin": "xs"
-        }
-        
-        game_buttons_row3 = {
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [
-                {"type": "button", "action": {"type": "message", "label": "فئة", "text": "فئه"}, "style": "secondary", "height": "sm", "flex": 1},
-                {"type": "button", "action": {"type": "message", "label": "مافيا", "text": "مافيا"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1, "margin": "xs"}
-            ],
-            "spacing": "xs",
-            "margin": "xs"
-        }
-        
-        note_text = "تحتاج للتسجيل أولاً" if not is_registered else "استمتع باللعب"
-        note_color = COLORS['error'] if not is_registered else COLORS['success']
-        
-        return {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "md",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "قائمة الألعاب", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
-                        ],
-                        "backgroundColor": COLORS['primary'],
-                        "paddingAll": "20px",
-                        "cornerRadius": "12px"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": note_text, "size": "sm", "color": note_color, "align": "center", "weight": "bold"}
-                        ],
-                        "margin": "lg"
-                    },
-                    {"type": "separator", "margin": "md", "color": COLORS['border']},
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            game_buttons_row1,
-                            game_buttons_row2,
-                            game_buttons_row3
-                        ],
-                        "margin": "md"
-                    },
-                    {"type": "separator", "margin": "md", "color": COLORS['border']},
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "العودة للبداية", "text": "بداية"},
-                        "style": "primary",
-                        "color": COLORS['primary'],
-                        "height": "sm",
-                        "margin": "md"
-                    }
-                ],
-                "backgroundColor": COLORS['card_bg'],
-                "paddingAll": "20px"
-            }
-        }
+    }
 
     @staticmethod
     def help_card():
