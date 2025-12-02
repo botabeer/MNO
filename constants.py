@@ -1,22 +1,22 @@
 COLORS = {
-    'primary': '#00E5FF',
-    'primary_dark': '#008B9E',
-    'background': '#0A1628',
-    'background_light': '#0D1B2E',
-    'card_bg': '#0F1F35',
-    'text': '#FFFFFF',
+    'primary': '#6B9BD1',  # أزرق هادئ
+    'primary_dark': '#4A7BA7',
+    'background': '#F5F7FA',
+    'background_light': '#FFFFFF',
+    'card_bg': '#FFFFFF',
+    'text': '#2C3E50',
     'white': '#FFFFFF',
-    'text_secondary': '#7FA8C9',
-    'text_light': '#7FA8C9',
-    'text_dark': '#E0F7FF',
-    'success': '#00FFD4',
-    'warning': '#FFB800',
-    'error': '#FF4757',
-    'border': '#1A3A52',
-    'progress_bg': '#0D2438',
-    'progress_fill': '#00E5FF',
-    'glow': '#00E5FF',
-    'shadow': 'rgba(0, 229, 255, 0.3)'
+    'text_secondary': '#7F8C8D',
+    'text_light': '#95A5A6',
+    'text_dark': '#2C3E50',
+    'success': '#52C5B6',  # تركواز ناعم
+    'warning': '#F39C6B',  # برتقالي فاتح
+    'error': '#E17B7B',  # أحمر ناعم
+    'border': '#E8ECEF',
+    'progress_bg': '#E8ECEF',
+    'progress_fill': '#6B9BD1',
+    'glow': '#6B9BD1',
+    'shadow': 'rgba(107, 155, 209, 0.15)'
 }
 
 POINTS = {
