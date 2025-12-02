@@ -49,6 +49,17 @@ class MafiaGame:
                             "type": "box",
                             "layout": "vertical",
                             "contents": [
+                                {"type": "text", "text": " مهم: أضف البوت كصديق لاستلام دورك السري", "size": "xs", "color": COLORS['warning'], "weight": "bold", "wrap": True, "align": "center"}
+                            ],
+                            "backgroundColor": f"{COLORS['warning']}1A",
+                            "paddingAll": "10px",
+                            "cornerRadius": "8px",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
                                 {"type": "text", "text": "انضم للعبة", "size": "lg", "color": COLORS['text_dark'], "weight": "bold"},
                                 {"type": "text", "text": f"اللاعبين المسجلين: {len(self.players)}", "size": "md", "color": COLORS['text_light'], "margin": "md"},
                                 {"type": "text", "text": f"الحد الأدنى: {MAFIA_CONFIG['min_players']} لاعبين", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}
