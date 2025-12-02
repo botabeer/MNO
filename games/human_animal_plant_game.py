@@ -1,24 +1,13 @@
 from linebot.models import TextSendMessage, FlexSendMessage
 import random
-import re
 from constants import COLORS
-
-def normalize_text(text):
-    if not text:
-        return ""
-    text = text.strip().lower()
-    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '').replace('ة', 'ه').replace('ى', 'ي')
-    text = re.sub(r'[\u064B-\u065F]', '', text)
-    text = re.sub(r'\s+', '', text)
-    return text
 
 class HumanAnimalPlantGame:
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.letters = [
             'أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 
-            'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي',
-            'أ', 'ب', 'ت', 'ج', 'ح', 'د', 'ر', 'س', 'ش', 'ع', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'
+            'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'
         ]
         self.questions = []
         self.current_question = 0
@@ -27,7 +16,7 @@ class HumanAnimalPlantGame:
         self.answered_users = {}
 
     def start_game(self):
-        self.questions = random.sample(self.letters, self.total_questions)
+        self.questions = random.sample(self.letters, min(self.total_questions, len(self.letters)))
         self.current_question = 0
         self.player_scores = {}
         self.answered_users = {}
@@ -46,57 +35,13 @@ class HumanAnimalPlantGame:
                     "layout": "vertical",
                     "spacing": "md",
                     "contents": [
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "إنسان حيوان نبات بلاد", "weight": "bold", "size": "lg", "color": COLORS['white'], "align": "center"}
-                            ],
-                            "backgroundColor": COLORS['primary'],
-                            "paddingAll": "20px",
-                            "cornerRadius": "12px"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "baseline",
-                            "contents": [
-                                {"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0},
-                                {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}
-                            ],
-                            "margin": "lg"
-                        },
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "إنسان حيوان نبات بلاد", "weight": "bold", "size": "lg", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
                         {"type": "separator", "margin": "md", "color": COLORS['border']},
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": letter, "size": "5xl", "color": COLORS['primary'], "weight": "bold", "align": "center"},
-                                {"type": "text", "text": "اكتب 4 كلمات تبدأ بهذا الحرف", "size": "sm", "color": COLORS['text_dark'], "margin": "md", "wrap": True, "align": "center"},
-                                {"type": "text", "text": "كل كلمة في سطر منفصل", "size": "xs", "color": COLORS['text_light'], "margin": "xs", "align": "center"}
-                            ],
-                            "margin": "lg"
-                        },
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": letter, "size": "5xl", "color": COLORS['primary'], "weight": "bold", "align": "center"}, {"type": "text", "text": "اكتب 4 كلمات تبدأ بهذا الحرف", "size": "sm", "color": COLORS['text_dark'], "margin": "md", "wrap": True, "align": "center"}, {"type": "text", "text": "كل كلمة في سطر منفصل", "size": "xs", "color": COLORS['text_light'], "margin": "xs", "align": "center"}], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}
-                            ],
-                            "spacing": "sm",
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}
-                            ],
-                            "spacing": "sm",
-                            "margin": "sm"
-                        }
+                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"},
+                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "sm"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
@@ -151,20 +96,10 @@ class HumanAnimalPlantGame:
         winner = sorted_players[0][1]
         
         players_contents = []
-        medals = ["🥇", "🥈", "🥉"]
         
         for i, p in enumerate(sorted_players[:5]):
-            medal = medals[i] if i < 3 else f"{i+1}."
-            players_contents.append({
-                "type": "box",
-                "layout": "baseline",
-                "contents": [
-                    {"type": "text", "text": medal, "size": "sm", "flex": 0},
-                    {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"},
-                    {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}
-                ],
-                "margin": "md" if i > 0 else "sm"
-            })
+            rank = f"{i+1}."
+            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": rank, "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
         
         winner_card = FlexSendMessage(
             alt_text="نتائج اللعبة",
@@ -175,45 +110,12 @@ class HumanAnimalPlantGame:
                     "layout": "vertical",
                     "spacing": "md",
                     "contents": [
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
-                            ],
-                            "backgroundColor": COLORS['primary'],
-                            "paddingAll": "20px",
-                            "cornerRadius": "12px"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"},
-                                {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"},
-                                {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}
-                            ],
-                            "margin": "lg"
-                        },
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
-                                *players_contents
-                            ],
-                            "margin": "lg"
-                        },
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "إعادة اللعب", "text": "لعبه"},
-                            "style": "primary",
-                            "color": COLORS['primary'],
-                            "height": "sm",
-                            "margin": "lg"
-                        }
+                        {"type": "button", "action": {"type": "message", "label": "إعادة اللعب", "text": "لعبه"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
