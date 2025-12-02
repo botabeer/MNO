@@ -22,7 +22,7 @@ class UIBuilder:
                     },
                     {
                         "type": "button",
-                        "action": {"type": "message", "label": "تغيير الاسم", "text": "تغيير الاسم"},
+                        "action": {"type": "message", "label": "تغيير", "text": "تغيير"},
                         "style": "secondary",
                         "height": "sm",
                         "flex": 1,
@@ -56,7 +56,7 @@ class UIBuilder:
                     },
                     {
                         "type": "button",
-                        "action": {"type": "message", "label": "تغيير الاسم", "text": "تغيير الاسم"},
+                        "action": {"type": "message", "label": "تغيير", "text": "تغيير"},
                         "style": "secondary",
                         "height": "sm",
                         "flex": 1,
