@@ -1,289 +1,221 @@
 from constants import COLORS
 
-@staticmethod
-def welcome_card(display_name, is_registered=False):
-    """نافذة البداية مع حقوق وأيقونة ثيم"""
+class UIBuilder:
     
-    # ===== الأزرار بنفس الحجم =====
-    if is_registered:
-        registration_status = f"مسجل | {display_name}"
-        status_color = COLORS['success']
-    else:
-        registration_status = "غير مسجل"
-        status_color = COLORS['warning']
-
-    registration_buttons = {
-        "type": "box",
-        "layout": "horizontal",
-        "spacing": "xs",
-        "contents": [
-            {
-                "type": "button",
-                "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"},
-                "style": "primary",
-                "color": COLORS['primary'],
-                "height": "sm",
-                "flex": 1
-            },
-            {
-                "type": "button",
-                "action": {"type": "message", "label": "تغيير", "text": "تغيير"},
-                "style": "secondary",
-                "height": "sm",
-                "flex": 1
-            },
-            {
-                "type": "button",
-                "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
-                "style": "secondary",
-                "height": "sm",
-                "flex": 1
-            }
-        ]
-    }
-
-    return {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "md",
-            "contents": [
-
-                # ===== العنوان + أيقونة الثيم =====
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "بوت الحوت",
-                            "weight": "bold",
-                            "size": "xl",
-                            "color": COLORS['white'],
-                            "flex": 4
-                        },
-                        {
-                            "type": "image",
-                            "url": "https://cdn-icons-png.flaticon.com/512/1163/1163661.png",
-                            "size": "xxs",
-                            "aspectMode": "fit"
-                        }
-                    ],
-                    "backgroundColor": COLORS['primary'],
-                    "paddingAll": "20px",
-                    "cornerRadius": "12px"
-                },
-
-                # ===== الحالة =====
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "مرحباً", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"},
-                        {"type": "text", "text": registration_status, "size": "md", "color": status_color, "margin": "xs", "align": "center", "weight": "bold"}
-                    ],
-                    "margin": "lg"
-                },
-
-                {"type": "separator", "margin": "md", "color": COLORS['border']},
-
-                # ===== الحساب =====
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "sm",
-                    "contents": [
-                        {"type": "text", "text": "الحساب", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
-                        registration_buttons
-                    ]
-                },
-
-                {"type": "separator", "margin": "md", "color": COLORS['border']},
-
-                # ===== الإحصائيات =====
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "sm",
-                    "contents": [
-                        {"type": "text", "text": "الإحصائيات", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "spacing": "xs",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"}, "style": "secondary", "height": "sm", "flex": 1}
-                            ]
-                        }
-                    ]
-                },
-
-                {"type": "separator", "margin": "md", "color": COLORS['border']},
-
-                # ===== القوائم =====
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "sm",
-                    "contents": [
-                        {"type": "text", "text": "القوائم", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "spacing": "xs",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "ألعاب", "text": "ألعاب"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "flex": 1}
-                            ]
-                        }
-                    ]
-                },
-
-                {"type": "separator", "margin": "lg", "color": COLORS['border']},
-
-                # ===== الحقوق =====
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025",
-                            "size": "xs",
-                            "color": COLORS['text_light'],
-                            "align": "center",
-                            "wrap": True,
-                            "flex": 5
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🌓", "text": "تبديل الثيم"},
-                            "style": "secondary",
-                            "height": "sm",
-                            "flex": 1
-                        }
-                    ],
-                    "margin": "sm"
-                }
-            ],
-            "backgroundColor": COLORS['card_bg'],
-            "paddingAll": "20px"
-        }
-    }
-
     @staticmethod
-def games_menu_card(is_registered):
+    def welcome_card(display_name, is_registered=False):
+        """نافذة البداية"""
+        
+        if is_registered:
+            registration_status = f"مسجل | {display_name}"
+            status_color = COLORS['success']
+        else:
+            registration_status = "غير مسجل"
+            status_color = COLORS['warning']
 
-    return {
-        "type": "bubble",
-        "body": {
+        registration_buttons = {
             "type": "box",
-            "layout": "vertical",
-            "spacing": "md",
+            "layout": "horizontal",
+            "spacing": "xs",
             "contents": [
-
-                # ✅ عنوان
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "backgroundColor": COLORS['primary'],
-                    "paddingAll": "20px",
-                    "cornerRadius": "12px",
-                    "contents": [
-                        {"type": "text", "text": "بوت الحوت", "size": "lg", "weight": "bold", "color": COLORS['white'], "align": "center"},
-                        {"type": "text", "text": "قائمة الألعاب", "size": "sm", "color": COLORS['white'], "align": "center"}
-                    ]
-                },
-
-                {"type": "text", "text": "استمتع باللعب", "align": "center", "color": COLORS['success']},
-
-                # ✅ الألعاب بالنقاط
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "xs",
-                    "contents": [
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "اغنيه", "text": "اغنيه"}, "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "ضد", "text": "ضد"}, "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "تكوين", "text": "تكوين"}, "flex": 1}
-                            ]
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "سلسله", "text": "سلسله"}, "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "اسرع", "text": "اسرع"}, "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "لعبه", "text": "لعبه"}, "flex": 1}
-                            ]
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "فئة", "text": "فئه"}, "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "مافيا", "text": "مافيا"}, "style": "primary", "color": COLORS['primary'], "flex": 1}
-                            ]
-                        }
-                    ]
-                },
-
-                {"type": "separator", "margin": "md"},
-
-                # ✅ الترفيه بدون تسجيل
-                {"type": "text", "text": "ألعاب ترفيهية بدون تسجيل", "align": "center", "color": COLORS['warning']},
-
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                        {"type": "button", "action": {"type": "message", "label": "توافق", "text": "توافق"}, "flex": 1},
-                        {"type": "button", "action": {"type": "message", "label": "سؤال", "text": "سؤال"}, "flex": 1},
-                        {"type": "button", "action": {"type": "message", "label": "منشن", "text": "منشن"}, "flex": 1}
-                    ]
-                },
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                        {"type": "button", "action": {"type": "message", "label": "تحدي", "text": "تحدي"}, "flex": 1},
-                        {"type": "button", "action": {"type": "message", "label": "اعتراف", "text": "اعتراف"}, "flex": 1}
-                    ]
-                },
-
-                {"type": "separator", "margin": "md"},
-
                 {
                     "type": "button",
-                    "action": {"type": "message", "label": "العودة للبداية", "text": "بداية"},
+                    "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"},
                     "style": "primary",
-                    "color": COLORS['primary']
+                    "color": COLORS['primary'],
+                    "height": "sm",
+                    "flex": 1
                 },
-
-                # ✅ الحقوق أسفل قائمة الألعاب
                 {
-                    "type": "text",
-                    "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025",
-                    "size": "xs",
-                    "color": COLORS['text_light'],
-                    "align": "center",
-                    "margin": "lg"
+                    "type": "button",
+                    "action": {"type": "message", "label": "تغيير", "text": "تغيير"},
+                    "style": "secondary",
+                    "height": "sm",
+                    "flex": 1
+                },
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
+                    "style": "secondary",
+                    "height": "sm",
+                    "flex": 1
                 }
-            ],
-            "backgroundColor": COLORS['card_bg'],
-            "paddingAll": "20px"
+            ]
         }
-    }
+
+        return {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "بوت الحوت", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
+                        ],
+                        "backgroundColor": COLORS['primary'],
+                        "paddingAll": "20px",
+                        "cornerRadius": "12px"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "مرحباً", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"},
+                            {"type": "text", "text": registration_status, "size": "md", "color": status_color, "margin": "xs", "align": "center", "weight": "bold"}
+                        ],
+                        "margin": "lg"
+                    },
+                    {"type": "separator", "margin": "md", "color": COLORS['border']},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": "الحساب", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                            registration_buttons
+                        ]
+                    },
+                    {"type": "separator", "margin": "md", "color": COLORS['border']},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": "الإحصائيات", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "spacing": "xs",
+                                "contents": [
+                                    {"type": "button", "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "flex": 1},
+                                    {"type": "button", "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"}, "style": "secondary", "height": "sm", "flex": 1}
+                                ]
+                            }
+                        ]
+                    },
+                    {"type": "separator", "margin": "md", "color": COLORS['border']},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": "القوائم", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "spacing": "xs",
+                                "contents": [
+                                    {"type": "button", "action": {"type": "message", "label": "ألعاب", "text": "ألعاب"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1},
+                                    {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "flex": 1}
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "backgroundColor": COLORS['card_bg'],
+                "paddingAll": "20px"
+            }
+        }
+
+    @staticmethod
+    def games_menu_card(is_registered):
+        """قائمة الألعاب"""
+        return {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": COLORS['primary'],
+                        "paddingAll": "20px",
+                        "cornerRadius": "12px",
+                        "contents": [
+                            {"type": "text", "text": "بوت الحوت", "size": "lg", "weight": "bold", "color": COLORS['white'], "align": "center"},
+                            {"type": "text", "text": "قائمة الألعاب", "size": "sm", "color": COLORS['white'], "align": "center"}
+                        ]
+                    },
+                    {"type": "text", "text": "استمتع باللعب", "align": "center", "color": COLORS['success']},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "xs",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "button", "action": {"type": "message", "label": "اغنيه", "text": "اغنيه"}, "flex": 1, "style": "secondary", "height": "sm"},
+                                    {"type": "button", "action": {"type": "message", "label": "ضد", "text": "ضد"}, "flex": 1, "style": "secondary", "height": "sm"},
+                                    {"type": "button", "action": {"type": "message", "label": "تكوين", "text": "تكوين"}, "flex": 1, "style": "secondary", "height": "sm"}
+                                ],
+                                "spacing": "xs"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "button", "action": {"type": "message", "label": "سلسله", "text": "سلسله"}, "flex": 1, "style": "secondary", "height": "sm"},
+                                    {"type": "button", "action": {"type": "message", "label": "اسرع", "text": "اسرع"}, "flex": 1, "style": "secondary", "height": "sm"},
+                                    {"type": "button", "action": {"type": "message", "label": "لعبه", "text": "لعبه"}, "flex": 1, "style": "secondary", "height": "sm"}
+                                ],
+                                "spacing": "xs"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {"type": "button", "action": {"type": "message", "label": "فئة", "text": "فئه"}, "flex": 1, "style": "secondary", "height": "sm"},
+                                    {"type": "button", "action": {"type": "message", "label": "مافيا", "text": "مافيا"}, "style": "primary", "color": COLORS['primary'], "flex": 1, "height": "sm"}
+                                ],
+                                "spacing": "xs"
+                            }
+                        ]
+                    },
+                    {"type": "separator", "margin": "md"},
+                    {"type": "text", "text": "ألعاب ترفيهية بدون تسجيل", "align": "center", "color": COLORS['warning']},
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "button", "action": {"type": "message", "label": "توافق", "text": "توافق"}, "flex": 1, "style": "secondary", "height": "sm"},
+                            {"type": "button", "action": {"type": "message", "label": "سؤال", "text": "سؤال"}, "flex": 1, "style": "secondary", "height": "sm"},
+                            {"type": "button", "action": {"type": "message", "label": "منشن", "text": "منشن"}, "flex": 1, "style": "secondary", "height": "sm"}
+                        ],
+                        "spacing": "xs"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "button", "action": {"type": "message", "label": "تحدي", "text": "تحدي"}, "flex": 1, "style": "secondary", "height": "sm"},
+                            {"type": "button", "action": {"type": "message", "label": "اعتراف", "text": "اعتراف"}, "flex": 1, "style": "secondary", "height": "sm"}
+                        ],
+                        "spacing": "xs"
+                    },
+                    {"type": "separator", "margin": "md"},
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "العودة للبداية", "text": "بداية"},
+                        "style": "primary",
+                        "color": COLORS['primary']
+                    }
+                ],
+                "backgroundColor": COLORS['card_bg'],
+                "paddingAll": "20px"
+            }
+        }
 
     @staticmethod
     def help_card():
-        """نافذة المساعدة - منظمة ومرتبة"""
+        """نافذة المساعدة"""
         return {
             "type": "bubble",
             "body": {
@@ -367,7 +299,7 @@ def games_menu_card(is_registered):
 
     @staticmethod
     def stats_card(display_name, stats):
-        """نافذة الإحصائيات - عرض جذاب"""
+        """نافذة الإحصائيات"""
         if not stats:
             stats = {'total_points': 0, 'games_played': 0, 'wins': 0}
         
@@ -447,7 +379,7 @@ def games_menu_card(is_registered):
 
     @staticmethod
     def leaderboard_card(leaders):
-        """نافذة لوحة الصدارة - تصميم أنيق"""
+        """نافذة لوحة الصدارة"""
         leader_contents = []
         
         for i, l in enumerate(leaders[:20]):
