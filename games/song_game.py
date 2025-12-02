@@ -142,8 +142,7 @@ class SongGame:
                             "type": "box",
                             "layout": "vertical",
                             "contents": [
-                                {"type": "text", "text": "🎵", "size": "xxl", "align": "center"},
-                                {"type": "text", "text": "لعبة الأغنية", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
+                                {"type": "text", "text": "لعبة الأغنية", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
                             ],
                             "backgroundColor": COLORS['primary'],
                             "paddingAll": "20px",
@@ -174,21 +173,11 @@ class SongGame:
                             "type": "box",
                             "layout": "horizontal",
                             "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "💡 لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "✅ جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}
+                                {"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}
                             ],
                             "spacing": "sm",
                             "margin": "lg"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "📝 تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}
-                            ],
-                            "spacing": "sm",
-                            "margin": "sm"
                         }
                     ],
                     "backgroundColor": COLORS['card_bg'],
@@ -216,14 +205,14 @@ class SongGame:
                 self.hints_used[user_id] = True
                 first_letter = song['singer'][0]
                 word_length = len(song['singer'])
-                return {'response': TextSendMessage(text=f"💡 يبدأ بحرف: {first_letter}\n📏 عدد الحروف: {word_length}"), 'points': 0, 'correct': False}
-            return {'response': TextSendMessage(text="⚠️ استخدمت التلميح مسبقاً"), 'points': 0, 'correct': False}
+                return {'response': TextSendMessage(text=f" يبدأ بحرف: {first_letter}\n عدد الحروف: {word_length}"), 'points': 0, 'correct': False}
+            return {'response': TextSendMessage(text=" استخدمت التلميح مسبقاً"), 'points': 0, 'correct': False}
 
         if answer in ['جاوب', 'الجواب']:
             self.previous_answer = song['singer']
             self.answered_users.add(user_id)
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"✅ الإجابة: {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
+                return {'response': TextSendMessage(text=f" الإجابة: {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
 
         if normalize_text(answer) == normalize_text(song['singer']):
@@ -234,14 +223,14 @@ class SongGame:
             self.previous_answer = song['singer']
 
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"🎉 إجابة صحيحة {display_name}!\n⭐ +{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
+                return {'response': TextSendMessage(text=f" إجابة صحيحة {display_name}!\n +{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
             return self._end_game()
 
         return None
 
     def _end_game(self):
         if not self.player_scores:
-            return {'response': TextSendMessage(text="🏁 انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
+            return {'response': TextSendMessage(text=" انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
 
         sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
         winner = sorted_players[0][1]
