@@ -141,7 +141,7 @@ class MafiaGame:
                             "contents": [
                                 {"type": "text", "text": "⚡ خطوات اللعب", "size": "lg", "color": COLORS['text_dark'], "weight": "bold"},
                                 {"type": "text", "text": "1️⃣ اضغط انضم", "size": "sm", "color": COLORS['text_light'], "margin": "md"},
-                                {"type": "text", "text": "2️⃣ اضغط بدء (5 لاعبين أقل شي)", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
+                                {"type": "text", "text": "2️⃣ اضغط بدء (4 لاعبين أقل شي)", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                                 {"type": "text", "text": "3️⃣ تشيك الخاص تعرف دورك", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                                 {"type": "text", "text": "4️⃣ الليل: استخدم دورك بالخاص", "size": "sm", "color": COLORS['text_light'], "margin": "xs"},
                                 {"type": "text", "text": "5️⃣ النهار: ناقش وصوت بالقروب", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}
