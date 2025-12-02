@@ -5,9 +5,9 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendM
 from ui_builder import UIBuilder
 from games.game_manager import GameManager
 from database import Database
-from registration_handler import RegistrationHandler
 import os
 import logging
+import re
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,13 +29,81 @@ handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
 Database.init()
 game_manager = GameManager(line_bot_api)
-registration_handler = RegistrationHandler()
 
 # ذاكرة تخزين المستخدمين المسجلين
 group_registered_users = {}
 
+# حالات التسجيل وتغيير الاسم
+waiting_for_registration = {}
+waiting_for_name_change = {}
+
+# فلتر الأسماء
+class NameFilter:
+    """فلتر الأسماء للتحقق من الكلمات غير اللائقة"""
+    
+    @staticmethod
+    def get_bad_words():
+        return [
+            'غبي', 'احمق', 'حمار', 'كلب', 'خنزير', 'قذر', 'وسخ', 'حقير', 'نذل',
+            'خائن', 'كذاب', 'لعين', 'ملعون', 'عاهر', 'زاني', 'فاسق', 'منافق',
+            'خبيث', 'ماجن', 'فاسد', 'رذيل', 'دنيء', 'ساقط', 'تافه', 'حثال',
+            'وضيع', 'سافل', 'منحط', 'هابط', 'زبال', 'قمامة', 'نفاية', 'عفن',
+            'متعفن', 'نتن', 'خسيس', 'دني', 'جنس', 'زنا', 'فاحش', 'عار',
+            'شرموط', 'قحب', 'عرص', 'متناك', 'كس', 'زب', 'طيز', 'بظر',
+            'نيك', 'لحس', 'مص', 'مضاجع', 'ابن الكلب', 'ابن الحرام',
+            'ولد الحرام', 'يا كلب', 'يا حمار', 'يا غبي', 'يا احمق'
+        ]
+    
+    @staticmethod
+    def normalize_arabic(text):
+        """توحيد الأحرف العربية"""
+        if not text:
+            return ""
+        text = text.lower().strip()
+        text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+        text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
+        text = text.replace('ة', 'ه').replace('ى', 'ي')
+        text = re.sub(r'[\u064B-\u065F]', '', text)
+        text = re.sub(r'\s+', ' ', text)
+        return text
+    
+    @staticmethod
+    def validate_name(name):
+        """
+        التحقق من صحة الاسم
+        Returns: (is_valid: bool, error_message: str)
+        """
+        if not name or name.strip() == "":
+            return False, "الاسم لا يمكن ان يكون فارغا"
+        
+        if len(name.strip()) < 2:
+            return False, "الاسم قصير جدا الحد الادنى حرفين"
+        
+        if len(name.strip()) > 30:
+            return False, "الاسم طويل جدا الحد الاقصى 30 حرف"
+        
+        if re.match(r'^[^a-zA-Zء-ي\s]+$', name):
+            return False, "الاسم يحتوي على رموز غير صالحة"
+        
+        if re.match(r'^[\d]+$', name):
+            return False, "الاسم لا يمكن ان يكون ارقام فقط"
+        
+        if re.search(r'(.)\1{4,}', name):
+            return False, "الاسم يحتوي على احرف مكررة بشكل غير طبيعي"
+        
+        if re.search(r'[!@#$%^&*()]{3,}', name):
+            return False, "الاسم يحتوي على رموز كثيرة"
+        
+        normalized_name = NameFilter.normalize_arabic(name)
+        for bad_word in NameFilter.get_bad_words():
+            normalized_bad = NameFilter.normalize_arabic(bad_word)
+            if normalized_bad in normalized_name:
+                return False, "الاسم يحتوي على كلمات غير لائقة\nالرجاء اختيار اسم مناسب"
+        
+        return True, ""
+
 def get_quick_reply():
-    """إنشاء Quick Reply مع أزرار محسّنة"""
+    """إنشاء Quick Reply"""
     return QuickReply(items=[
         QuickReplyButton(action=MessageAction(label="سؤال", text="سؤال")),
         QuickReplyButton(action=MessageAction(label="منشن", text="منشن")),
@@ -83,7 +151,6 @@ def get_user_display_name(group_id, user_id):
     if is_user_registered(group_id, user_id):
         return group_registered_users[group_id][user_id]
     
-    # محاولة جلب من قاعدة البيانات
     stats = Database.get_user_stats(user_id)
     if stats and stats.get('display_name'):
         return stats['display_name']
@@ -117,42 +184,53 @@ def handle_message(event):
         
         quick_reply = get_quick_reply()
 
-        # أولاً: التحقق من حالة التسجيل أو تغيير الاسم
-        if registration_handler.is_waiting_for_registration(user_id):
+        # التحقق من حالة التسجيل
+        if user_id in waiting_for_registration:
             if text.lower() in ["الغاء", "إلغاء", "cancel"]:
-                registration_handler.cancel_registration(user_id)
-                msg = TextSendMessage(text="تم إلغاء التسجيل", quick_reply=quick_reply)
+                del waiting_for_registration[user_id]
+                msg = TextSendMessage(text="تم الغاء التسجيل", quick_reply=quick_reply)
                 line_bot_api.reply_message(event.reply_token, msg)
                 return
             
-            result = registration_handler.process_registration(user_id, text)
-            if result:
-                if result['success']:
-                    # نجح التسجيل
-                    register_user(result['group_id'], user_id, result['name'])
-                    line_bot_api.reply_message(event.reply_token, result['response'])
-                else:
-                    # فشل التحقق من الاسم
-                    line_bot_api.reply_message(event.reply_token, result['response'])
+            is_valid, error_msg = NameFilter.validate_name(text)
+            if not is_valid:
+                msg = TextSendMessage(
+                    text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء",
+                    quick_reply=quick_reply
+                )
+                line_bot_api.reply_message(event.reply_token, msg)
                 return
+            
+            register_group = waiting_for_registration[user_id]
+            del waiting_for_registration[user_id]
+            register_user(register_group, user_id, text)
+            msg = TextSendMessage(text=f"تم التسجيل بنجاح باسم: {text}", quick_reply=quick_reply)
+            line_bot_api.reply_message(event.reply_token, msg)
+            return
         
-        if registration_handler.is_waiting_for_name_change(user_id):
+        # التحقق من حالة تغيير الاسم
+        if user_id in waiting_for_name_change:
             if text.lower() in ["الغاء", "إلغاء", "cancel"]:
-                registration_handler.cancel_name_change(user_id)
-                msg = TextSendMessage(text="تم إلغاء تغيير الاسم", quick_reply=quick_reply)
+                del waiting_for_name_change[user_id]
+                msg = TextSendMessage(text="تم الغاء تغيير الاسم", quick_reply=quick_reply)
                 line_bot_api.reply_message(event.reply_token, msg)
                 return
             
-            result = registration_handler.process_name_change(user_id, text)
-            if result:
-                if result['success']:
-                    # نجح تغيير الاسم
-                    update_user_name(result['group_id'], user_id, result['new_name'])
-                    line_bot_api.reply_message(event.reply_token, result['response'])
-                else:
-                    # فشل التحقق من الاسم
-                    line_bot_api.reply_message(event.reply_token, result['response'])
+            is_valid, error_msg = NameFilter.validate_name(text)
+            if not is_valid:
+                msg = TextSendMessage(
+                    text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء",
+                    quick_reply=quick_reply
+                )
+                line_bot_api.reply_message(event.reply_token, msg)
                 return
+            
+            change_group = waiting_for_name_change[user_id]
+            del waiting_for_name_change[user_id]
+            update_user_name(change_group, user_id, text)
+            msg = TextSendMessage(text=f"تم تغيير الاسم بنجاح الى: {text}", quick_reply=quick_reply)
+            line_bot_api.reply_message(event.reply_token, msg)
+            return
 
         # الحصول على اسم المستخدم
         display_name = get_user_display_name(group_id, user_id) or "مستخدم"
@@ -206,30 +284,35 @@ def handle_message(event):
         # معالجة التسجيل الجديد
         if text in ["تسجيل"]:
             if is_user_registered(group_id, user_id):
-                msg = TextSendMessage(text=f"أنت مسجل بالفعل باسم: {display_name}", quick_reply=quick_reply)
-                line_bot_api.reply_message(event.reply_token, msg)
+                msg = TextSendMessage(text=f"انت مسجل بالفعل باسم: {display_name}", quick_reply=quick_reply)
             else:
-                response = registration_handler.start_registration(user_id, group_id)
-                line_bot_api.reply_message(event.reply_token, response)
+                waiting_for_registration[user_id] = group_id
+                msg = TextSendMessage(
+                    text="مرحبا بك في التسجيل\n\nالرجاء كتابة اسمك المطلوب\n\nملاحظة:\n- الاسم من 2 الى 30 حرف\n- لا يحتوي على كلمات غير لائقة\n- لا يحتوي على رموز فقط او ارقام فقط\n\nاكتب الغاء للالغاء",
+                    quick_reply=quick_reply
+                )
+            line_bot_api.reply_message(event.reply_token, msg)
             return
 
         # معالجة تغيير الاسم
         if text in ["تغيير الاسم", "تغيير اسم"]:
             if not is_user_registered(group_id, user_id):
-                msg = TextSendMessage(text="يجب التسجيل أولاً باستخدام أمر: تسجيل", quick_reply=quick_reply)
-                line_bot_api.reply_message(event.reply_token, msg)
+                msg = TextSendMessage(text="يجب التسجيل اولا باستخدام امر: تسجيل", quick_reply=quick_reply)
             else:
-                current_name = get_user_display_name(group_id, user_id)
-                response = registration_handler.start_name_change(user_id, group_id, current_name)
-                line_bot_api.reply_message(event.reply_token, response)
+                waiting_for_name_change[user_id] = group_id
+                msg = TextSendMessage(
+                    text=f"اسمك الحالي: {display_name}\n\nالرجاء كتابة الاسم الجديد\n\nملاحظة:\n- الاسم من 2 الى 30 حرف\n- لا يحتوي على كلمات غير لائقة\n- لا يحتوي على رموز فقط او ارقام فقط\n\nاكتب الغاء للالغاء",
+                    quick_reply=quick_reply
+                )
+            line_bot_api.reply_message(event.reply_token, msg)
             return
 
         # معالجة الانسحاب
         if text in ["انسحب", "الغاء"]:
             if unregister_user(group_id, user_id):
-                msg = TextSendMessage(text="تم إلغاء تسجيلك بنجاح", quick_reply=quick_reply)
+                msg = TextSendMessage(text="تم الغاء تسجيلك بنجاح", quick_reply=quick_reply)
             else:
-                msg = TextSendMessage(text="أنت غير مسجل", quick_reply=quick_reply)
+                msg = TextSendMessage(text="انت غير مسجل", quick_reply=quick_reply)
             line_bot_api.reply_message(event.reply_token, msg)
             return
 
@@ -237,7 +320,7 @@ def handle_message(event):
         if text in ["نقاطي", "احصائياتي"]:
             if not is_user_registered(group_id, user_id):
                 msg = TextSendMessage(
-                    text="يجب التسجيل أولاً باستخدام أمر: تسجيل", 
+                    text="يجب التسجيل اولا باستخدام امر: تسجيل", 
                     quick_reply=quick_reply
                 )
                 line_bot_api.reply_message(event.reply_token, msg)
@@ -303,7 +386,7 @@ def handle_message(event):
         if text in game_commands:
             if not is_user_registered(group_id, user_id) and text != "مافيا":
                 msg = TextSendMessage(
-                    text="يجب التسجيل أولاً باستخدام أمر: تسجيل", 
+                    text="يجب التسجيل اولا باستخدام امر: تسجيل", 
                     quick_reply=quick_reply
                 )
                 line_bot_api.reply_message(event.reply_token, msg)
@@ -314,41 +397,45 @@ def handle_message(event):
                 line_bot_api.reply_message(event.reply_token, response)
             return
 
-        # معالجة الإجابات
-        result = game_manager.check_answer(group_id, text, user_id, display_name)
-        if result:
-            # تحديث النقاط للمستخدمين المسجلين فقط
-            if result.get('correct') and result.get('points', 0) > 0 and is_user_registered(group_id, user_id):
-                Database.update_user_points(
-                    user_id, 
-                    result['points'], 
-                    result.get('won', False), 
-                    game_manager.active_games.get(group_id, {}).get('type', 'unknown')
-                )
+        # معالجة الإجابات - فقط للمسجلين
+        if game:
+            # تجاهل إجابات غير المسجلين
+            if not is_user_registered(group_id, user_id):
+                return
+            
+            result = game_manager.check_answer(group_id, text, user_id, display_name)
+            if result:
+                # تحديث النقاط
+                if result.get('correct') and result.get('points', 0) > 0:
+                    Database.update_user_points(
+                        user_id, 
+                        result['points'], 
+                        result.get('won', False), 
+                        game_manager.active_games.get(group_id, {}).get('type', 'unknown')
+                    )
 
-            response = result.get('response')
-            if response:
-                # إضافة quick_reply للرسائل
-                if isinstance(response, TextSendMessage):
-                    response.quick_reply = quick_reply
-                elif isinstance(response, list):
-                    for r in response:
-                        if isinstance(r, TextSendMessage):
-                            r.quick_reply = quick_reply
-                line_bot_api.reply_message(event.reply_token, response)
+                response = result.get('response')
+                if response:
+                    if isinstance(response, TextSendMessage):
+                        response.quick_reply = quick_reply
+                    elif isinstance(response, list):
+                        for r in response:
+                            if isinstance(r, TextSendMessage):
+                                r.quick_reply = quick_reply
+                    line_bot_api.reply_message(event.reply_token, response)
 
-            # إرسال السؤال التالي
-            if result.get('next_question'):
-                next_q = game_manager.next_question(group_id)
-                if next_q:
-                    try:
-                        line_bot_api.push_message(group_id, next_q)
-                    except Exception as e:
-                        logger.error(f"خطأ في إرسال السؤال التالي: {e}")
+                # إرسال السؤال التالي
+                if result.get('next_question'):
+                    next_q = game_manager.next_question(group_id)
+                    if next_q:
+                        try:
+                            line_bot_api.push_message(group_id, next_q)
+                        except Exception as e:
+                            logger.error(f"خطأ في إرسال السؤال التالي: {e}")
 
-            # إنهاء اللعبة
-            if result.get('game_over'):
-                game_manager.stop_game(group_id)
+                # إنهاء اللعبة
+                if result.get('game_over'):
+                    game_manager.stop_game(group_id)
     
     except Exception as e:
         logger.error(f"خطأ في معالجة الرسالة: {e}", exc_info=True)
