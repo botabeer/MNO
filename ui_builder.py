@@ -48,7 +48,7 @@ class UIBuilder:
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "🐋", "size": "xxl", "align": "center"},
+                            {"type": "text","size": "xxl", "align": "center"},
                             {"type": "text", "text": "بوت الحوت", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "margin": "md"}
                         ],
                         "backgroundColor": COLORS['primary'],
