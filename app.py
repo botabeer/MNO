@@ -46,15 +46,18 @@ waiting_for_name_change = {}
 def get_quick_reply():
     """Quick Reply ثابت لجميع الرسائل"""
     return QuickReply(items=[
-        QuickReplyButton(action=MessageAction(label="🎮 ألعاب", text="ألعاب")),
-        QuickReplyButton(action=MessageAction(label="❓ سؤال", text="سؤال")),
-        QuickReplyButton(action=MessageAction(label="🎯 تحدي", text="تحدي")),
-        QuickReplyButton(action=MessageAction(label="💭 اعتراف", text="اعتراف")),
-        QuickReplyButton(action=MessageAction(label="👤 منشن", text="منشن")),
-        QuickReplyButton(action=MessageAction(label="📊 نقاطي", text="نقاطي")),
-        QuickReplyButton(action=MessageAction(label="🏆 الصدارة", text="الصدارة")),
-        QuickReplyButton(action=MessageAction(label="🏠 بداية", text="بداية")),
-        QuickReplyButton(action=MessageAction(label="⛔ إيقاف", text="إيقاف"))
+        QuickReplyButton(action=MessageAction(label="سؤال", text="سؤال")),
+        QuickReplyButton(action=MessageAction(label="منشن", text="منشن")),
+        QuickReplyButton(action=MessageAction(label="اعتراف", text="اعتراف")),
+        QuickReplyButton(action=MessageAction(label="تحدي", text="تحدي")),
+        QuickReplyButton(action=MessageAction(label="توافق", text="توافق")),
+        QuickReplyButton(action=MessageAction(label="اسرع", text="اسرع")),
+        QuickReplyButton(action=MessageAction(label="سلسلة", text="سلسله")),
+        QuickReplyButton(action=MessageAction(label="مافيا", text="مافيا")),
+        QuickReplyButton(action=MessageAction(label="فئة", text="فئه")),
+        QuickReplyButton(action=MessageAction(label="اغنية", text="اغنيه")),
+        QuickReplyButton(action=MessageAction(label="ضد", text="ضد")),
+        QuickReplyButton(action=MessageAction(label="تكوين", text="تكوين"))
     ])
 
 class NameFilter:
@@ -218,7 +221,7 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
-        if text == "ألعاب":
+        if text == "ألعاب" or text == "العاب":
             flex = FlexSendMessage(
                 alt_text="قائمة الألعاب",
                 contents=UIBuilder.games_menu_card(is_user_registered(group_id, user_id)),
@@ -267,7 +270,7 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
-        if text in ["الصداره", "المتصدرين"]:
+        if text in ["الصداره", "المتصدرين", "الصدارة"]:
             leaders = Database.get_leaderboard(20)
             flex = FlexSendMessage(
                 alt_text="لوحه الصداره", 
