@@ -21,14 +21,35 @@ game_manager = GameManager(line_bot_api)
 
 group_registered_users = {}
 
-def get_user_name(user_id):
+def get_user_name(user_id, group_id=None, force_update=False):
+    """
+    جلب اسم المستخدم بذكاء:
+    - أولاً: محاولة جلبه من قاعدة البيانات (سريع)
+    - ثانياً: جلبه من LINE API فقط إذا لم يكن موجود
+    - force_update: لتحديث الاسم يدوياً عند الحاجة
+    """
     try:
-        profile = line_bot_api.get_profile(user_id)
+        # محاولة جلب الاسم من قاعدة البيانات أولاً (تجنب استدعاء API)
+        if not force_update:
+            stats = Database.get_user_stats(user_id)
+            if stats and stats.get('display_name'):
+                return stats['display_name']
+        
+        # إذا لم يكن موجود في DB، اجلبه من LINE API
+        if group_id and group_id.startswith('C'):  # C تعني group
+            profile = line_bot_api.get_group_member_profile(group_id, user_id)
+        else:
+            profile = line_bot_api.get_profile(user_id)
+        
         display_name = profile.display_name
+        # حفظه في قاعدة البيانات للاستخدام المستقبلي
         Database.register_or_update_user(user_id, display_name)
+        logger.info(f"تم تحديث اسم المستخدم {user_id}: {display_name}")
         return display_name
+        
     except Exception as e:
         logger.error(f"خطا جلب اسم المستخدم {user_id}: {e}")
+        # محاولة أخيرة من قاعدة البيانات
         stats = Database.get_user_stats(user_id)
         return stats.get('display_name', 'مستخدم') if stats else 'مستخدم'
 
@@ -58,6 +79,7 @@ def register_user(group_id, user_id, display_name):
     if group_id not in group_registered_users:
         group_registered_users[group_id] = {}
     group_registered_users[group_id][user_id] = display_name
+    # تحديث الاسم في قاعدة البيانات عند التسجيل
     Database.register_or_update_user(user_id, display_name)
 
 def unregister_user(group_id, user_id):
@@ -82,7 +104,8 @@ def handle_message(event):
     user_id = event.source.user_id
     group_id = getattr(event.source, 'group_id', None) or user_id
     
-    display_name = get_user_name(user_id)
+    # جلب اسم المستخدم (من DB أولاً، ثم من LINE API إذا لزم الأمر)
+    display_name = get_user_name(user_id, group_id)
     
     quick_reply = get_quick_reply()
 
@@ -124,6 +147,8 @@ def handle_message(event):
         if is_user_registered(group_id, user_id):
             msg = TextSendMessage(text="انت مسجل بالفعل", quick_reply=quick_reply)
         else:
+            # تحديث الاسم من LINE API عند التسجيل
+            display_name = get_user_name(user_id, group_id, force_update=True)
             register_user(group_id, user_id, display_name)
             flex = FlexSendMessage(alt_text="تم التسجيل", contents=UIBuilder.registration_success(display_name))
             msg = flex
