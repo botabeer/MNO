@@ -25,14 +25,28 @@ class OppositeGame:
             {"word": "داخل", "opposite": "خارج"}, {"word": "قريب", "opposite": "بعيد"},
             {"word": "جديد", "opposite": "قديم"}, {"word": "ثقيل", "opposite": "خفيف"},
             {"word": "مظلم", "opposite": "مضيء"}, {"word": "صادق", "opposite": "كاذب"},
-            {"word": "شجاع", "opposite": "جبان"}, {"word": "نشيط", "opposite": "كسول"}
+            {"word": "شجاع", "opposite": "جبان"}, {"word": "نشيط", "opposite": "كسول"},
+            {"word": "واسع", "opposite": "ضيق"}, {"word": "عميق", "opposite": "سطحي"},
+            {"word": "مرتفع", "opposite": "منخفض"}, {"word": "صلب", "opposite": "لين"},
+            {"word": "جاف", "opposite": "رطب"}, {"word": "حلو", "opposite": "مر"},
+            {"word": "نظيف", "opposite": "قذر"}, {"word": "مستقيم", "opposite": "معوج"},
+            {"word": "صحيح", "opposite": "خاطئ"}, {"word": "حي", "opposite": "ميت"},
+            {"word": "مفتوح", "opposite": "مغلق"}, {"word": "مليء", "opposite": "فارغ"},
+            {"word": "ناعم", "opposite": "خشن"}, {"word": "محبوب", "opposite": "مكروه"},
+            {"word": "آمن", "opposite": "خطير"}, {"word": "واضح", "opposite": "غامض"},
+            {"word": "مبكر", "opposite": "متأخر"}, {"word": "عالي", "opposite": "واطي"},
+            {"word": "جاهز", "opposite": "غير جاهز"}, {"word": "مشغول", "opposite": "فارغ"},
+            {"word": "ذكي", "opposite": "غبي"}, {"word": "نحيف", "opposite": "سمين"},
+            {"word": "جاف", "opposite": "مبلل"}, {"word": "حاد", "opposite": "مملّ"},
+            {"word": "مستعمل", "opposite": "جديد"}, {"word": "محظوظ", "opposite": "منحوس"},
+            {"word": "مريح", "opposite": "مزعج"}, {"word": "لذيذ", "opposite": "مقرف"},
+            {"word": "رخيص", "opposite": "غالي"}, {"word": "بسيط", "opposite": "معقد"}
         ]
         self.questions = []
         self.current_question = 0
         self.total_questions = 5
         self.player_scores = {}
         self.answered_users = set()
-        self.previous_answer = None
         self.hints_used = {}
 
     def start_game(self):
@@ -40,15 +54,76 @@ class OppositeGame:
         self.current_question = 0
         self.player_scores = {}
         self.answered_users = set()
-        self.previous_answer = None
         self.hints_used = {}
         return self._show_question()
 
     def _show_question(self):
         word = self.questions[self.current_question]
+        progress = f"{self.current_question + 1}/{self.total_questions}"
+        
         return FlexSendMessage(
             alt_text="لعبة الأضداد",
-            contents={"type": "bubble", "body": {"type": "box", "layout": "vertical", "contents": [{"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "لعبة الأضداد", "weight": "bold", "size": "xl", "color": COLORS['white']}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "10px"}, {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": f"السؤال {self.current_question + 1} من {self.total_questions}", "size": "sm", "color": COLORS['text_light']}, {"type": "text", "text": f"ما هو عكس: {word['word']}", "size": "lg", "color": COLORS['text_dark'], "wrap": True, "margin": "md", "weight": "bold"}], "margin": "lg", "spacing": "sm"}, {"type": "separator", "margin": "lg", "color": COLORS['border']}, {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm"}], "spacing": "sm", "margin": "lg"}], "backgroundColor": COLORS['card_bg'], "paddingAll": "20px"}}
+            contents={
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "md",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "لعبة الأضداد", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
+                            ],
+                            "backgroundColor": COLORS['primary'],
+                            "paddingAll": "20px",
+                            "cornerRadius": "12px"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "baseline",
+                            "contents": [
+                                {"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0},
+                                {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}
+                            ],
+                            "margin": "lg"
+                        },
+                        {"type": "separator", "margin": "md", "color": COLORS['border']},
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": f"ما هو عكس: {word['word']}", "size": "lg", "color": COLORS['text_dark'], "wrap": True, "weight": "bold", "align": "center"}
+                            ],
+                            "margin": "lg"
+                        },
+                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}
+                            ],
+                            "spacing": "sm",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1},
+                                {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}
+                            ],
+                            "spacing": "sm",
+                            "margin": "sm"
+                        }
+                    ],
+                    "backgroundColor": COLORS['card_bg'],
+                    "paddingAll": "20px"
+                }
+            }
         )
 
     def next_question(self):
@@ -71,7 +146,6 @@ class OppositeGame:
             return {'response': TextSendMessage(text="استخدمت التلميح"), 'points': 0, 'correct': False}
 
         if answer.lower() in ['جاوب', 'الجواب']:
-            self.previous_answer = word['opposite']
             self.answered_users.add(user_id)
             if self.current_question + 1 < self.total_questions:
                 return {'response': TextSendMessage(text=f"الاجابة: {word['opposite']}"), 'points': 0, 'correct': False, 'next_question': True}
@@ -82,7 +156,6 @@ class OppositeGame:
             self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0})
             self.player_scores[user_id]['score'] += points
             self.answered_users.add(user_id)
-            self.previous_answer = word['opposite']
 
             if self.current_question + 1 < self.total_questions:
                 return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
@@ -92,11 +165,78 @@ class OppositeGame:
     def _end_game(self):
         if not self.player_scores:
             return {'response': TextSendMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
+        
         sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
         winner = sorted_players[0][1]
-        players_text = "\n".join([f"{i+1}. {p[1]['name']}: {p[1]['score']} نقطة" for i, p in enumerate(sorted_players[:5])])
+        
+        players_contents = []
+        medals = ["🥇", "🥈", "🥉"]
+        
+        for i, p in enumerate(sorted_players[:5]):
+            medal = medals[i] if i < 3 else f"{i+1}."
+            players_contents.append({
+                "type": "box",
+                "layout": "baseline",
+                "contents": [
+                    {"type": "text", "text": medal, "size": "sm", "flex": 0},
+                    {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"},
+                    {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}
+                ],
+                "margin": "md" if i > 0 else "sm"
+            })
+        
         winner_card = FlexSendMessage(
             alt_text="نتائج اللعبة",
-            contents={"type": "bubble", "body": {"type": "box", "layout": "vertical", "contents": [{"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white']}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "10px"}, {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light']}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['text_dark'], "margin": "xs"}], "margin": "lg", "spacing": "xs"}, {"type": "separator", "margin": "lg", "color": COLORS['border']}, {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "sm", "color": COLORS['text_light']}, {"type": "text", "text": players_text, "size": "sm", "color": COLORS['text_dark'], "wrap": True, "margin": "md"}], "margin": "lg"}, {"type": "separator", "margin": "lg", "color": COLORS['border']}, {"type": "button", "action": {"type": "message", "label": "إعادة", "text": "ضد"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}], "backgroundColor": COLORS['card_bg'], "paddingAll": "20px"}}
+            contents={
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "md",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
+                            ],
+                            "backgroundColor": COLORS['primary'],
+                            "paddingAll": "20px",
+                            "cornerRadius": "12px"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"},
+                                {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"},
+                                {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}
+                            ],
+                            "margin": "lg"
+                        },
+                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
+                                *players_contents
+                            ],
+                            "margin": "lg"
+                        },
+                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "إعادة اللعب", "text": "ضد"},
+                            "style": "primary",
+                            "color": COLORS['primary'],
+                            "height": "sm",
+                            "margin": "lg"
+                        }
+                    ],
+                    "backgroundColor": COLORS['card_bg'],
+                    "paddingAll": "20px"
+                }
+            }
         )
         return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
