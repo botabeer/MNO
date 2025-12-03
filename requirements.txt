@@ -6,11 +6,3 @@ APScheduler
 requests
 pytz
 Werkzeug
-Jinja2
-itsdangerous
-pytest
-pytest-cov
-coverage
-flask-testing
-faker
-python-dateutil
