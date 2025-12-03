@@ -1,141 +1,369 @@
-from linebot.v3.messaging import TextMessage, FlexMessage
+"""
+لعبة الكتابة السريعة - Fast Typing Game
+اكتب النص بأسرع وقت ممكن
+"""
+
+from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 import random
 import re
+import logging
 from datetime import datetime
 from constants import COLORS
 
+logger = logging.getLogger(__name__)
+
+
 def normalize_text(text):
+    """تطبيع النص العربي للمقارنة"""
     if not text:
         return ""
+    
     text = text.strip().lower()
-    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '').replace('ة', 'ه').replace('ى', 'ي')
+    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+    text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
+    text = text.replace('ة', 'ه').replace('ى', 'ي')
     text = re.sub(r'[\u064B-\u065F]', '', text)
-    text = re.sub(r'\s+', '', text)
+    text = re.sub(r'\s+', ' ', text)
+    
     return text
 
+
 class FastTypingGame:
+    """لعبة الكتابة السريعة"""
+    
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.words = [
-            "سبحان الله", "الحمد لله", "لا اله الا الله", "الله اكبر", "استغفر الله",
-            "لا حول ولا قوه الا بالله", "حسبنا الله ونعم الوكيل", "توكلت على الله"
+            "سبحان الله",
+            "الحمد لله",
+            "لا اله الا الله",
+            "الله اكبر",
+            "استغفر الله",
+            "لا حول ولا قوه الا بالله",
+            "حسبنا الله ونعم الوكيل",
+            "توكلت على الله",
+            "بسم الله الرحمن الرحيم",
+            "اللهم صل على محمد"
         ]
         self.questions = []
         self.current_question = 0
         self.total_questions = 5
         self.player_scores = {}
         self.start_time = None
-        self.time_limit = 30
+        self.time_limit = 60
         self.answered_users = set()
-
+    
     def start_game(self):
-        self.questions = random.sample(self.words, min(self.total_questions, len(self.words)))
-        self.current_question = 0
-        self.player_scores = {}
-        self.answered_users = set()
-        self.start_time = datetime.now()
-        return self._show_question()
-
-    def _show_question(self):
-        word = self.questions[self.current_question]
-        progress = f"{self.current_question + 1}/{self.total_questions}"
-        self.start_time = datetime.now()
+        """بدء اللعبة"""
+        try:
+            self.questions = random.sample(
+                self.words, 
+                min(self.total_questions, len(self.words))
+            )
+            self.current_question = 0
+            self.player_scores = {}
+            self.answered_users = set()
+            self.start_time = datetime.now()
+            
+            logger.info(f"بدء لعبة الكتابة السريعة - عدد الأسئلة: {self.total_questions}")
+            return self._show_question()
         
-        return FlexMessage(
-            alt_text="الكتابه السريعه",
-            contents={
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الكتابه السريعه", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
-                        {"type": "separator", "margin": "md"},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": word, "size": "lg", "color": COLORS['primary'], "weight": "bold", "align": "center", "wrap": True}, {"type": "text", "text": "اكتب النص باسرع وقت", "size": "sm", "margin": "md", "align": "center"}], "margin": "lg"},
-                        {"type": "separator", "margin": "lg"},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm"}], "spacing": "sm", "margin": "lg"}
-                    ],
-                    "paddingAll": "20px"
-                }
-            }
-        )
-
+        except Exception as e:
+            logger.error(f"خطأ في بدء لعبة الكتابة السريعة: {e}")
+            return TextMessage(text="حدث خطأ في بدء اللعبة")
+    
+    def _show_question(self):
+        """عرض السؤال الحالي"""
+        try:
+            word = self.questions[self.current_question]
+            progress = f"{self.current_question + 1}/{self.total_questions}"
+            self.start_time = datetime.now()
+            
+            return FlexMessage(
+                alt_text="الكتابة السريعة",
+                contents=FlexContainer.from_dict({
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "md",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "الكتابة السريعة",
+                                        "weight": "bold",
+                                        "size": "xl",
+                                        "color": COLORS['white'],
+                                        "align": "center"
+                                    }
+                                ],
+                                "backgroundColor": COLORS['primary'],
+                                "paddingAll": "20px",
+                                "cornerRadius": "12px"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "baseline",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "السؤال",
+                                        "size": "xs",
+                                        "color": COLORS['text_light'],
+                                        "flex": 0
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": progress,
+                                        "size": "xs",
+                                        "color": COLORS['primary'],
+                                        "weight": "bold",
+                                        "align": "end"
+                                    }
+                                ],
+                                "margin": "lg"
+                            },
+                            {
+                                "type": "separator",
+                                "margin": "md"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": word,
+                                        "size": "lg",
+                                        "color": COLORS['primary'],
+                                        "weight": "bold",
+                                        "align": "center",
+                                        "wrap": True
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "اكتب النص بأسرع وقت",
+                                        "size": "sm",
+                                        "margin": "md",
+                                        "align": "center"
+                                    }
+                                ],
+                                "margin": "lg"
+                            },
+                            {
+                                "type": "separator",
+                                "margin": "lg"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "button",
+                                        "action": {
+                                            "type": "message",
+                                            "label": "لمح",
+                                            "text": "لمح"
+                                        },
+                                        "style": "secondary",
+                                        "height": "sm"
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {
+                                            "type": "message",
+                                            "label": "جاوب",
+                                            "text": "جاوب"
+                                        },
+                                        "style": "secondary",
+                                        "height": "sm"
+                                    }
+                                ],
+                                "spacing": "sm",
+                                "margin": "lg"
+                            }
+                        ],
+                        "paddingAll": "20px"
+                    }
+                })
+            )
+        
+        except Exception as e:
+            logger.error(f"خطأ في عرض السؤال: {e}")
+            return TextMessage(text="حدث خطأ في عرض السؤال")
+    
     def next_question(self):
+        """الانتقال للسؤال التالي"""
         self.current_question += 1
+        
         if self.current_question < self.total_questions:
             self.answered_users = set()
             return self._show_question()
+        
         return None
-
+    
     def check_answer(self, text, user_id, display_name):
-        if user_id in self.answered_users:
-            return None
-
-        if text.lower() in ['لمح', 'تلميح']:
-            word = self.questions[self.current_question]
-            return {'response': TextMessage(text=f"يبدأ بحرف: {word[0]}\nعدد الحروف: {len(word)}"), 'points': 0, 'correct': False}
-
-        if text.lower() in ['جاوب', 'الجواب', 'الحل']:
-            self.answered_users.add(user_id)
-            word = self.questions[self.current_question]
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextMessage(text=f"الاجابة: {word}"), 'points': 0, 'correct': False, 'next_question': True}
-            return self._end_game()
-
-        if self.start_time:
-            elapsed = (datetime.now() - self.start_time).seconds
-            if elapsed > self.time_limit:
-                if self.current_question + 1 < self.total_questions:
-                    return {'response': TextMessage(text="انتهى الوقت"), 'points': 0, 'correct': False, 'next_question': True}
-                return self._end_game()
-
-        text_normalized = normalize_text(text)
-        word_normalized = normalize_text(self.questions[self.current_question])
-
-        if text_normalized == word_normalized:
-            elapsed_time = (datetime.now() - self.start_time).total_seconds()
-            points = 1
+        """التحقق من إجابة اللاعب"""
+        try:
+            if user_id in self.answered_users:
+                return None
             
-            self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0, 'time': 0})
-            self.player_scores[user_id]['score'] += points
-            self.player_scores[user_id]['time'] += elapsed_time
-            self.answered_users.add(user_id)
-
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextMessage(text=f"صحيح {display_name} الوقت {elapsed_time:.1f}ث +{points}"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
-            return self._end_game()
-        return None
-
-    def _end_game(self):
-        if not self.player_scores:
-            return {'response': TextMessage(text="انتهت اللعبه"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
-        
-        sorted_players = sorted(self.player_scores.items(), key=lambda x: (x[1]['score'], -x[1]['time']), reverse=True)
-        winner = sorted_players[0][1]
-        
-        players_contents = []
-        for i, p in enumerate(sorted_players[:5]):
-            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']}", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "md" if i > 0 else "sm"})
-        
-        winner_card = FlexMessage(
-            alt_text="نتائج اللعبه",
-            contents={
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبه", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center"}, {"type": "text", "text": f"{winner['score']} نقطه", "size": "lg", "color": COLORS['success'], "align": "center"}], "margin": "lg"},
-                        {"type": "separator", "margin": "lg"},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "weight": "bold"}, *players_contents], "margin": "lg"},
-                        {"type": "button", "action": {"type": "message", "label": "اعادة اللعب", "text": "اسرع"}, "style": "primary", "margin": "lg"}
-                    ],
-                    "paddingAll": "20px"
+            text = text.strip()
+            word = self.questions[self.current_question]
+            
+            # معالجة طلب التلميح
+            if text.lower() in ['لمح', 'تلميح']:
+                hint_text = f"أول حرف: {word[0]}\nعدد الحروف: {len(word)}"
+                logger.info(f"تلميح لـ {display_name}: {hint_text}")
+                
+                return {
+                    'response': TextMessage(text=hint_text),
+                    'points': 0,
+                    'correct': False
                 }
+            
+            # معالجة طلب الإجابة
+            if text.lower() in ['جاوب', 'الجواب', 'الحل']:
+                self.answered_users.add(user_id)
+                
+                if self.current_question + 1 < self.total_questions:
+                    return {
+                        'response': TextMessage(text=f"الإجابة: {word}"),
+                        'points': 0,
+                        'correct': False,
+                        'next_question': True
+                    }
+                else:
+                    return self._end_game()
+            
+            # التحقق من الوقت
+            if self.start_time:
+                elapsed = (datetime.now() - self.start_time).seconds
+                if elapsed > self.time_limit:
+                    if self.current_question + 1 < self.total_questions:
+                        return {
+                            'response': TextMessage(text="انتهى الوقت"),
+                            'points': 0,
+                            'correct': False,
+                            'next_question': True
+                        }
+                    else:
+                        return self._end_game()
+            
+            # التحقق من الإجابة
+            text_normalized = normalize_text(text)
+            word_normalized = normalize_text(word)
+            
+            if text_normalized == word_normalized:
+                elapsed_time = (datetime.now() - self.start_time).total_seconds()
+                points = 1
+                
+                if user_id not in self.player_scores:
+                    self.player_scores[user_id] = {
+                        'name': display_name,
+                        'score': 0,
+                        'time': 0
+                    }
+                
+                self.player_scores[user_id]['score'] += points
+                self.player_scores[user_id]['time'] += elapsed_time
+                self.answered_users.add(user_id)
+                
+                logger.info(f"إجابة صحيحة من {display_name} - الوقت: {elapsed_time:.1f}ث")
+                
+                if self.current_question + 1 < self.total_questions:
+                    return {
+                        'response': TextMessage(
+                            text=f"صحيح {display_name}\nالوقت: {elapsed_time:.1f}ث\n+{points} نقطة"
+                        ),
+                        'points': points,
+                        'correct': True,
+                        'won': True,
+                        'next_question': True
+                    }
+                else:
+                    return self._end_game()
+            
+            return None
+        
+        except Exception as e:
+            logger.error(f"خطأ في التحقق من الإجابة: {e}")
+            return None
+    
+    def _end_game(self):
+        """إنهاء اللعبة وعرض النتائج"""
+        try:
+            if not self.player_scores:
+                return {
+                    'response': TextMessage(text="انتهت اللعبة"),
+                    'points': 0,
+                    'correct': False,
+                    'won': False,
+                    'game_over': True
+                }
+            
+            # ترتيب اللاعبين حسب النقاط ثم الوقت
+            sorted_players = sorted(
+                self.player_scores.items(),
+                key=lambda x: (x[1]['score'], -x[1]['time']),
+                reverse=True
+            )
+            
+            winner = sorted_players[0][1]
+            
+            players_contents = []
+            for i, (uid, player) in enumerate(sorted_players[:5]):
+                players_contents.append({
+                    "type": "box",
+                    "layout": "baseline",
+                    "contents": [
+                        {"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0},
+                        {"type": "text", "text": player['name'], "size": "sm", "flex": 3, "margin": "sm"},
+                        {"type": "text", "text": f"{player['score']}", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end"}
+                    ],
+                    "margin": "md" if i > 0 else "sm"
+                })
+            
+            winner_card = FlexMessage(
+                alt_text="نتائج اللعبة",
+                contents=FlexContainer.from_dict({
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "md",
+                        "contents": [
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center"}], "margin": "lg"},
+                            {"type": "separator", "margin": "lg"},
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "weight": "bold"}, *players_contents], "margin": "lg"},
+                            {"type": "button", "action": {"type": "message", "label": "اعادة اللعب", "text": "اسرع"}, "style": "primary", "margin": "lg"}
+                        ],
+                        "paddingAll": "20px"
+                    }
+                })
+            )
+            
+            logger.info(f"انتهت اللعبة - الفائز: {winner['name']}")
+            
+            return {
+                'response': winner_card,
+                'points': winner['score'],
+                'correct': True,
+                'won': True,
+                'game_over': True
             }
-        )
-        return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
+        
+        except Exception as e:
+            logger.error(f"خطأ في إنهاء اللعبة: {e}")
+            return {
+                'response': TextMessage(text="حدث خطأ في إنهاء اللعبة"),
+                'points': 0,
+                'correct': False,
+                'won': False,
+                'game_over': True
+            }
