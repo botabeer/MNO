@@ -46,9 +46,18 @@ scheduler.add_job(func=Database.cleanup_inactive_users, trigger="interval", hour
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
-group_registered_users = {}
 waiting_for_registration = {}
 waiting_for_name_change = {}
+
+BOT_COMMANDS = [
+    'بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة',
+    'ألعاب', 'العاب', 'تسجيل', 'تغيير', 'تغيير الاسم', 'انسحب',
+    'نقاطي', 'احصائياتي', 'الصداره', 'المتصدرين', 'الصدارة', 'اللاعبين',
+    'ايقاف', 'stop', 'إيقاف', 'سؤال', 'سوال', 'تحدي', 'اعتراف', 'منشن',
+    'توافق', 'اغنيه', 'لعبه', 'سلسله', 'اسرع', 'ضد', 'تكوين', 'فئه', 'مافيا',
+    'لمح', 'تلميح', 'جاوب', 'الجواب', 'الغاء', 'إلغاء',
+    'انضم مافيا', 'بدء مافيا', 'شرح مافيا', 'إنهاء الليل', 'تصويت مافيا', 'إنهاء التصويت'
+]
 
 def get_quick_reply():
     return QuickReply(items=[
@@ -92,10 +101,12 @@ class NameFilter:
         if not name or name.strip() == "":
             return False, "الاسم لا يمكن ان يكون فارغا"
         
-        if len(name.strip()) < 1:
-            return False, "الاسم قصير جدا"
+        name = name.strip()
         
-        if len(name.strip()) > 30:
+        if len(name) < 2:
+            return False, "الاسم قصير جدا (الحد الادنى حرفان)"
+        
+        if len(name) > 30:
             return False, "الاسم طويل جدا الحد الاقصى 30 حرف"
         
         if re.match(r'^[^a-zA-Zء-ي\s]+$', name):
@@ -112,29 +123,19 @@ class NameFilter:
         
         return True, ""
 
-def is_user_registered(group_id, user_id):
-    return group_id in group_registered_users and user_id in group_registered_users[group_id]
-
-def register_user(group_id, user_id, display_name):
-    if group_id not in group_registered_users:
-        group_registered_users[group_id] = {}
-    group_registered_users[group_id][user_id] = display_name
-    Database.register_or_update_user(user_id, display_name)
-
-def update_user_name(group_id, user_id, new_name):
-    if group_id in group_registered_users and user_id in group_registered_users[group_id]:
-        group_registered_users[group_id][user_id] = new_name
-    Database.register_or_update_user(user_id, new_name)
-
-def unregister_user(group_id, user_id):
-    if group_id in group_registered_users and user_id in group_registered_users[group_id]:
-        del group_registered_users[group_id][user_id]
+def is_bot_command(text):
+    text_lower = text.lower()
+    for cmd in BOT_COMMANDS:
+        if text_lower == cmd.lower():
+            return True
+    if text_lower.startswith('صوت ') or text_lower.startswith('اقتل ') or text_lower.startswith('افحص ') or text_lower.startswith('احمي '):
         return True
     return False
 
-def get_user_display_name(group_id, user_id):
-    if is_user_registered(group_id, user_id):
-        return group_registered_users[group_id][user_id]
+def is_user_registered(user_id):
+    return Database.is_user_registered(user_id)
+
+def get_user_display_name(user_id):
     stats = Database.get_user_stats(user_id)
     if stats and stats.get('display_name'):
         return stats['display_name']
@@ -189,10 +190,8 @@ def handle_message(event):
         user_id = event.source.user_id
         group_id = getattr(event.source, 'group_id', None) or user_id
         
-        Database.update_last_activity(user_id)
-
         if user_id in waiting_for_registration:
-            if text.lower() in ["الغاء", "إلغاء"]:
+            if text.lower() in ["انسحب", "إلغاء"]:
                 del waiting_for_registration[user_id]
                 msg = TextMessage(text="تم الغاء التسجيل", quick_reply=get_quick_reply())
                 reply_message(event.reply_token, msg)
@@ -204,15 +203,14 @@ def handle_message(event):
                 reply_message(event.reply_token, msg)
                 return
             
-            register_group = waiting_for_registration[user_id]
             del waiting_for_registration[user_id]
-            register_user(register_group, user_id, text)
+            Database.register_or_update_user(user_id, text)
             msg = TextMessage(text=f"تم التسجيل بنجاح\nاسمك: {text}\nيمكنك الآن اللعب وجمع النقاط", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
         
         if user_id in waiting_for_name_change:
-            if text.lower() in ["الغاء", "إلغاء"]:
+            if text.lower() in ["انسحب", "إلغاء"]:
                 del waiting_for_name_change[user_id]
                 msg = TextMessage(text="تم الغاء تغيير الاسم", quick_reply=get_quick_reply())
                 reply_message(event.reply_token, msg)
@@ -224,19 +222,70 @@ def handle_message(event):
                 reply_message(event.reply_token, msg)
                 return
             
-            change_group = waiting_for_name_change[user_id]
             del waiting_for_name_change[user_id]
-            update_user_name(change_group, user_id, text)
+            Database.register_or_update_user(user_id, text)
             msg = TextMessage(text=f"تم تغيير الاسم بنجاح الى: {text}", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
-        display_name = get_user_display_name(group_id, user_id) or "مستخدم"
+        if not is_bot_command(text):
+            game = game_manager.get_game(group_id)
+            if game and is_user_registered(user_id):
+                try:
+                    Database.update_last_activity(user_id)
+                except:
+                    pass
+                
+                display_name = get_user_display_name(user_id) or "مستخدم"
+                result = game_manager.check_answer(group_id, text, user_id, display_name)
+                
+                if result:
+                    if result.get('correct') and result.get('points', 0) > 0:
+                        Database.update_user_points(
+                            user_id, 
+                            result['points'], 
+                            result.get('won', False), 
+                            game_manager.active_games.get(group_id, {}).get('type', 'unknown')
+                        )
+
+                    response = result.get('response')
+                    if response:
+                        if isinstance(response, list):
+                            for r in response:
+                                if isinstance(r, (FlexMessage, TextMessage)):
+                                    r.quick_reply = get_quick_reply()
+                            reply_message(event.reply_token, response)
+                        else:
+                            if isinstance(response, (FlexMessage, TextMessage)):
+                                response.quick_reply = get_quick_reply()
+                            reply_message(event.reply_token, response)
+
+                    if result.get('next_question') and not result.get('game_over'):
+                        next_q = game_manager.next_question(group_id)
+                        if next_q:
+                            try:
+                                if isinstance(next_q, FlexMessage):
+                                    next_q.quick_reply = get_quick_reply()
+                                time.sleep(1)
+                                push_message(group_id, next_q)
+                            except Exception as e:
+                                logger.error(f"خطأ في إرسال السؤال التالي: {e}")
+
+                    if result.get('game_over'):
+                        game_manager.stop_game(group_id)
+            return
+
+        try:
+            Database.update_last_activity(user_id)
+        except:
+            pass
+
+        display_name = get_user_display_name(user_id) or "مستخدم"
 
         if text.lower() in ["بدايه", "start", "ابدا", "بداية"]:
             flex = FlexMessage(
                 alt_text="مرحبا", 
-                contents=FlexContainer.from_dict(UIBuilder.welcome_card(display_name, is_user_registered(group_id, user_id))),
+                contents=FlexContainer.from_dict(UIBuilder.welcome_card(display_name, is_user_registered(user_id))),
                 quick_reply=get_quick_reply()
             )
             reply_message(event.reply_token, flex)
@@ -254,40 +303,49 @@ def handle_message(event):
         if text == "ألعاب" or text == "العاب":
             flex = FlexMessage(
                 alt_text="قائمة الألعاب",
-                contents=FlexContainer.from_dict(UIBuilder.games_menu_card(is_user_registered(group_id, user_id))),
+                contents=FlexContainer.from_dict(UIBuilder.games_menu_card(is_user_registered(user_id))),
                 quick_reply=get_quick_reply()
             )
             reply_message(event.reply_token, flex)
             return
 
         if text == "تسجيل":
-            if is_user_registered(group_id, user_id):
+            if is_user_registered(user_id):
                 msg = TextMessage(text=f"انت مسجل بالفعل باسم: {display_name}", quick_reply=get_quick_reply())
             else:
-                waiting_for_registration[user_id] = group_id
-                msg = TextMessage(text="اكتب اسمك في الشات الآن\n\nالشروط: 1-30 حرف، بدون كلمات غير لائقة\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
+                # التحقق من وجود حساب سابق
+                existing_name = Database.get_existing_user_name(user_id)
+                if existing_name:
+                    # إعادة تفعيل الحساب القديم
+                    Database.reactivate_user(user_id)
+                    msg = TextMessage(text=f"مرحباً بعودتك!\nتم إعادة تفعيل حسابك باسم: {existing_name}\n\nلتغيير الاسم اكتب: تغيير", quick_reply=get_quick_reply())
+                else:
+                    # تسجيل جديد
+                    waiting_for_registration[user_id] = True
+                    msg = TextMessage(text="اكتب اسمك في الشات الآن\n\nالشروط: 2-30 حرف، بدون كلمات غير لائقة\n\nاكتب انسحب للالغاء", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
         if text == "تغيير" or text == "تغيير الاسم":
-            if not is_user_registered(group_id, user_id):
+            if not is_user_registered(user_id):
                 msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
             else:
-                waiting_for_name_change[user_id] = group_id
-                msg = TextMessage(text=f"اسمك الحالي: {display_name}\n\nاكتب اسمك الجديد في الشات الآن\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
+                waiting_for_name_change[user_id] = True
+                msg = TextMessage(text=f"اسمك الحالي: {display_name}\n\nاكتب اسمك الجديد في الشات الآن\n\nاكتب انسحب للالغاء", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
         if text == "انسحب":
-            if unregister_user(group_id, user_id):
-                msg = TextMessage(text="تم الغاء تسجيلك", quick_reply=get_quick_reply())
-            else:
+            if not is_user_registered(user_id):
                 msg = TextMessage(text="انت غير مسجل", quick_reply=get_quick_reply())
+            else:
+                Database.delete_user(user_id)
+                msg = TextMessage(text="تم الغاء تسجيلك بنجاح", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
         if text in ["نقاطي", "احصائياتي"]:
-            if not is_user_registered(group_id, user_id):
+            if not is_user_registered(user_id):
                 msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
                 reply_message(event.reply_token, msg)
                 return
@@ -363,8 +421,8 @@ def handle_message(event):
         }
 
         if text in game_commands:
-            if not is_user_registered(group_id, user_id) and text != "مافيا":
-                msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
+            if not is_user_registered(user_id) and text != "مافيا":
+                msg = TextMessage(text="يجب التسجيل اولا لبدء الالعاب", quick_reply=get_quick_reply())
                 reply_message(event.reply_token, msg)
                 return
             
@@ -376,48 +434,9 @@ def handle_message(event):
                     response.quick_reply = get_quick_reply()
                 reply_message(event.reply_token, response)
             return
-
-        game = game_manager.get_game(group_id)
-        if game:
-            if not is_user_registered(group_id, user_id):
-                return
-            
-            result = game_manager.check_answer(group_id, text, user_id, display_name)
-            if result:
-                if result.get('correct') and result.get('points', 0) > 0:
-                    Database.update_user_points(
-                        user_id, 
-                        result['points'], 
-                        result.get('won', False), 
-                        game_manager.active_games.get(group_id, {}).get('type', 'unknown')
-                    )
-
-                response = result.get('response')
-                if response:
-                    if isinstance(response, list):
-                        for r in response:
-                            if isinstance(r, (FlexMessage, TextMessage)):
-                                r.quick_reply = get_quick_reply()
-                        reply_message(event.reply_token, response)
-                    else:
-                        if isinstance(response, (FlexMessage, TextMessage)):
-                            response.quick_reply = get_quick_reply()
-                        reply_message(event.reply_token, response)
-
-                if result.get('next_question') and not result.get('game_over'):
-                    next_q = game_manager.next_question(group_id)
-                    if next_q:
-                        try:
-                            if isinstance(next_q, FlexMessage):
-                                next_q.quick_reply = get_quick_reply()
-                            time.sleep(1)
-                            push_message(group_id, next_q)
-                        except Exception as e:
-                            logger.error(f"خطأ في إرسال السؤال التالي: {e}")
-
-                if result.get('game_over'):
-                    game_manager.stop_game(group_id)
     
+    except AttributeError as e:
+        logger.error(f"خطأ في بنية الرسالة: {e}")
     except Exception as e:
         logger.error(f"خطأ في معالجة الرسالة: {e}", exc_info=True)
 
