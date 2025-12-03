@@ -5,7 +5,7 @@ class UIBuilder:
     @staticmethod
     def welcome_card(display_name, is_registered=False):
         if is_registered:
-            registration_status = f"مسجل | {display_name}"
+            registration_status = f"مسجل {display_name}"
             status_color = COLORS['success']
         else:
             registration_status = "غير مسجل"
