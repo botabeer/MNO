@@ -300,7 +300,7 @@ def handle_message(event):
                 msg = TextMessage(text="انت غير مسجل", quick_reply=get_quick_reply())
             else:
                 Database.delete_user(user_id)
-                msg = TextMessage(text="تم الغاء تسجيلك بنجاح لن يتم الرد على رسائلك", quick_reply=get_quick_reply())
+                msg = TextMessage(text="تم الغاء تسجيلك بنجاح", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
