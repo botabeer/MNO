@@ -54,4 +54,4 @@ MAFIA_CONFIG = {
     'voting_duration': 60
 }
 
-INACTIVITY_DAYS = 7
+INACTIVITY_DAYS = 30
