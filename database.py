@@ -22,6 +22,7 @@ class Database:
                 total_points INTEGER DEFAULT 0,
                 games_played INTEGER DEFAULT 0,
                 wins INTEGER DEFAULT 0,
+                is_active INTEGER DEFAULT 1,
                 last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -49,10 +50,11 @@ class Database:
             try:
                 conn = sqlite3.connect(Database.DB_NAME)
                 cursor = conn.cursor()
-                cursor.execute('''INSERT INTO users (user_id, display_name, last_activity)
-                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                cursor.execute('''INSERT INTO users (user_id, display_name, is_active, last_activity)
+                    VALUES (?, ?, 1, CURRENT_TIMESTAMP)
                     ON CONFLICT(user_id) DO UPDATE SET
                     display_name = excluded.display_name,
+                    is_active = 1,
                     last_activity = CURRENT_TIMESTAMP,
                     updated_at = CURRENT_TIMESTAMP
                 ''', (user_id, display_name))
@@ -107,13 +109,77 @@ class Database:
         try:
             conn = sqlite3.connect(Database.DB_NAME)
             cursor = conn.cursor()
-            cursor.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
+            cursor.execute('SELECT is_active FROM users WHERE user_id = ?', (user_id,))
             result = cursor.fetchone()
             conn.close()
-            return result is not None
+            return result is not None and result[0] == 1
         except Exception as e:
             logger.error(f"خطأ تحقق: {e}")
             return False
+    
+    @staticmethod
+    def delete_user(user_id):
+        """إلغاء تفعيل المستخدم (لا يحذف البيانات)"""
+        with Database._lock:
+            try:
+                conn = sqlite3.connect(Database.DB_NAME)
+                cursor = conn.cursor()
+                
+                # تحديث حالة المستخدم إلى غير نشط
+                cursor.execute('''UPDATE users 
+                    SET is_active = 0,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?''', (user_id,))
+                
+                deactivated = cursor.rowcount > 0
+                conn.commit()
+                conn.close()
+                
+                if deactivated:
+                    logger.info(f"تم إلغاء تفعيل المستخدم {user_id}")
+                return deactivated
+            except Exception as e:
+                logger.error(f"خطأ إلغاء التفعيل: {e}")
+                return False
+    
+    @staticmethod
+    def reactivate_user(user_id):
+        """إعادة تفعيل المستخدم"""
+        with Database._lock:
+            try:
+                conn = sqlite3.connect(Database.DB_NAME)
+                cursor = conn.cursor()
+                
+                cursor.execute('''UPDATE users 
+                    SET is_active = 1,
+                        last_activity = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?''', (user_id,))
+                
+                reactivated = cursor.rowcount > 0
+                conn.commit()
+                conn.close()
+                
+                if reactivated:
+                    logger.info(f"تم إعادة تفعيل المستخدم {user_id}")
+                return reactivated
+            except Exception as e:
+                logger.error(f"خطأ إعادة التفعيل: {e}")
+                return False
+    
+    @staticmethod
+    def get_existing_user_name(user_id):
+        """الحصول على اسم المستخدم حتى لو كان غير مفعل"""
+        try:
+            conn = sqlite3.connect(Database.DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute('SELECT display_name FROM users WHERE user_id = ?', (user_id,))
+            result = cursor.fetchone()
+            conn.close()
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"خطأ في جلب اسم المستخدم: {e}")
+            return None
     
     @staticmethod
     def update_user_points(user_id, points, won, game_type):
@@ -121,6 +187,13 @@ class Database:
             try:
                 conn = sqlite3.connect(Database.DB_NAME)
                 cursor = conn.cursor()
+                
+                cursor.execute('SELECT is_active FROM users WHERE user_id = ?', (user_id,))
+                result = cursor.fetchone()
+                if not result or result[0] != 1:
+                    logger.warning(f"محاولة تحديث نقاط لمستخدم غير مفعل: {user_id}")
+                    conn.close()
+                    return False
                 
                 cursor.execute('''UPDATE users
                     SET total_points = total_points + ?,
@@ -137,6 +210,7 @@ class Database:
                 
                 conn.commit()
                 conn.close()
+                logger.info(f"تحديث نقاط المستخدم {user_id}: +{points} نقطة")
                 return True
             except Exception as e:
                 logger.error(f"خطأ تحديث نقاط: {e}")
@@ -152,17 +226,29 @@ class Database:
             ''', (user_id,))
             result = cursor.fetchone()
             conn.close()
+            
             if result:
                 return {
-                    'total_points': result[0],
-                    'games_played': result[1],
-                    'wins': result[2],
-                    'display_name': result[3]
+                    'total_points': result[0] or 0,
+                    'games_played': result[1] or 0,
+                    'wins': result[2] or 0,
+                    'display_name': result[3] or 'مستخدم'
                 }
-            return None
+            
+            return {
+                'total_points': 0,
+                'games_played': 0,
+                'wins': 0,
+                'display_name': 'مستخدم'
+            }
         except Exception as e:
             logger.error(f"خطأ احصائيات: {e}")
-            return None
+            return {
+                'total_points': 0,
+                'games_played': 0,
+                'wins': 0,
+                'display_name': 'مستخدم'
+            }
     
     @staticmethod
     def get_leaderboard(limit=20):
@@ -187,7 +273,7 @@ class Database:
         try:
             conn = sqlite3.connect(Database.DB_NAME)
             cursor = conn.cursor()
-            cursor.execute('''SELECT display_name, total_points, games_played, last_activity
+            cursor.execute('''SELECT display_name, total_points, games_played, is_active, last_activity
                 FROM users
                 ORDER BY total_points DESC
             ''')
@@ -197,8 +283,12 @@ class Database:
             cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
             players = []
             for r in results:
-                last_activity = datetime.strptime(r[3], '%Y-%m-%d %H:%M:%S')
-                active = last_activity >= cutoff_date
+                try:
+                    last_activity = datetime.strptime(r[4], '%Y-%m-%d %H:%M:%S')
+                    active = r[3] == 1 and last_activity >= cutoff_date
+                except:
+                    active = False
+                    
                 players.append({
                     'display_name': r[0],
                     'total_points': r[1],
