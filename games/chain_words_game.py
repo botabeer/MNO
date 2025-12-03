@@ -1,7 +1,7 @@
-from linebot.models import TextSendMessage, FlexSendMessage
+from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 import random
 import re
-from constants import COLORS
+from constants import COLOR
 
 def normalize_text(text):
     if not text:
