@@ -87,7 +87,7 @@ class Database:
                 cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
                 
                 cursor.execute('''DELETE FROM users 
-                    WHERE last_activity < ? AND games_played = 0''', 
+                    WHERE last_activity < ?''', 
                     (cutoff_date.strftime('%Y-%m-%d %H:%M:%S'),))
                 
                 deleted_count = cursor.rowcount
