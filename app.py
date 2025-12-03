@@ -26,38 +26,31 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# التحقق من المتغيرات
 required_env_vars = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
 for var in required_env_vars:
     if not os.getenv(var):
         logger.error(f"متغير البيئة {var} غير موجود")
         raise ValueError(f"متغير البيئة {var} مطلوب")
 
-# إعداد LINE Bot API v3
 configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
-# إنشاء API client
 api_client = ApiClient(configuration)
 line_bot_api = MessagingApi(api_client)
 
-# تهيئة قاعدة البيانات ومدير الألعاب
 Database.init()
 game_manager = GameManager(line_bot_api)
 
-# جدولة تنظيف المستخدمين غير النشطين
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=Database.cleanup_inactive_users, trigger="interval", hours=24)
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
-# تخزين حالة المستخدمين
 group_registered_users = {}
 waiting_for_registration = {}
 waiting_for_name_change = {}
 
 def get_quick_reply():
-    """إنشاء أزرار الرد السريع"""
     return QuickReply(items=[
         QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
         QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
@@ -148,7 +141,6 @@ def get_user_display_name(group_id, user_id):
     return None
 
 def reply_message(reply_token, messages):
-    """إرسال رسالة رد - متوافق مع v3"""
     try:
         if not isinstance(messages, list):
             messages = [messages]
@@ -162,7 +154,6 @@ def reply_message(reply_token, messages):
         logger.error(f"خطأ في إرسال الرد: {e}")
 
 def push_message(to, messages):
-    """إرسال رسالة push - متوافق مع v3"""
     try:
         if not isinstance(messages, list):
             messages = [messages]
@@ -200,7 +191,6 @@ def handle_message(event):
         
         Database.update_last_activity(user_id)
 
-        # معالجة التسجيل
         if user_id in waiting_for_registration:
             if text.lower() in ["الغاء", "إلغاء"]:
                 del waiting_for_registration[user_id]
@@ -217,11 +207,10 @@ def handle_message(event):
             register_group = waiting_for_registration[user_id]
             del waiting_for_registration[user_id]
             register_user(register_group, user_id, text)
-            msg = TextMessage(text=f"تم التسجيل بنجاح\n\nاسمك {text}\n\nيمكنك الان اللعب وجمع النقاط", quick_reply=get_quick_reply())
+            msg = TextMessage(text=f"تم التسجيل بنجاح\nاسمك: {text}\nيمكنك الآن اللعب وجمع النقاط", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
         
-        # معالجة تغيير الاسم
         if user_id in waiting_for_name_change:
             if text.lower() in ["الغاء", "إلغاء"]:
                 del waiting_for_name_change[user_id]
@@ -238,13 +227,12 @@ def handle_message(event):
             change_group = waiting_for_name_change[user_id]
             del waiting_for_name_change[user_id]
             update_user_name(change_group, user_id, text)
-            msg = TextMessage(text=f"تم تغيير الاسم بنجاح الى {text}", quick_reply=get_quick_reply())
+            msg = TextMessage(text=f"تم تغيير الاسم بنجاح الى: {text}", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
         display_name = get_user_display_name(group_id, user_id) or "مستخدم"
 
-        # الأوامر الأساسية
         if text.lower() in ["بدايه", "start", "ابدا", "بداية"]:
             flex = FlexMessage(
                 alt_text="مرحبا", 
@@ -274,10 +262,10 @@ def handle_message(event):
 
         if text == "تسجيل":
             if is_user_registered(group_id, user_id):
-                msg = TextMessage(text=f"انت مسجل بالفعل باسم {display_name}", quick_reply=get_quick_reply())
+                msg = TextMessage(text=f"انت مسجل بالفعل باسم: {display_name}", quick_reply=get_quick_reply())
             else:
                 waiting_for_registration[user_id] = group_id
-                msg = TextMessage(text="مرحبا بك في التسجيل\n\nالرجاء كتابة اسمك\n\nالشروط\nمن حرف الى 30 حرف\nلا يحتوي على كلمات غير لائقة\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
+                msg = TextMessage(text="اكتب اسمك في الشات الآن\n\nالشروط: 1-30 حرف، بدون كلمات غير لائقة\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
@@ -286,7 +274,7 @@ def handle_message(event):
                 msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
             else:
                 waiting_for_name_change[user_id] = group_id
-                msg = TextMessage(text=f"اسمك الحالي {display_name}\n\nالرجاء كتابة الاسم الجديد\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
+                msg = TextMessage(text=f"اسمك الحالي: {display_name}\n\nاكتب اسمك الجديد في الشات الآن\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
@@ -341,7 +329,6 @@ def handle_message(event):
             reply_message(event.reply_token, msg)
             return
 
-        # الألعاب بدون تسجيل
         if text in ["سؤال", "سوال"]:
             msg = TextMessage(text=game_manager.get_random_question(), quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
@@ -362,7 +349,6 @@ def handle_message(event):
             reply_message(event.reply_token, msg)
             return
         
-        # ألعاب تحتاج تسجيل
         if text == "توافق":
             response = game_manager.start_game("compatibility", group_id)
             if isinstance(response, FlexMessage):
@@ -391,7 +377,6 @@ def handle_message(event):
                 reply_message(event.reply_token, response)
             return
 
-        # معالجة إجابات الألعاب
         game = game_manager.get_game(group_id)
         if game:
             if not is_user_registered(group_id, user_id):
