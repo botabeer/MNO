@@ -1,6 +1,7 @@
-from linebot.models import TextSendMessage, FlexSendMessage
+from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 import random
 from constants import MAFIA_CONFIG, COLORS
+
 
 class MafiaGame:
     def __init__(self, line_bot_api):
