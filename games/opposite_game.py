@@ -27,7 +27,23 @@ class OppositeGame:
             {"word": "داخل", "opposite": "خارج"}, {"word": "قريب", "opposite": "بعيد"},
             {"word": "جديد", "opposite": "قديم"}, {"word": "ثقيل", "opposite": "خفيف"},
             {"word": "مظلم", "opposite": "مضيء"}, {"word": "صادق", "opposite": "كاذب"},
-            {"word": "شجاع", "opposite": "جبان"}, {"word": "نشيط", "opposite": "كسول"}
+            {"word": "شجاع", "opposite": "جبان"}, {"word": "نشيط", "opposite": "كسول"},
+            {"word": "ممتلئ", "opposite": "فارغ"}, {"word": "واسع", "opposite": "ضيق"},
+            {"word": "عالي", "opposite": "منخفض"}, {"word": "حار", "opposite": "بارد"},
+            {"word": "رطب", "opposite": "جاف"}, {"word": "صلب", "opposite": "طري"},
+            {"word": "حلو", "opposite": "مر"}, {"word": "مالح", "opposite": "عذب"},
+            {"word": "ناعم", "opposite": "خشن"}, {"word": "لامع", "opposite": "باهت"},
+            {"word": "مبتسم", "opposite": "عابس"}, {"word": "سعيد", "opposite": "حزين"},
+            {"word": "هادئ", "opposite": "صاخب"}, {"word": "مريح", "opposite": "مزعج"},
+            {"word": "آمن", "opposite": "خطر"}, {"word": "صحي", "opposite": "مريض"},
+            {"word": "حي", "opposite": "ميت"}, {"word": "نائم", "opposite": "مستيقظ"},
+            {"word": "مفتوح", "opposite": "مغلق"}, {"word": "مشغول", "opposite": "فارغ"},
+            {"word": "غالي", "opposite": "رخيص"}, {"word": "نافع", "opposite": "ضار"},
+            {"word": "حقيقي", "opposite": "وهمي"}, {"word": "طبيعي", "opposite": "صناعي"},
+            {"word": "عام", "opposite": "خاص"}, {"word": "واضح", "opposite": "غامض"},
+            {"word": "مباشر", "opposite": "غير مباشر"}, {"word": "محلي", "opposite": "أجنبي"},
+            {"word": "ذكي", "opposite": "غبي"}, {"word": "مؤدب", "opposite": "وقح"},
+            {"word": "متواضع", "opposite": "متكبر"}, {"word": "كريم", "opposite": "بخيل"}
         ]
         self.questions = []
         self.current_question = 0
@@ -63,7 +79,7 @@ class OppositeGame:
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": f"ما هو عكس: {word['word']}", "size": "lg", "color": COLORS['text_dark'], "wrap": True, "weight": "bold", "align": "center"}], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
                         {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "sm"}
+                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "بداية", "text": "بداية"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "sm"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
@@ -87,7 +103,7 @@ class OppositeGame:
         if answer.lower() in ['لمح', 'تلميح']:
             if user_id not in self.hints_used:
                 self.hints_used[user_id] = True
-                return {'response': TextMessage(text=f"يبدأ بحرف: {word['opposite'][0]}\nعدد الحروف: {len(word['opposite'])}"), 'points': 0, 'correct': False}
+                return {'response': TextMessage(text=f"اول حرف: {word['opposite'][0]}\nعدد الحروف: {len(word['opposite'])}"), 'points': 0, 'correct': False}
             return {'response': TextMessage(text="استخدمت التلميح"), 'points': 0, 'correct': False}
 
         if answer.lower() in ['جاوب', 'الجواب']:
@@ -115,10 +131,8 @@ class OppositeGame:
         winner = sorted_players[0][1]
         
         players_contents = []
-        
         for i, p in enumerate(sorted_players[:5]):
-            rank = f"{i+1}."
-            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": rank, "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
+            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
         
         winner_card = FlexMessage(
             alt_text="نتائج اللعبة",
