@@ -1,7 +1,15 @@
+"""
+لعبة الأغنية - Song Game
+لعبة تخمين اسم المغني من كلمات الأغنية
+"""
+
 from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 import random
 import re
+import logging
 from constants import COLORS
+
+logger = logging.getLogger(__name__)
 
 SONGS = [
     {'lyrics': 'رجعت لي أيام الماضي معاك', 'singer': 'أم كلثوم'},
@@ -24,50 +32,42 @@ SONGS = [
     {'lyrics': 'أحبك ليه أنا مدري', 'singer': 'عبدالمجيد عبدالله'},
     {'lyrics': 'أمر الله أقوى أحبك والعقل واعي', 'singer': 'ماجد المهندس'},
     {'lyrics': 'الحب يتعب من يدله والله في حبه بلاني', 'singer': 'راشد الماجد'},
-    {'lyrics': 'محد غيرك شغل عقلي شغل بالي', 'singer': 'وليد الشامي'},
-    {'lyrics': 'نكتشف مر الحقيقة بعد ما يفوت الأوان', 'singer': 'أصالة'},
-    {'lyrics': 'يا هي توجع كذبة اخباري تمام', 'singer': 'أميمة طالب'},
-    {'lyrics': 'احس اني لقيتك بس عشان تضيع مني', 'singer': 'عبدالمجيد عبدالله'},
-    {'lyrics': 'بردان أنا تكفى أبي احترق بدفا لعيونك', 'singer': 'محمد عبده'},
-    {'lyrics': 'أشوفك كل يوم وأروح وأقول نظرة ترد الروح', 'singer': 'محمد عبده'},
-    {'lyrics': 'في زحمة الناس صعبة حالتي', 'singer': 'محمد عبده'},
-    {'lyrics': 'اختلفنا مين يحب الثاني أكثر', 'singer': 'محمد عبده'},
-    {'lyrics': 'لبيه يا بو عيون وساع', 'singer': 'محمد عبده'},
-    {'lyrics': 'اسمحيلي يا الغرام العف', 'singer': 'محمد عبده'},
-    {'lyrics': 'سألوني الناس عنك يا حبيبي', 'singer': 'فيروز'},
-    {'lyrics': 'أحبك موت كلمة مالها تفسير', 'singer': 'ماجد المهندس'},
-    {'lyrics': 'جننت قلبي بحب يلوي ذراعي', 'singer': 'ماجد المهندس'},
-    {'lyrics': 'بديت أطيب بديت احس بك عادي', 'singer': 'ماجد المهندس'},
-    {'lyrics': 'من أول نظرة شفتك قلت هذا اللي تمنيته', 'singer': 'ماجد المهندس'},
-    {'lyrics': 'أنا بلياك إذا أرمش تنزل ألف دمعة', 'singer': 'ماجد المهندس'},
-    {'lyrics': 'عطشان يا برق السما', 'singer': 'ماجد المهندس'},
-    {'lyrics': 'هيجيلي موجوع دموعه ف عينه', 'singer': 'تامر عاشور'},
-    {'lyrics': 'تيجي نتراهن إن هيجي اليوم', 'singer': 'تامر عاشور'},
-    {'lyrics': 'خليني ف حضنك يا حبيبي', 'singer': 'تامر عاشور'},
-    {'lyrics': 'أريد الله يسامحني لأن أذيت نفسي', 'singer': 'رحمة رياض'},
-    {'lyrics': 'كون نصير أنا وياك نجمة بالسما', 'singer': 'رحمة رياض'},
-    {'lyrics': 'على طاري الزعل والدمعتين', 'singer': 'أصيل هميم'},
-    {'lyrics': 'يشبهك قلبي كنك القلب مخلوق', 'singer': 'أصيل هميم'},
-    {'lyrics': 'أحبه بس مو معناه اسمحله يجرح', 'singer': 'أصيل هميم'},
-    {'lyrics': 'المفروض أعوفك من زمان', 'singer': 'أصيل هميم'},
-    {'lyrics': 'ضعت منك وانهدم جسر التلاقي', 'singer': 'أميمة طالب'},
-    {'lyrics': 'بيان صادر من معاناة المحبة', 'singer': 'أميمة طالب'},
-    {'lyrics': 'أنا ودي إذا ودك نعيد الماضي', 'singer': 'رابح صقر'},
-    {'lyrics': 'مثل ما تحب ياروحي ألبي رغبتك', 'singer': 'رابح صقر'}
 ]
 
+
 def normalize_text(text):
+    """
+    تطبيع النص العربي للمقارنة
+    يزيل التشكيل والهمزات ويوحّد الأحرف المتشابهة
+    """
     if not text:
         return ""
+    
     text = text.strip().lower()
+    
+    # توحيد الألف
     text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+    
+    # توحيد الواو والياء
     text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
+    
+    # توحيد التاء المربوطة والألف المقصورة
     text = text.replace('ة', 'ه').replace('ى', 'ي')
+    
+    # إزالة التشكيل
     text = re.sub(r'[\u064B-\u065F]', '', text)
+    
+    # إزالة المسافات الزائدة
     text = re.sub(r'\s+', '', text)
+    
     return text
 
+
 class SongGame:
+    """
+    لعبة تخمين اسم المغني من كلمات الأغنية
+    """
+    
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.songs = SONGS
@@ -77,111 +77,425 @@ class SongGame:
         self.player_scores = {}
         self.answered_users = set()
         self.hints_used = {}
-
+    
     def start_game(self):
-        self.questions = random.sample(self.songs, min(self.total_questions, len(self.songs)))
-        self.current_question = 0
-        self.player_scores = {}
-        self.answered_users = set()
-        self.hints_used = {}
-        return self._show_question()
-
-    def _show_question(self):
-        song = self.questions[self.current_question]
-        progress = f"{self.current_question + 1}/{self.total_questions}"
+        """بدء اللعبة"""
+        try:
+            self.questions = random.sample(self.songs, min(self.total_questions, len(self.songs)))
+            self.current_question = 0
+            self.player_scores = {}
+            self.answered_users = set()
+            self.hints_used = {}
+            
+            logger.info(f"بدء لعبة الأغنية - عدد الأسئلة: {self.total_questions}")
+            return self._show_question()
         
-        return FlexMessage(
-            alt_text="لعبه الاغنيه",
-            contents=FlexContainer.from_dict({
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "لعبة الأغنية", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
-                        {"type": "separator", "margin": "md", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": song['lyrics'], "size": "lg", "color": COLORS['text_dark'], "wrap": True, "weight": "bold", "align": "center"}, {"type": "text", "text": "من المغني؟", "size": "md", "color": COLORS['primary'], "margin": "md", "align": "center"}], "margin": "lg", "spacing": "sm"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "بداية", "text": "بداية"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "sm"}
-                    ],
-                    "backgroundColor": COLORS['card_bg'],
-                    "paddingAll": "20px"
-                }
-            })
-        )
-
+        except Exception as e:
+            logger.error(f"خطأ في بدء لعبة الأغنية: {e}")
+            return TextMessage(text="حدث خطأ في بدء اللعبة")
+    
+    def _show_question(self):
+        """عرض السؤال الحالي"""
+        try:
+            song = self.questions[self.current_question]
+            progress = f"{self.current_question + 1}/{self.total_questions}"
+            
+            return FlexMessage(
+                alt_text="لعبة الأغنية",
+                contents=FlexContainer.from_dict({
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "md",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "لعبة الأغنية",
+                                        "weight": "bold",
+                                        "size": "xl",
+                                        "color": COLORS['white'],
+                                        "align": "center"
+                                    }
+                                ],
+                                "backgroundColor": COLORS['primary'],
+                                "paddingAll": "20px",
+                                "cornerRadius": "12px"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "baseline",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "السؤال",
+                                        "size": "xs",
+                                        "color": COLORS['text_light'],
+                                        "flex": 0
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": progress,
+                                        "size": "xs",
+                                        "color": COLORS['primary'],
+                                        "weight": "bold",
+                                        "align": "end"
+                                    }
+                                ],
+                                "margin": "lg"
+                            },
+                            {
+                                "type": "separator",
+                                "margin": "md",
+                                "color": COLORS['border']
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": song['lyrics'],
+                                        "size": "lg",
+                                        "color": COLORS['text_dark'],
+                                        "wrap": True,
+                                        "weight": "bold",
+                                        "align": "center"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "من المغني؟",
+                                        "size": "md",
+                                        "color": COLORS['primary'],
+                                        "margin": "md",
+                                        "align": "center"
+                                    }
+                                ],
+                                "margin": "lg",
+                                "spacing": "sm"
+                            },
+                            {
+                                "type": "separator",
+                                "margin": "lg",
+                                "color": COLORS['border']
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "button",
+                                        "action": {
+                                            "type": "message",
+                                            "label": "لمح",
+                                            "text": "لمح"
+                                        },
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {
+                                            "type": "message",
+                                            "label": "جاوب",
+                                            "text": "جاوب"
+                                        },
+                                        "style": "secondary",
+                                        "height": "sm",
+                                        "flex": 1
+                                    }
+                                ],
+                                "spacing": "sm",
+                                "margin": "lg"
+                            }
+                        ],
+                        "backgroundColor": COLORS['card_bg'],
+                        "paddingAll": "20px"
+                    }
+                })
+            )
+        
+        except Exception as e:
+            logger.error(f"خطأ في عرض السؤال: {e}")
+            return TextMessage(text="حدث خطأ في عرض السؤال")
+    
     def next_question(self):
+        """الانتقال للسؤال التالي"""
         self.current_question += 1
+        
         if self.current_question < self.total_questions:
             self.answered_users = set()
             self.hints_used = {}
             return self._show_question()
-        return None
-
-    def check_answer(self, answer, user_id, display_name):
-        if user_id in self.answered_users:
-            return None
-
-        song = self.questions[self.current_question]
-
-        if answer.lower() in ['لمح', 'تلميح']:
-            if user_id not in self.hints_used:
-                self.hints_used[user_id] = True
-                return {'response': TextMessage(text=f"اول حرف: {song['singer'][0]}\nعدد الحروف: {len(song['singer'])}"), 'points': 0, 'correct': False}
-            return {'response': TextMessage(text="استخدمت التلميح"), 'points': 0, 'correct': False}
-
-        if answer.lower() in ['جاوب', 'الجواب']:
-            self.answered_users.add(user_id)
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextMessage(text=f"الاجابة: {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
-            return self._end_game()
-
-        if normalize_text(answer) == normalize_text(song['singer']):
-            points = 1
-            self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0})
-            self.player_scores[user_id]['score'] += points
-            self.answered_users.add(user_id)
-
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextMessage(text=f"اجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
-            return self._end_game()
-
-        return None
-
-    def _end_game(self):
-        if not self.player_scores:
-            return {'response': TextMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
-
-        sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
-        winner = sorted_players[0][1]
         
-        players_contents = []
-        for i, p in enumerate(sorted_players[:5]):
-            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
-
-        winner_card = FlexMessage(
-            alt_text="نتائج اللعبة",
-            contents=FlexContainer.from_dict({
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "button", "action": {"type": "message", "label": "إعادة اللعب", "text": "اغنيه"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
-                    ],
-                    "backgroundColor": COLORS['card_bg'],
-                    "paddingAll": "20px"
+        return None
+    
+    def check_answer(self, answer, user_id, display_name):
+        """
+        التحقق من إجابة اللاعب
+        
+        Args:
+            answer: الإجابة المُدخلة
+            user_id: معرّف المستخدم
+            display_name: اسم المستخدم
+            
+        Returns:
+            dict: نتيجة التحقق من الإجابة
+        """
+        try:
+            # تحقق إذا كان المستخدم أجاب بالفعل
+            if user_id in self.answered_users:
+                return None
+            
+            song = self.questions[self.current_question]
+            answer = answer.strip()
+            
+            # معالجة طلب التلميح
+            if answer.lower() in ['لمح', 'تلميح']:
+                if user_id not in self.hints_used:
+                    self.hints_used[user_id] = True
+                    hint_text = f"أول حرف: {song['singer'][0]}\nعدد الحروف: {len(song['singer'])}"
+                    logger.info(f"تلميح لـ {display_name}: {hint_text}")
+                    
+                    return {
+                        'response': TextMessage(text=hint_text),
+                        'points': 0,
+                        'correct': False
+                    }
+                else:
+                    return {
+                        'response': TextMessage(text="لقد استخدمت التلميح بالفعل"),
+                        'points': 0,
+                        'correct': False
+                    }
+            
+            # معالجة طلب الإجابة
+            if answer.lower() in ['جاوب', 'الجواب', 'الحل']:
+                self.answered_users.add(user_id)
+                answer_text = f"الإجابة: {song['singer']}"
+                
+                if self.current_question + 1 < self.total_questions:
+                    return {
+                        'response': TextMessage(text=answer_text),
+                        'points': 0,
+                        'correct': False,
+                        'next_question': True
+                    }
+                else:
+                    return self._end_game()
+            
+            # التحقق من الإجابة
+            if normalize_text(answer) == normalize_text(song['singer']):
+                points = 1
+                
+                # تحديث النقاط
+                if user_id not in self.player_scores:
+                    self.player_scores[user_id] = {
+                        'name': display_name,
+                        'score': 0
+                    }
+                
+                self.player_scores[user_id]['score'] += points
+                self.answered_users.add(user_id)
+                
+                logger.info(f"إجابة صحيحة من {display_name}: {answer}")
+                
+                if self.current_question + 1 < self.total_questions:
+                    return {
+                        'response': TextMessage(
+                            text=f"إجابة صحيحة {display_name}\n+{points} نقطة"
+                        ),
+                        'points': points,
+                        'correct': True,
+                        'won': True,
+                        'next_question': True
+                    }
+                else:
+                    return self._end_game()
+            
+            return None
+        
+        except Exception as e:
+            logger.error(f"خطأ في التحقق من الإجابة: {e}")
+            return None
+    
+    def _end_game(self):
+        """إنهاء اللعبة وعرض النتائج"""
+        try:
+            if not self.player_scores:
+                return {
+                    'response': TextMessage(text="انتهت اللعبة"),
+                    'points': 0,
+                    'correct': False,
+                    'won': False,
+                    'game_over': True
                 }
-            })
-        )
-
-        return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
+            
+            # ترتيب اللاعبين حسب النقاط
+            sorted_players = sorted(
+                self.player_scores.items(),
+                key=lambda x: x[1]['score'],
+                reverse=True
+            )
+            
+            winner = sorted_players[0][1]
+            
+            # إنشاء قائمة اللاعبين
+            players_contents = []
+            for i, (uid, player) in enumerate(sorted_players[:5]):
+                players_contents.append({
+                    "type": "box",
+                    "layout": "baseline",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": f"{i+1}.",
+                            "size": "sm",
+                            "flex": 0
+                        },
+                        {
+                            "type": "text",
+                            "text": player['name'],
+                            "size": "sm",
+                            "color": COLORS['text_dark'],
+                            "flex": 3,
+                            "margin": "sm"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"{player['score']} نقطة",
+                            "size": "sm",
+                            "color": COLORS['primary'],
+                            "weight": "bold",
+                            "align": "end",
+                            "flex": 2
+                        }
+                    ],
+                    "margin": "md" if i > 0 else "sm"
+                })
+            
+            winner_card = FlexMessage(
+                alt_text="نتائج اللعبة",
+                contents=FlexContainer.from_dict({
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "md",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "انتهت اللعبة",
+                                        "weight": "bold",
+                                        "size": "xl",
+                                        "color": COLORS['white'],
+                                        "align": "center"
+                                    }
+                                ],
+                                "backgroundColor": COLORS['primary'],
+                                "paddingAll": "20px",
+                                "cornerRadius": "12px"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "الفائز",
+                                        "size": "sm",
+                                        "color": COLORS['text_light'],
+                                        "align": "center"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": winner['name'],
+                                        "size": "xxl",
+                                        "color": COLORS['primary'],
+                                        "weight": "bold",
+                                        "align": "center",
+                                        "margin": "xs"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": f"{winner['score']} نقطة",
+                                        "size": "lg",
+                                        "color": COLORS['success'],
+                                        "align": "center",
+                                        "margin": "xs"
+                                    }
+                                ],
+                                "margin": "lg"
+                            },
+                            {
+                                "type": "separator",
+                                "margin": "lg",
+                                "color": COLORS['border']
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "النتائج",
+                                        "size": "md",
+                                        "color": COLORS['text_dark'],
+                                        "weight": "bold"
+                                    },
+                                    *players_contents
+                                ],
+                                "margin": "lg"
+                            },
+                            {
+                                "type": "separator",
+                                "margin": "lg",
+                                "color": COLORS['border']
+                            },
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "message",
+                                    "label": "إعادة اللعب",
+                                    "text": "اغنيه"
+                                },
+                                "style": "primary",
+                                "color": COLORS['primary'],
+                                "height": "sm",
+                                "margin": "lg"
+                            }
+                        ],
+                        "backgroundColor": COLORS['card_bg'],
+                        "paddingAll": "20px"
+                    }
+                })
+            )
+            
+            logger.info(f"انتهت اللعبة - الفائز: {winner['name']} - النقاط: {winner['score']}")
+            
+            return {
+                'response': winner_card,
+                'points': winner['score'],
+                'correct': True,
+                'won': True,
+                'game_over': True
+            }
+        
+        except Exception as e:
+            logger.error(f"خطأ في إنهاء اللعبة: {e}")
+            return {
+                'response': TextMessage(text="حدث خطأ في إنهاء اللعبة"),
+                'points': 0,
+                'correct': False,
+                'won': False,
+                'game_over': True
+            }
