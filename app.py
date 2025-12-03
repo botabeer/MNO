@@ -2,21 +2,15 @@ from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
-    Configuration, ApiClient, MessagingApi,
-    ReplyMessageRequest, PushMessageRequest,
-    TextMessage, FlexMessage, FlexContainer,
-    QuickReply, QuickReplyItem, MessageAction
+    Configuration, ApiClient, MessagingApi, ReplyMessageRequest, PushMessageRequest,
+    TextMessage, FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from apscheduler.schedulers.background import BackgroundScheduler
 from ui_builder import UIBuilder
 from games.game_manager import GameManager
 from database import Database
-import os
-import logging
-import re
-import atexit
-import time
+import os, logging, re, atexit, time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -45,13 +39,12 @@ waiting_for_registration = {}
 waiting_for_name_change = {}
 
 BOT_COMMANDS = [
-    'بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة',
-    'ألعاب', 'العاب', 'تسجيل', 'تغيير', 'تغيير الاسم', 'انسحب',
-    'نقاطي', 'احصائياتي', 'الصداره', 'المتصدرين', 'الصدارة', 'اللاعبين',
-    'ايقاف', 'stop', 'إيقاف', 'سؤال', 'سوال', 'تحدي', 'اعتراف', 'منشن',
-    'توافق', 'اغنيه', 'لعبه', 'سلسله', 'اسرع', 'ضد', 'تكوين', 'فئه', 'مافيا',
-    'لمح', 'تلميح', 'جاوب', 'الجواب', 'الغاء', 'إلغاء',
-    'انضم مافيا', 'بدء مافيا', 'شرح مافيا', 'إنهاء الليل', 'تصويت مافيا', 'إنهاء التصويت'
+    'بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة', 'ألعاب', 'العاب', 'تسجيل', 
+    'تغيير', 'تغيير الاسم', 'انسحب', 'نقاطي', 'احصائياتي', 'الصداره', 'المتصدرين', 'الصدارة', 
+    'اللاعبين', 'ايقاف', 'stop', 'إيقاف', 'سؤال', 'سوال', 'تحدي', 'اعتراف', 'منشن', 'توافق', 
+    'اغنيه', 'لعبه', 'سلسله', 'اسرع', 'ضد', 'تكوين', 'فئه', 'مافيا', 'لمح', 'تلميح', 'جاوب', 
+    'الجواب', 'الغاء', 'إلغاء', 'انضم مافيا', 'بدء مافيا', 'شرح مافيا', 'إنهاء الليل', 
+    'تصويت مافيا', 'إنهاء التصويت'
 ]
 
 def get_quick_reply():
@@ -74,10 +67,7 @@ def get_quick_reply():
 class NameFilter:
     @staticmethod
     def get_bad_words():
-        return [
-            'غبي', 'احمق', 'حمار', 'كلب', 'خنزير', 'قذر', 'وسخ', 'حقير', 'نذل',
-            'خائن', 'كذاب', 'لعين', 'ملعون', 'عاهر', 'زاني', 'فاسق', 'منافق'
-        ]
+        return ['غبي', 'احمق', 'حمار', 'كلب', 'خنزير', 'قذر', 'وسخ', 'حقير', 'نذل', 'خائن', 'كذاب', 'لعين', 'ملعون', 'عاهر', 'زاني', 'فاسق', 'منافق']
     
     @staticmethod
     def normalize_arabic(text):
@@ -97,7 +87,6 @@ class NameFilter:
             return False, "الاسم لا يمكن ان يكون فارغا"
         
         name = name.strip()
-        
         if len(name) > 30:
             return False, "الاسم طويل جدا (الحد الاقصى 30 حرف)"
         
@@ -114,7 +103,7 @@ def is_bot_command(text):
     for cmd in BOT_COMMANDS:
         if text_lower == cmd.lower():
             return True
-    if text_lower.startswith('صوت ') or text_lower.startswith('اقتل ') or text_lower.startswith('افحص ') or text_lower.startswith('احمي '):
+    if text_lower.startswith(('صوت ', 'اقتل ', 'افحص ', 'احمي ')):
         return True
     return False
 
@@ -218,9 +207,7 @@ def handle_message(event):
                 if result:
                     if result.get('correct') and result.get('points', 0) > 0:
                         Database.update_user_points(
-                            user_id, 
-                            result['points'], 
-                            result.get('won', False), 
+                            user_id, result['points'], result.get('won', False),
                             game_manager.active_games.get(group_id, {}).get('type', 'unknown')
                         )
 
@@ -276,7 +263,7 @@ def handle_message(event):
             reply_message(event.reply_token, flex)
             return
 
-        if text == "ألعاب" or text == "العاب":
+        if text in ["ألعاب", "العاب"]:
             flex = FlexMessage(
                 alt_text="قائمة الألعاب",
                 contents=FlexContainer.from_dict(UIBuilder.games_menu_card(is_user_registered(user_id))),
@@ -299,7 +286,7 @@ def handle_message(event):
             reply_message(event.reply_token, msg)
             return
 
-        if text == "تغيير" or text == "تغيير الاسم":
+        if text in ["تغيير", "تغيير الاسم"]:
             if not is_user_registered(user_id):
                 msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
             else:
