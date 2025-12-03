@@ -1,4 +1,4 @@
-from linebot.models import TextSendMessage, FlexSendMessage
+from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 import random
 import re
 from constants import COLORS
@@ -126,9 +126,9 @@ class SongGame:
         song = self.questions[self.current_question]
         progress = f"{self.current_question + 1}/{self.total_questions}"
         
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="لعبه الاغنيه",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -146,7 +146,7 @@ class SongGame:
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
     def next_question(self):
@@ -166,13 +166,13 @@ class SongGame:
         if answer in ['لمح', 'تلميح']:
             if user_id not in self.hints_used:
                 self.hints_used[user_id] = True
-                return {'response': TextSendMessage(text=f"يبدأ بحرف: {song['singer'][0]}\nعدد الحروف: {len(song['singer'])}"), 'points': 0, 'correct': False}
-            return {'response': TextSendMessage(text="استخدمت التلميح مسبقاً"), 'points': 0, 'correct': False}
+                return {'response': TextMessage(text=f"يبدأ بحرف: {song['singer'][0]}\nعدد الحروف: {len(song['singer'])}"), 'points': 0, 'correct': False}
+            return {'response': TextMessage(text="استخدمت التلميح مسبقاً"), 'points': 0, 'correct': False}
 
         if answer in ['جاوب', 'الجواب']:
             self.answered_users.add(user_id)
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"الإجابة: {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
+                return {'response': TextMessage(text=f"الإجابة: {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
 
         if normalize_text(answer) == normalize_text(song['singer']):
@@ -182,14 +182,14 @@ class SongGame:
             self.answered_users.add(user_id)
 
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"إجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
+                return {'response': TextMessage(text=f"إجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
             return self._end_game()
 
         return None
 
     def _end_game(self):
         if not self.player_scores:
-            return {'response': TextSendMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
+            return {'response': TextMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
 
         sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
         winner = sorted_players[0][1]
@@ -200,9 +200,9 @@ class SongGame:
             rank = f"{i+1}."
             players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": rank, "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
 
-        winner_card = FlexSendMessage(
+        winner_card = FlexMessage(
             alt_text="نتائج اللعبة",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -219,7 +219,7 @@ class SongGame:
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
         return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
