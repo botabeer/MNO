@@ -38,11 +38,17 @@ class Database:
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             )''')
             
+            cursor.execute('''CREATE INDEX IF NOT EXISTS idx_users_points 
+                ON users(total_points DESC, is_active)''')
+            
+            cursor.execute('''CREATE INDEX IF NOT EXISTS idx_users_activity 
+                ON users(last_activity, is_active)''')
+            
             conn.commit()
             conn.close()
-            logger.info("تم تهيئة قاعدة البيانات")
+            logger.info("✅ تم تهيئة قاعدة البيانات بنجاح")
         except Exception as e:
-            logger.error(f"خطأ تهيئة DB: {e}")
+            logger.error(f"❌ خطأ تهيئة DB: {e}")
     
     @staticmethod
     def register_or_update_user(user_id, display_name):
@@ -60,9 +66,10 @@ class Database:
                 ''', (user_id, display_name))
                 conn.commit()
                 conn.close()
+                logger.info(f"✅ تسجيل/تحديث مستخدم: {display_name}")
                 return True
             except Exception as e:
-                logger.error(f"خطأ تسجيل: {e}")
+                logger.error(f"❌ خطأ تسجيل: {e}")
                 return False
     
     @staticmethod
@@ -72,12 +79,12 @@ class Database:
                 conn = sqlite3.connect(Database.DB_NAME)
                 cursor = conn.cursor()
                 cursor.execute('''UPDATE users SET last_activity = CURRENT_TIMESTAMP 
-                    WHERE user_id = ?''', (user_id,))
+                    WHERE user_id = ? AND is_active = 1''', (user_id,))
                 conn.commit()
                 conn.close()
                 return True
             except Exception as e:
-                logger.error(f"خطأ تحديث النشاط: {e}")
+                logger.error(f"❌ خطأ تحديث النشاط: {e}")
                 return False
     
     @staticmethod
@@ -88,20 +95,20 @@ class Database:
                 cursor = conn.cursor()
                 cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
                 
-                cursor.execute('''DELETE FROM users 
-                    WHERE last_activity < ?''', 
+                cursor.execute('''UPDATE users SET is_active = 0
+                    WHERE last_activity < ? AND is_active = 1''', 
                     (cutoff_date.strftime('%Y-%m-%d %H:%M:%S'),))
                 
-                deleted_count = cursor.rowcount
+                deactivated_count = cursor.rowcount
                 conn.commit()
                 conn.close()
                 
-                if deleted_count > 0:
-                    logger.info(f"تم حذف {deleted_count} مستخدم غير نشط")
+                if deactivated_count > 0:
+                    logger.info(f"🧹 تم إلغاء تفعيل {deactivated_count} مستخدم غير نشط")
                 
-                return deleted_count
+                return deactivated_count
             except Exception as e:
-                logger.error(f"خطأ تنظيف المستخدمين: {e}")
+                logger.error(f"❌ خطأ تنظيف المستخدمين: {e}")
                 return 0
     
     @staticmethod
@@ -114,7 +121,7 @@ class Database:
             conn.close()
             return result is not None and result[0] == 1
         except Exception as e:
-            logger.error(f"خطأ تحقق: {e}")
+            logger.error(f"❌ خطأ تحقق: {e}")
             return False
     
     @staticmethod
@@ -134,10 +141,10 @@ class Database:
                 conn.close()
                 
                 if deactivated:
-                    logger.info(f"تم إلغاء تفعيل المستخدم {user_id}")
+                    logger.info(f"✅ تم إلغاء تفعيل المستخدم {user_id}")
                 return deactivated
             except Exception as e:
-                logger.error(f"خطأ إلغاء التفعيل: {e}")
+                logger.error(f"❌ خطأ إلغاء التفعيل: {e}")
                 return False
     
     @staticmethod
@@ -158,10 +165,10 @@ class Database:
                 conn.close()
                 
                 if reactivated:
-                    logger.info(f"تم إعادة تفعيل المستخدم {user_id}")
+                    logger.info(f"✅ تم إعادة تفعيل المستخدم {user_id}")
                 return reactivated
             except Exception as e:
-                logger.error(f"خطأ إعادة التفعيل: {e}")
+                logger.error(f"❌ خطأ إعادة التفعيل: {e}")
                 return False
     
     @staticmethod
@@ -174,7 +181,7 @@ class Database:
             conn.close()
             return result[0] if result else None
         except Exception as e:
-            logger.error(f"خطأ في جلب اسم المستخدم: {e}")
+            logger.error(f"❌ خطأ في جلب اسم المستخدم: {e}")
             return None
     
     @staticmethod
@@ -187,7 +194,7 @@ class Database:
                 cursor.execute('SELECT is_active FROM users WHERE user_id = ?', (user_id,))
                 result = cursor.fetchone()
                 if not result or result[0] != 1:
-                    logger.warning(f"محاولة تحديث نقاط لمستخدم غير مفعل: {user_id}")
+                    logger.warning(f"⚠️ محاولة تحديث نقاط لمستخدم غير مفعل: {user_id}")
                     conn.close()
                     return False
                 
@@ -206,10 +213,10 @@ class Database:
                 
                 conn.commit()
                 conn.close()
-                logger.info(f"تحديث نقاط المستخدم {user_id}: +{points} نقطة")
+                logger.info(f"✅ تحديث نقاط المستخدم {user_id}: +{points} نقطة")
                 return True
             except Exception as e:
-                logger.error(f"خطأ تحديث نقاط: {e}")
+                logger.error(f"❌ خطأ تحديث نقاط: {e}")
                 return False
     
     @staticmethod
@@ -218,7 +225,7 @@ class Database:
             conn = sqlite3.connect(Database.DB_NAME)
             cursor = conn.cursor()
             cursor.execute('''SELECT total_points, games_played, wins, display_name
-                FROM users WHERE user_id = ?
+                FROM users WHERE user_id = ? AND is_active = 1
             ''', (user_id,))
             result = cursor.fetchone()
             conn.close()
@@ -238,7 +245,7 @@ class Database:
                 'display_name': 'مستخدم'
             }
         except Exception as e:
-            logger.error(f"خطأ احصائيات: {e}")
+            logger.error(f"❌ خطأ احصائيات: {e}")
             return {
                 'total_points': 0,
                 'games_played': 0,
@@ -253,7 +260,7 @@ class Database:
             cursor = conn.cursor()
             cursor.execute('''SELECT display_name, total_points, games_played, wins
                 FROM users
-                WHERE games_played > 0
+                WHERE games_played > 0 AND is_active = 1
                 ORDER BY total_points DESC
                 LIMIT ?
             ''', (limit,))
@@ -261,7 +268,7 @@ class Database:
             conn.close()
             return [{'display_name': r[0], 'total_points': r[1], 'games_played': r[2], 'wins': r[3]} for r in results]
         except Exception as e:
-            logger.error(f"خطأ صدارة: {e}")
+            logger.error(f"❌ خطأ صدارة: {e}")
             return []
     
     @staticmethod
@@ -271,7 +278,7 @@ class Database:
             cursor = conn.cursor()
             cursor.execute('''SELECT display_name, total_points, games_played, is_active, last_activity
                 FROM users
-                ORDER BY total_points DESC
+                ORDER BY is_active DESC, total_points DESC
             ''')
             results = cursor.fetchall()
             conn.close()
@@ -293,5 +300,5 @@ class Database:
                 })
             return players
         except Exception as e:
-            logger.error(f"خطأ جلب اللاعبين: {e}")
+            logger.error(f"❌ خطأ جلب اللاعبين: {e}")
             return []
