@@ -1,4 +1,4 @@
-from linebot.models import TextSendMessage, FlexSendMessage
+from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 import hashlib
 from constants import COLORS
 
@@ -8,9 +8,9 @@ class CompatibilityGame:
         self.waiting_for_names = True
 
     def start_game(self):
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="نسبة التوافق",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -25,7 +25,7 @@ class CompatibilityGame:
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
     def parse_names(self, text):
@@ -84,7 +84,7 @@ class CompatibilityGame:
         name1, name2 = self.parse_names(answer)
 
         if not name1 or not name2:
-            return {'response': TextSendMessage(text="يرجى كتابة اسمين بالشكل الصحيح:\n\nاسم و اسم\n\nمثال: الحُوت و عبير"), 'points': 0, 'correct': False, 'won': False, 'game_over': False}
+            return {'response': TextMessage(text="يرجى كتابة اسمين بالشكل الصحيح:\n\nاسم و اسم\n\nمثال: الحُوت و عبير"), 'points': 0, 'correct': False, 'won': False, 'game_over': False}
 
         compatibility = self.calculate_compatibility(name1, name2)
         message = self.get_compatibility_message(compatibility)
@@ -101,9 +101,9 @@ class CompatibilityGame:
         else:
             extra_text = "علاقة تحتاج لبعض الجهد"
 
-        result_card = FlexSendMessage(
+        result_card = FlexMessage(
             alt_text="نتيجة التوافق",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -121,7 +121,7 @@ class CompatibilityGame:
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
         return {'response': result_card, 'points': 0, 'correct': False, 'won': False, 'game_over': True}
