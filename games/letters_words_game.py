@@ -3,7 +3,6 @@ import random
 import re
 from constants import COLORS
 
-
 def normalize_text(text):
     if not text:
         return ""
@@ -91,70 +90,27 @@ class LettersWordsGame:
         progress = f"{self.current_question + 1}/{self.total_questions}"
         self.valid_words = [normalize_text(word) for word in challenge['answers']]
         
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="تكوين الكلمات",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
                     "layout": "vertical",
                     "spacing": "md",
                     "contents": [
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "تكوين الكلمات", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
-                            ],
-                            "backgroundColor": COLORS['primary'],
-                            "paddingAll": "20px",
-                            "cornerRadius": "12px"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "baseline",
-                            "contents": [
-                                {"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0},
-                                {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}
-                            ],
-                            "margin": "lg"
-                        },
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تكوين الكلمات", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
                         {"type": "separator", "margin": "md", "color": COLORS['border']},
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": letters, "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center"},
-                                {"type": "text", "text": f"كون {self.words_needed} كلمات من هذه الحروف", "size": "sm", "color": COLORS['text_dark'], "margin": "md", "wrap": True, "align": "center"}
-                            ],
-                            "margin": "lg"
-                        },
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": letters, "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center"}, {"type": "text", "text": f"كون {self.words_needed} كلمات من هذه الحروف", "size": "sm", "color": COLORS['text_dark'], "margin": "md", "wrap": True, "align": "center"}], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}
-                            ],
-                            "spacing": "sm",
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1},
-                                {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}
-                            ],
-                            "spacing": "sm",
-                            "margin": "sm"
-                        }
+                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"},
+                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "بداية", "text": "بداية"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "sm"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
     def next_question(self):
@@ -172,23 +128,23 @@ class LettersWordsGame:
             if user_id not in self.hints_used:
                 self.hints_used[user_id] = True
                 sample_word = self.questions[self.current_question]['answers'][0]
-                return {'response': TextSendMessage(text=f"يبدا بحرف: {sample_word[0]}\nعدد الحروف: {len(sample_word)}"), 'points': 0, 'correct': False}
-            return {'response': TextSendMessage(text="استخدمت التلميح"), 'points': 0, 'correct': False}
+                return {'response': TextMessage(text=f"اول حرف: {sample_word[0]}\nعدد الحروف: {len(sample_word)}"), 'points': 0, 'correct': False}
+            return {'response': TextMessage(text="استخدمت التلميح"), 'points': 0, 'correct': False}
 
         if text.lower() in ['جاوب', 'الحل']:
             some_words = ' - '.join(self.questions[self.current_question]['answers'][:5])
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"بعض الكلمات الصحيحه:\n{some_words}"), 'points': 0, 'correct': False, 'next_question': True}
+                return {'response': TextMessage(text=f"بعض الكلمات الصحيحه:\n{some_words}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
 
         word_normalized = normalize_text(text)
 
         if user_id in self.found_words and word_normalized in self.found_words[user_id]:
-            return {'response': TextSendMessage(text="هذه الكلمه سبق وان ادخلتها"), 'points': 0, 'correct': False}
+            return {'response': TextMessage(text="هذه الكلمه سبق وان ادخلتها"), 'points': 0, 'correct': False}
 
         is_valid = word_normalized in self.valid_words
         if not is_valid:
-            return {'response': TextSendMessage(text="هذه الكلمه غير صحيحه"), 'points': 0, 'correct': False}
+            return {'response': TextMessage(text="هذه الكلمه غير صحيحه"), 'points': 0, 'correct': False}
 
         self.found_words.setdefault(user_id, [])
         self.found_words[user_id].append(word_normalized)
@@ -200,86 +156,41 @@ class LettersWordsGame:
 
         if words_count >= self.words_needed:
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"اجابه صحيحه {display_name}\n+{points} نقطه"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
+                return {'response': TextMessage(text=f"اجابه صحيحه {display_name}\n+{points} نقطه"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
             return self._end_game()
 
-        return {'response': TextSendMessage(text=f"كلمه صحيحه\n+{points} نقطه\nالكلمات المتبقيه: {self.words_needed - words_count}"), 'points': points, 'correct': True}
+        return {'response': TextMessage(text=f"كلمه صحيحه\n+{points} نقطه\nالكلمات المتبقيه: {self.words_needed - words_count}"), 'points': points, 'correct': True}
 
     def _end_game(self):
         if not self.player_scores:
-            return {'response': TextSendMessage(text="انتهت اللعبه"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
+            return {'response': TextMessage(text="انتهت اللعبه"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
         
         sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
         winner = sorted_players[0][1]
         
         players_contents = []
-        medals = ["🥇", "🥈", "🥉"]
-        
         for i, p in enumerate(sorted_players[:5]):
-            medal = medals[i] if i < 3 else f"{i+1}."
-            players_contents.append({
-                "type": "box",
-                "layout": "baseline",
-                "contents": [
-                    {"type": "text", "text": medal, "size": "sm", "flex": 0},
-                    {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"},
-                    {"type": "text", "text": f"{p[1]['score']} نقطه", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}
-                ],
-                "margin": "md" if i > 0 else "sm"
-            })
+            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطه", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
         
-        winner_card = FlexSendMessage(
+        winner_card = FlexMessage(
             alt_text="نتائج اللعبه",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
                     "layout": "vertical",
                     "spacing": "md",
                     "contents": [
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "انتهت اللعبه", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
-                            ],
-                            "backgroundColor": COLORS['primary'],
-                            "paddingAll": "20px",
-                            "cornerRadius": "12px"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"},
-                                {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"},
-                                {"type": "text", "text": f"{winner['score']} نقطه", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}
-                            ],
-                            "margin": "lg"
-                        },
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبه", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطه", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"},
-                                *players_contents
-                            ],
-                            "margin": "lg"
-                        },
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "إعادة اللعب", "text": "تكوين"},
-                            "style": "primary",
-                            "color": COLORS['primary'],
-                            "height": "sm",
-                            "margin": "lg"
-                        }
+                        {"type": "button", "action": {"type": "message", "label": "إعادة اللعب", "text": "تكوين"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
         return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
