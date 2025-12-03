@@ -18,23 +18,18 @@ import re
 import atexit
 import time
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-required_env_vars = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
-for var in required_env_vars:
+for var in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']:
     if not os.getenv(var):
         logger.error(f"متغير البيئة {var} غير موجود")
         raise ValueError(f"متغير البيئة {var} مطلوب")
 
 configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
-
 api_client = ApiClient(configuration)
 line_bot_api = MessagingApi(api_client)
 
@@ -103,17 +98,8 @@ class NameFilter:
         
         name = name.strip()
         
-        if len(name) < 2:
-            return False, "الاسم قصير جدا (الحد الادنى حرفان)"
-        
         if len(name) > 30:
-            return False, "الاسم طويل جدا الحد الاقصى 30 حرف"
-        
-        if re.match(r'^[^a-zA-Zء-ي\s]+$', name):
-            return False, "الاسم يحتوي على رموز غير صالحة"
-        
-        if re.match(r'^[\d]+$', name):
-            return False, "الاسم لا يمكن ان يكون ارقام فقط"
+            return False, "الاسم طويل جدا (الحد الاقصى 30 حرف)"
         
         normalized_name = NameFilter.normalize_arabic(name)
         for bad_word in NameFilter.get_bad_words():
@@ -145,12 +131,7 @@ def reply_message(reply_token, messages):
     try:
         if not isinstance(messages, list):
             messages = [messages]
-        line_bot_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=messages
-            )
-        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
     except Exception as e:
         logger.error(f"خطأ في إرسال الرد: {e}")
 
@@ -158,12 +139,7 @@ def push_message(to, messages):
     try:
         if not isinstance(messages, list):
             messages = [messages]
-        line_bot_api.push_message(
-            PushMessageRequest(
-                to=to,
-                messages=messages
-            )
-        )
+        line_bot_api.push_message(PushMessageRequest(to=to, messages=messages))
     except Exception as e:
         logger.error(f"خطأ في إرسال push: {e}")
 
@@ -191,7 +167,7 @@ def handle_message(event):
         group_id = getattr(event.source, 'group_id', None) or user_id
         
         if user_id in waiting_for_registration:
-            if text.lower() in ["انسحب", "إلغاء"]:
+            if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
                 del waiting_for_registration[user_id]
                 msg = TextMessage(text="تم الغاء التسجيل", quick_reply=get_quick_reply())
                 reply_message(event.reply_token, msg)
@@ -210,7 +186,7 @@ def handle_message(event):
             return
         
         if user_id in waiting_for_name_change:
-            if text.lower() in ["انسحب", "إلغاء"]:
+            if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
                 del waiting_for_name_change[user_id]
                 msg = TextMessage(text="تم الغاء تغيير الاسم", quick_reply=get_quick_reply())
                 reply_message(event.reply_token, msg)
@@ -313,16 +289,13 @@ def handle_message(event):
             if is_user_registered(user_id):
                 msg = TextMessage(text=f"انت مسجل بالفعل باسم: {display_name}", quick_reply=get_quick_reply())
             else:
-                # التحقق من وجود حساب سابق
                 existing_name = Database.get_existing_user_name(user_id)
                 if existing_name:
-                    # إعادة تفعيل الحساب القديم
                     Database.reactivate_user(user_id)
-                    msg = TextMessage(text=f"مرحباً بعودتك!\nتم إعادة تفعيل حسابك باسم: {existing_name}\n\nلتغيير الاسم اكتب: تغيير", quick_reply=get_quick_reply())
+                    msg = TextMessage(text=f"مرحباً بعودتك\nتم إعادة تفعيل حسابك باسم: {existing_name}\n\nلتغيير الاسم اكتب: تغيير", quick_reply=get_quick_reply())
                 else:
-                    # تسجيل جديد
                     waiting_for_registration[user_id] = True
-                    msg = TextMessage(text="اكتب اسمك في الشات الآن\n\nالشروط: 2-30 حرف، بدون كلمات غير لائقة\n\nاكتب انسحب للالغاء", quick_reply=get_quick_reply())
+                    msg = TextMessage(text="اكتب اسمك في الشات الآن للعب\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
@@ -331,7 +304,7 @@ def handle_message(event):
                 msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
             else:
                 waiting_for_name_change[user_id] = True
-                msg = TextMessage(text=f"اسمك الحالي: {display_name}\n\nاكتب اسمك الجديد في الشات الآن\n\nاكتب انسحب للالغاء", quick_reply=get_quick_reply())
+                msg = TextMessage(text=f"اسمك الحالي: {display_name}\n\nاكتب اسمك الجديد في الشات الآن\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
@@ -340,7 +313,7 @@ def handle_message(event):
                 msg = TextMessage(text="انت غير مسجل", quick_reply=get_quick_reply())
             else:
                 Database.delete_user(user_id)
-                msg = TextMessage(text="تم الغاء تسجيلك بنجاح", quick_reply=get_quick_reply())
+                msg = TextMessage(text="تم الغاء تسجيلك بنجاح لن يتم الرد على رسائلك", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
@@ -380,10 +353,7 @@ def handle_message(event):
 
         if text in ["ايقاف", "stop", "إيقاف"]:
             stopped = game_manager.stop_game(group_id)
-            msg = TextMessage(
-                text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه",
-                quick_reply=get_quick_reply()
-            )
+            msg = TextMessage(text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه", quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
             return
 
