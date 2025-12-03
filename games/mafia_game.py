@@ -11,7 +11,6 @@ class MafiaGame:
         self.day = 0
         self.votes = {}
         self.night_actions = {}
-        self.group_id = None
 
     def start_game(self):
         self.phase = "registration"
@@ -22,9 +21,9 @@ class MafiaGame:
         return self.registration_flex()
 
     def registration_flex(self):
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="لعبة المافيا - التسجيل",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -50,13 +49,13 @@ class MafiaGame:
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
     def explanation_flex(self):
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="شرح لعبة المافيا",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -70,49 +69,23 @@ class MafiaGame:
                         {"type": "text", "text": "لعبة اجتماعية بين المافيا والمواطنين. المافيا يحاول يقتل الجميع والمواطنون يحاولون يكتشفونه", "size": "sm", "color": COLORS['text_light'], "wrap": True, "margin": "xs"},
                         
                         {"type": "separator", "margin": "md"},
-                        {"type": "text", "text": "خطوات اللعب", "size": "md", "color": COLORS['text_dark'], "weight": "bold", "margin": "md"},
-                        
-                        {"type": "text", "text": "1. التسجيل في القروب", "size": "sm", "color": COLORS['primary'], "weight": "bold", "margin": "md"},
-                        {"type": "text", "text": "اضغط انضم في القروب عشان تدخل اللعبة. لازم 4 لاعبين على الأقل", "size": "xs", "color": COLORS['text_light'], "wrap": True, "margin": "xs"},
-                        
-                        {"type": "text", "text": "2. استلام الدور في الخاص", "size": "sm", "color": COLORS['primary'], "weight": "bold", "margin": "md"},
-                        {"type": "text", "text": "بعد ما تبدأ اللعبة راح يجيك رسالة خاصة من البوت فيها دورك. لا تشارك دورك مع أحد", "size": "xs", "color": COLORS['text_light'], "wrap": True, "margin": "xs"},
-                        
-                        {"type": "separator", "margin": "md"},
-                        {"type": "text", "text": "الأدوار ووظائفها", "size": "md", "color": COLORS['text_dark'], "weight": "bold", "margin": "md"},
+                        {"type": "text", "text": "الأدوار", "size": "md", "color": COLORS['text_dark'], "weight": "bold", "margin": "md"},
                         
                         {"type": "box", "layout": "vertical", "contents": [
-                            {"type": "text", "text": "المافيا", "size": "sm", "weight": "bold", "color": "#8B0000"},
-                            {"type": "text", "text": "في الخاص: تختار شخص تقتله كل ليلة\nفي القروب: تتظاهر انك بريء وتصوت مع الناس", "size": "xs", "color": COLORS['text_light'], "wrap": True, "margin": "xs"}
+                            {"type": "text", "text": "المافيا: تختار شخص تقتله كل ليلة", "size": "sm", "color": "#8B0000", "wrap": True}
                         ], "margin": "sm", "backgroundColor": "#8B00001A", "paddingAll": "10px", "cornerRadius": "8px"},
                         
                         {"type": "box", "layout": "vertical", "contents": [
-                            {"type": "text", "text": "المحقق", "size": "sm", "weight": "bold", "color": "#1E90FF"},
-                            {"type": "text", "text": "في الخاص: تفحص شخص كل ليلة وتعرف دوره\nفي القروب: تحاول تلمح للناس بدون ما تفضح نفسك", "size": "xs", "color": COLORS['text_light'], "wrap": True, "margin": "xs"}
+                            {"type": "text", "text": "المحقق: تفحص شخص كل ليلة لمعرفة دوره", "size": "sm", "color": "#1E90FF", "wrap": True}
                         ], "margin": "sm", "backgroundColor": "#1E90FF1A", "paddingAll": "10px", "cornerRadius": "8px"},
                         
                         {"type": "box", "layout": "vertical", "contents": [
-                            {"type": "text", "text": "الدكتور", "size": "sm", "weight": "bold", "color": "#32CD32"},
-                            {"type": "text", "text": "في الخاص: تحمي شخص من القتل كل ليلة\nفي القروب: تصوت وتحاول تحمي المهمين", "size": "xs", "color": COLORS['text_light'], "wrap": True, "margin": "xs"}
+                            {"type": "text", "text": "الدكتور: تحمي شخص من القتل كل ليلة", "size": "sm", "color": "#32CD32", "wrap": True}
                         ], "margin": "sm", "backgroundColor": "#32CD321A", "paddingAll": "10px", "cornerRadius": "8px"},
                         
                         {"type": "box", "layout": "vertical", "contents": [
-                            {"type": "text", "text": "المواطن", "size": "sm", "weight": "bold", "color": "#808080"},
-                            {"type": "text", "text": "في الخاص: ما عندك شيء تسويه\nفي القروب: تناقش وتحاول تكتشف المافيا بالتصويت", "size": "xs", "color": COLORS['text_light'], "wrap": True, "margin": "xs"}
+                            {"type": "text", "text": "المواطن: تناقش وتصوت لاكتشاف المافيا", "size": "sm", "color": "#808080", "wrap": True}
                         ], "margin": "sm", "backgroundColor": "#8080801A", "paddingAll": "10px", "cornerRadius": "8px"},
-                        
-                        {"type": "separator", "margin": "md"},
-                        {"type": "text", "text": "دورة اللعب", "size": "md", "color": COLORS['text_dark'], "weight": "bold", "margin": "md"},
-                        
-                        {"type": "text", "text": "مرحلة الليل", "size": "sm", "color": COLORS['primary'], "weight": "bold", "margin": "md"},
-                        {"type": "text", "text": "تستخدم دورك في الخاص (إذا عندك دور خاص). القروب ينتظر إلى ما ينتهي الليل", "size": "xs", "color": COLORS['text_light'], "wrap": True, "margin": "xs"},
-                        
-                        {"type": "text", "text": "مرحلة النهار", "size": "sm", "color": COLORS['primary'], "weight": "bold", "margin": "sm"},
-                        {"type": "text", "text": "في القروب: تناقشون من تشكون فيه وتصوتون عشان تعدمون شخص واحد", "size": "xs", "color": COLORS['text_light'], "wrap": True, "margin": "xs"},
-                        
-                        {"type": "separator", "margin": "md"},
-                        {"type": "text", "text": "الفوز", "size": "md", "color": COLORS['text_dark'], "weight": "bold", "margin": "md"},
-                        {"type": "text", "text": "المواطنون: يفوزون لما يقتلون المافيا\nالمافيا: يفوز لما يصير عددهم مثل المواطنين أو أكثر", "size": "xs", "color": COLORS['text_light'], "wrap": True, "margin": "xs"},
                         
                         {"type": "separator", "margin": "lg"},
                         {"type": "button", "action": {"type": "message", "label": "رجوع", "text": "مافيا"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "md"}
@@ -120,20 +93,20 @@ class MafiaGame:
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
     def add_player(self, user_id, name):
         if self.phase != "registration":
-            return {"response": TextSendMessage(text="اللعبة بدأت")}
+            return {"response": TextMessage(text="اللعبة بدأت")}
         if user_id in self.players:
-            return {"response": TextSendMessage(text="أنت مسجل")}
+            return {"response": TextMessage(text="أنت مسجل")}
         self.players[user_id] = {"name": name, "role": None, "alive": True}
         return {"response": self.registration_flex()}
 
     def assign_roles(self):
         if len(self.players) < MAFIA_CONFIG["min_players"]:
-            return {"response": TextSendMessage(text=f"نحتاج {MAFIA_CONFIG['min_players']} لاعبين على الأقل")}
+            return {"response": TextMessage(text=f"نحتاج {MAFIA_CONFIG['min_players']} لاعبين على الأقل")}
         
         roles = ["mafia", "detective", "doctor"] + ["citizen"] * (len(self.players) - 3)
         random.shuffle(roles)
@@ -144,10 +117,7 @@ class MafiaGame:
         
         self.phase = "night"
         self.day = 1
-        return {"response": [
-            TextSendMessage(text="✅ تم توزيع الأدوار"),
-            self.night_flex()
-        ]}
+        return {"response": [TextMessage(text="تم توزيع الأدوار"), self.night_flex()]}
 
     def send_role_private(self, user_id, role):
         role_info = {
@@ -158,9 +128,9 @@ class MafiaGame:
         }
         
         info = role_info[role]
-        flex = FlexSendMessage(
+        flex = FlexMessage(
             alt_text="دورك في اللعبة",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -177,7 +147,7 @@ class MafiaGame:
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
         
         try:
@@ -200,9 +170,9 @@ class MafiaGame:
         for p in alive[:10]:
             buttons.append({"type": "button", "action": {"type": "message", "label": p['name'], "text": f"{action} {p['name']}"}, "style": "secondary", "height": "sm", "margin": "xs"})
         
-        flex = FlexSendMessage(
+        flex = FlexMessage(
             alt_text="اختر هدفك",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -214,7 +184,7 @@ class MafiaGame:
                     ],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
         
         try:
@@ -223,15 +193,17 @@ class MafiaGame:
             pass
 
     def night_flex(self):
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="الليل",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
                     "layout": "vertical",
                     "contents": [
-                        {"type": "text", "text": f"الليل - اليوم {self.day}", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "vertical", "contents": [
+                            {"type": "text", "text": f"الليل - اليوم {self.day}", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
+                        ], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                         {"type": "text", "text": "حل الليل على القرية", "size": "md", "color": COLORS['text_dark'], "align": "center", "margin": "lg", "weight": "bold"},
                         {"type": "text", "text": "الأدوار الخاصة تستخدم قدراتها في الخاص الآن", "size": "sm", "color": COLORS['text_light'], "align": "center", "wrap": True, "margin": "xs"},
                         {"type": "separator", "margin": "md"},
@@ -240,7 +212,7 @@ class MafiaGame:
                     ],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
     def process_night(self):
@@ -260,18 +232,20 @@ class MafiaGame:
         if winner:
             return winner
         
-        return {"response": [TextSendMessage(text=msg), self.day_flex()]}
+        return {"response": [TextMessage(text=msg), self.day_flex()]}
 
     def day_flex(self):
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="النهار",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
                     "layout": "vertical",
                     "contents": [
-                        {"type": "text", "text": f"النهار - اليوم {self.day}", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center", "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "vertical", "contents": [
+                            {"type": "text", "text": f"النهار - اليوم {self.day}", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
+                        ], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                         {"type": "text", "text": "وقت المناقشة والتصويت", "size": "md", "color": COLORS['text_dark'], "align": "center", "margin": "lg", "weight": "bold"},
                         {"type": "text", "text": "ناقشوا بينكم واختاروا شخص واحد للإعدام بالتصويت", "size": "sm", "color": COLORS['text_light'], "align": "center", "wrap": True, "margin": "xs"},
                         {"type": "separator", "margin": "md"},
@@ -280,7 +254,7 @@ class MafiaGame:
                     ],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
     def voting_flex(self):
@@ -288,9 +262,9 @@ class MafiaGame:
         buttons = [{"type": "button", "action": {"type": "message", "label": p["name"], "text": f"صوت {p['name']}"}, "style": "secondary", "height": "sm", "margin": "xs"} for p in alive[:10]]
         buttons.append({"type": "button", "action": {"type": "message", "label": "إنهاء التصويت وإعلان النتيجة", "text": "إنهاء التصويت"}, "style": "primary", "color": COLORS['primary'], "margin": "md"})
         
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="التصويت",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -303,25 +277,25 @@ class MafiaGame:
                     ],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
     def vote(self, user_id, target_name):
         if self.phase != "voting" or user_id not in self.players or not self.players[user_id]["alive"]:
-            return {"response": TextSendMessage(text="لا يمكنك التصويت")}
+            return {"response": TextMessage(text="لا يمكنك التصويت")}
         
         for uid, p in self.players.items():
             if p["name"] == target_name and p["alive"]:
                 self.votes[user_id] = uid
-                return {"response": TextSendMessage(text=f"تم تسجيل صوتك ضد {target_name}")}
+                return {"response": TextMessage(text=f"تم تسجيل صوتك ضد {target_name}")}
         
-        return {"response": TextSendMessage(text="لاعب غير صحيح")}
+        return {"response": TextMessage(text="لاعب غير صحيح")}
 
     def end_voting(self):
         if not self.votes:
             self.phase = "night"
             self.day += 1
-            return {"response": [TextSendMessage(text="لا توجد أصوات"), self.night_flex()]}
+            return {"response": [TextMessage(text="لا توجد أصوات"), self.night_flex()]}
         
         killed = max(self.votes, key=lambda k: list(self.votes.values()).count(self.votes[k]))
         self.players[killed]["alive"] = False
@@ -335,7 +309,7 @@ class MafiaGame:
         if winner:
             return winner
         
-        return {"response": [TextSendMessage(text=f"تم إعدام {name}"), self.night_flex()]}
+        return {"response": [TextMessage(text=f"تم إعدام {name}"), self.night_flex()]}
 
     def check_winner(self):
         mafia = sum(1 for p in self.players.values() if p["alive"] and p["role"] == "mafia")
@@ -352,7 +326,6 @@ class MafiaGame:
         return None
 
     def winner_flex(self, winner_team):
-        # كشف الأدوار
         roles_content = []
         for uid, p in self.players.items():
             role_name = {"mafia": "المافيا", "detective": "المحقق", "doctor": "الدكتور", "citizen": "مواطن"}[p["role"]]
@@ -371,9 +344,9 @@ class MafiaGame:
                 "margin": "md" if len(roles_content) > 0 else "sm"
             })
         
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="نتيجة اللعبة",
-            contents={
+            contents=FlexContainer.from_dict({
                 "type": "bubble",
                 "body": {
                     "type": "box",
@@ -407,7 +380,7 @@ class MafiaGame:
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
                 }
-            }
+            })
         )
 
     def check_answer(self, text, user_id, display_name):
@@ -429,30 +402,29 @@ class MafiaGame:
         if text == "إنهاء التصويت" and self.phase == "voting":
             return self.end_voting()
         
-        # أوامر الخاص
         if text.startswith("اقتل ") and self.players.get(user_id, {}).get("role") == "mafia":
             target = text.replace("اقتل ", "")
             for uid, p in self.players.items():
                 if p["name"] == target and p["alive"]:
                     self.night_actions["mafia_target"] = uid
-                    return {"response": TextSendMessage(text=f"تم اختيار {target} للقتل")}
+                    return {"response": TextMessage(text=f"تم اختيار {target} للقتل")}
         
         if text.startswith("افحص ") and self.players.get(user_id, {}).get("role") == "detective":
             target = text.replace("افحص ", "")
             for uid, p in self.players.items():
                 if p["name"] == target and p["alive"]:
                     result = "هذا الشخص هو المافيا" if p["role"] == "mafia" else "هذا الشخص بريء"
-                    return {"response": TextSendMessage(text=f"نتيجة الفحص:\n{target}: {result}")}
+                    return {"response": TextMessage(text=f"نتيجة الفحص:\n{target}: {result}")}
         
         if text.startswith("احمي ") and self.players.get(user_id, {}).get("role") == "doctor":
             target = text.replace("احمي ", "")
             if target == "نفسي":
                 self.night_actions["doctor_target"] = user_id
-                return {"response": TextSendMessage(text="تم حماية نفسك من القتل")}
+                return {"response": TextMessage(text="تم حماية نفسك من القتل")}
             for uid, p in self.players.items():
                 if p["name"] == target and p["alive"]:
                     self.night_actions["doctor_target"] = uid
-                    return {"response": TextSendMessage(text=f"تم حماية {target} من القتل")}
+                    return {"response": TextMessage(text=f"تم حماية {target} من القتل")}
         
         return None
     
