@@ -119,13 +119,11 @@ class Database:
     
     @staticmethod
     def delete_user(user_id):
-        """إلغاء تفعيل المستخدم (لا يحذف البيانات)"""
         with Database._lock:
             try:
                 conn = sqlite3.connect(Database.DB_NAME)
                 cursor = conn.cursor()
                 
-                # تحديث حالة المستخدم إلى غير نشط
                 cursor.execute('''UPDATE users 
                     SET is_active = 0,
                         updated_at = CURRENT_TIMESTAMP
@@ -144,7 +142,6 @@ class Database:
     
     @staticmethod
     def reactivate_user(user_id):
-        """إعادة تفعيل المستخدم"""
         with Database._lock:
             try:
                 conn = sqlite3.connect(Database.DB_NAME)
@@ -169,7 +166,6 @@ class Database:
     
     @staticmethod
     def get_existing_user_name(user_id):
-        """الحصول على اسم المستخدم حتى لو كان غير مفعل"""
         try:
             conn = sqlite3.connect(Database.DB_NAME)
             cursor = conn.cursor()
