@@ -80,16 +80,24 @@ class GameManager:
     
     def get_random_question(self):
         """الحصول على سؤال عشوائي"""
-        return random.choice(self.questions) if self.questions else "لا توجد اسئله متاحه"
+        if self.questions:
+            return random.choice(self.questions)
+        return "لا توجد اسئله متاحه"
     
     def get_random_challenge(self):
         """الحصول على تحدي عشوائي"""
-        return random.choice(self.challenges) if self.challenges else "لا توجد تحديات متاحه"
+        if self.challenges:
+            return random.choice(self.challenges)
+        return "لا توجد تحديات متاحه"
     
     def get_random_confession(self):
         """الحصول على اعتراف عشوائي"""
-        return random.choice(self.confessions) if self.confessions else "لا توجد اعترافات متاحه"
+        if self.confessions:
+            return random.choice(self.confessions)
+        return "لا توجد اعترافات متاحه"
     
     def get_random_mention(self):
         """الحصول على منشن عشوائي"""
-        return random.choice(self.mentions) if self.mentions else "لا توجد منشنات متاحه"
+        if self.mentions:
+            return random.choice(self.mentions)
+        return "لا توجد منشنات متاحه"
