@@ -38,7 +38,7 @@ class UIBuilder:
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {"type": "box", "layout": "vertical", "spacing": "sm", "contents": [{"type": "text", "text": "القوائم", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": [{"type": "button", "action": {"type": "message", "label": "العاب", "text": "العاب"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "flex": 1}]}]},
                     {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تم انشاء هذا البوت بواسطة", "size": "xxs", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": "عبير الدوسري 2025", "size": "xs", "color": COLORS['text_light'], "align": "center", "weight": "bold", "margin": "xs"}], "margin": "md"}
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تم التطوير بواسطة عبير الدوسري 2025", "size": "xs", "color": COLORS['text_light'], "align": "center"}], "margin": "md"}
                 ],
                 "backgroundColor": COLORS['card_bg'],
                 "paddingAll": "20px"
@@ -64,7 +64,7 @@ class UIBuilder:
                     {"type": "separator", "margin": "md"},
                     {"type": "button", "action": {"type": "message", "label": "العودة للبداية", "text": "بداية"}, "style": "primary", "color": COLORS['primary']},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
-                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تم انشاء هذا البوت بواسطة", "size": "xxs", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": "عبير الدوسري 2025", "size": "xs", "color": COLORS['text_light'], "align": "center", "weight": "bold", "margin": "xs"}], "margin": "xs"}
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تم التطوير بواسطة عبير الدوسري 2025", "size": "xs", "color": COLORS['text_light'], "align": "center"}], "margin": "xs"}
                 ],
                 "backgroundColor": COLORS['card_bg'],
                 "paddingAll": "20px"
@@ -87,13 +87,13 @@ class UIBuilder:
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الالعاب", "size": "md", "color": COLORS['primary'], "weight": "bold"}, {"type": "text", "text": "فئة - اغنية - ضد - تكوين - سلسلة - اسرع - لعبة - مافيا", "size": "sm", "color": COLORS['text_light'], "margin": "sm", "wrap": True}], "margin": "md"},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
-                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "اثناء اللعب", "size": "md", "color": COLORS['primary'], "weight": "bold"}, {"type": "text", "text": "لمح - جاوب - ايقاف", "size": "sm", "color": COLORS['text_light'], "margin": "sm"}], "margin": "md"},
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "اثناء اللعب", "size": "md", "color": COLORS['primary'], "weight": "bold"}, {"type": "text", "text": "بداية - لمح - جاوب - ايقاف", "size": "sm", "color": COLORS['text_light'], "margin": "sm"}], "margin": "md"},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النقاط", "size": "md", "color": COLORS['success'], "weight": "bold"}, {"type": "text", "text": "اجابة صحيحة = 1 نقطة | تلميح او جاوب = 0 نقطة", "size": "xs", "color": COLORS['text_light'], "margin": "sm", "wrap": True}], "margin": "md"},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {"type": "button", "action": {"type": "message", "label": "العودة للبداية", "text": "بداية"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "md"},
                     {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تم انشاء هذا البوت بواسطة", "size": "xxs", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": "عبير الدوسري 2025", "size": "xs", "color": COLORS['text_light'], "align": "center", "weight": "bold", "margin": "xs"}], "margin": "md"}
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تم التطوير بواسطة عبير الدوسري 2025", "size": "xs", "color": COLORS['text_light'], "align": "center"}], "margin": "md"}
                 ],
                 "backgroundColor": COLORS['card_bg'],
                 "paddingAll": "20px"
@@ -117,7 +117,9 @@ class UIBuilder:
                     {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "احصائياتك", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                     {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": display_name, "size": "xl", "color": COLORS['text_dark'], "align": "center", "weight": "bold"}], "margin": "lg"},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
-                    {"type": "box", "layout": "vertical", "spacing": "md", "contents": [{"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "النقاط", "size": "sm", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": str(stats['total_points']), "size": "xl", "color": COLORS['primary'], "weight": "bold", "align": "end"}]}, {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "الالعاب", "size": "sm", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": str(stats['games_played']), "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "end"}]}, {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "الفوز", "size": "sm", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": str(stats['wins']), "size": "lg", "color": COLORS['success'], "weight": "bold", "align": "end"}]}, {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "نسبة الفوز", "size": "sm", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": f"{win_rate}%", "size": "lg", "color": COLORS['primary'], "weight": "bold", "align": "end"}]}], "margin": "lg"}
+                    {"type": "box", "layout": "vertical", "spacing": "md", "contents": [{"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "النقاط", "size": "sm", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": str(stats['total_points']), "size": "xl", "color": COLORS['primary'], "weight": "bold", "align": "end"}]}, {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "الالعاب", "size": "sm", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": str(stats['games_played']), "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "end"}]}, {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "الفوز", "size": "sm", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": str(stats['wins']), "size": "lg", "color": COLORS['success'], "weight": "bold", "align": "end"}]}, {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "نسبة الفوز", "size": "sm", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": f"{win_rate}%", "size": "lg", "color": COLORS['primary'], "weight": "bold", "align": "end"}]}], "margin": "lg"},
+                    {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تم التطوير بواسطة عبير الدوسري 2025", "size": "xs", "color": COLORS['text_light'], "align": "center"}], "margin": "md"}
                 ],
                 "backgroundColor": COLORS['card_bg'],
                 "paddingAll": "20px"
@@ -143,7 +145,9 @@ class UIBuilder:
                 "spacing": "md",
                 "contents": [
                     {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "لوحة الصدارة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                    {"type": "box", "layout": "vertical", "contents": leader_contents, "margin": "lg"}
+                    {"type": "box", "layout": "vertical", "contents": leader_contents, "margin": "lg"},
+                    {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تم التطوير بواسطة عبير الدوسري 2025", "size": "xs", "color": COLORS['text_light'], "align": "center"}], "margin": "md"}
                 ],
                 "backgroundColor": COLORS['card_bg'],
                 "paddingAll": "20px"
