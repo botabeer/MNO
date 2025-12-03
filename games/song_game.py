@@ -36,37 +36,22 @@ SONGS = [
 
 
 def normalize_text(text):
-    """
-    تطبيع النص العربي للمقارنة
-    يزيل التشكيل والهمزات ويوحّد الأحرف المتشابهة
-    """
+    """تطبيع النص العربي للمقارنة"""
     if not text:
         return ""
     
     text = text.strip().lower()
-    
-    # توحيد الألف
     text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
-    
-    # توحيد الواو والياء
     text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
-    
-    # توحيد التاء المربوطة والألف المقصورة
     text = text.replace('ة', 'ه').replace('ى', 'ي')
-    
-    # إزالة التشكيل
     text = re.sub(r'[\u064B-\u065F]', '', text)
-    
-    # إزالة المسافات الزائدة
     text = re.sub(r'\s+', '', text)
     
     return text
 
 
 class SongGame:
-    """
-    لعبة تخمين اسم المغني من كلمات الأغنية
-    """
+    """لعبة تخمين اسم المغني من كلمات الأغنية"""
     
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
@@ -236,19 +221,8 @@ class SongGame:
         return None
     
     def check_answer(self, answer, user_id, display_name):
-        """
-        التحقق من إجابة اللاعب
-        
-        Args:
-            answer: الإجابة المُدخلة
-            user_id: معرّف المستخدم
-            display_name: اسم المستخدم
-            
-        Returns:
-            dict: نتيجة التحقق من الإجابة
-        """
+        """التحقق من إجابة اللاعب"""
         try:
-            # تحقق إذا كان المستخدم أجاب بالفعل
             if user_id in self.answered_users:
                 return None
             
@@ -293,7 +267,6 @@ class SongGame:
             if normalize_text(answer) == normalize_text(song['singer']):
                 points = 1
                 
-                # تحديث النقاط
                 if user_id not in self.player_scores:
                     self.player_scores[user_id] = {
                         'name': display_name,
@@ -336,7 +309,6 @@ class SongGame:
                     'game_over': True
                 }
             
-            # ترتيب اللاعبين حسب النقاط
             sorted_players = sorted(
                 self.player_scores.items(),
                 key=lambda x: x[1]['score'],
@@ -345,36 +317,15 @@ class SongGame:
             
             winner = sorted_players[0][1]
             
-            # إنشاء قائمة اللاعبين
             players_contents = []
             for i, (uid, player) in enumerate(sorted_players[:5]):
                 players_contents.append({
                     "type": "box",
                     "layout": "baseline",
                     "contents": [
-                        {
-                            "type": "text",
-                            "text": f"{i+1}.",
-                            "size": "sm",
-                            "flex": 0
-                        },
-                        {
-                            "type": "text",
-                            "text": player['name'],
-                            "size": "sm",
-                            "color": COLORS['text_dark'],
-                            "flex": 3,
-                            "margin": "sm"
-                        },
-                        {
-                            "type": "text",
-                            "text": f"{player['score']} نقطة",
-                            "size": "sm",
-                            "color": COLORS['primary'],
-                            "weight": "bold",
-                            "align": "end",
-                            "flex": 2
-                        }
+                        {"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0},
+                        {"type": "text", "text": player['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"},
+                        {"type": "text", "text": f"{player['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}
                     ],
                     "margin": "md" if i > 0 else "sm"
                 })
@@ -388,91 +339,12 @@ class SongGame:
                         "layout": "vertical",
                         "spacing": "md",
                         "contents": [
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "انتهت اللعبة",
-                                        "weight": "bold",
-                                        "size": "xl",
-                                        "color": COLORS['white'],
-                                        "align": "center"
-                                    }
-                                ],
-                                "backgroundColor": COLORS['primary'],
-                                "paddingAll": "20px",
-                                "cornerRadius": "12px"
-                            },
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "الفائز",
-                                        "size": "sm",
-                                        "color": COLORS['text_light'],
-                                        "align": "center"
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": winner['name'],
-                                        "size": "xxl",
-                                        "color": COLORS['primary'],
-                                        "weight": "bold",
-                                        "align": "center",
-                                        "margin": "xs"
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": f"{winner['score']} نقطة",
-                                        "size": "lg",
-                                        "color": COLORS['success'],
-                                        "align": "center",
-                                        "margin": "xs"
-                                    }
-                                ],
-                                "margin": "lg"
-                            },
-                            {
-                                "type": "separator",
-                                "margin": "lg",
-                                "color": COLORS['border']
-                            },
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "النتائج",
-                                        "size": "md",
-                                        "color": COLORS['text_dark'],
-                                        "weight": "bold"
-                                    },
-                                    *players_contents
-                                ],
-                                "margin": "lg"
-                            },
-                            {
-                                "type": "separator",
-                                "margin": "lg",
-                                "color": COLORS['border']
-                            },
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "message",
-                                    "label": "إعادة اللعب",
-                                    "text": "اغنيه"
-                                },
-                                "style": "primary",
-                                "color": COLORS['primary'],
-                                "height": "sm",
-                                "margin": "lg"
-                            }
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
+                            {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
+                            {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                            {"type": "button", "action": {"type": "message", "label": "إعادة اللعب", "text": "اغنيه"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
                         ],
                         "backgroundColor": COLORS['card_bg'],
                         "paddingAll": "20px"
@@ -480,7 +352,7 @@ class SongGame:
                 })
             )
             
-            logger.info(f"انتهت اللعبة - الفائز: {winner['name']} - النقاط: {winner['score']}")
+            logger.info(f"انتهت اللعبة - الفائز: {winner['name']}")
             
             return {
                 'response': winner_card,
