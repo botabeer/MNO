@@ -144,19 +144,28 @@ class SongGame:
             song = self.questions[self.current_question]
             answer = answer.strip()
             
+            # معالجة التلميح
             if answer.lower() in ['لمح', 'تلميح']:
                 hint_text = f"أول حرف: {song['singer'][0]}\nعدد الحروف: {len(song['singer'])}"
+                logger.info(f"تلميح لـ {display_name}")
                 return {'response': TextMessage(text=hint_text), 'points': 0, 'correct': False}
             
+            # معالجة طلب الإجابة
             if answer.lower() in ['جاوب', 'الجواب', 'الحل']:
                 self.answered_users.add(user_id)
+                logger.info(f"طلب جواب من {display_name}")
+                
                 if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"الإجابة: {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
                 else:
                     result = self._end_game()
-                    result['response'] = [TextMessage(text=f"الإجابة: {song['singer']}"), result['response']]
+                    if isinstance(result['response'], list):
+                        result['response'].insert(0, TextMessage(text=f"الإجابة: {song['singer']}"))
+                    else:
+                        result['response'] = [TextMessage(text=f"الإجابة: {song['singer']}"), result['response']]
                     return result
             
+            # التحقق من الإجابة
             if normalize_text(answer) == normalize_text(song['singer']):
                 points = 1
                 if user_id not in self.player_scores:
@@ -164,12 +173,15 @@ class SongGame:
                 self.player_scores[user_id]['score'] += points
                 self.answered_users.add(user_id)
                 
+                logger.info(f"إجابة صحيحة من {display_name}")
+                
                 if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"إجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
                 else:
                     return self._end_game()
             
             return None
+            
         except Exception as e:
             logger.error(f"خطأ في التحقق من الإجابة: {e}")
             return None
@@ -177,14 +189,23 @@ class SongGame:
     def _end_game(self):
         try:
             if not self.player_scores:
-                return {'response': TextMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
+                return {'response': TextMessage(text="انتهت اللعبة - لم يجب أحد"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
             
             sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
             winner = sorted_players[0][1]
             
             players_contents = []
             for i, (uid, player) in enumerate(sorted_players[:5]):
-                players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0}, {"type": "text", "text": player['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{player['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
+                players_contents.append({
+                    "type": "box", 
+                    "layout": "baseline", 
+                    "contents": [
+                        {"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0},
+                        {"type": "text", "text": player['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"},
+                        {"type": "text", "text": f"{player['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}
+                    ], 
+                    "margin": "md" if i > 0 else "sm"
+                })
             
             winner_card = FlexMessage(
                 alt_text="نتائج اللعبة",
@@ -195,8 +216,12 @@ class SongGame:
                         "layout": "vertical",
                         "spacing": "md",
                         "contents": [
-                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "🎉 انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                            {"type": "box", "layout": "vertical", "contents": [
+                                {"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, 
+                                {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, 
+                                {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}
+                            ], "margin": "lg"},
                             {"type": "separator", "margin": "lg", "color": COLORS['border']},
                             {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
                             {"type": "separator", "margin": "lg", "color": COLORS['border']},
@@ -208,7 +233,9 @@ class SongGame:
                 })
             )
             
+            logger.info(f"انتهت اللعبة - الفائز: {winner['name']} بـ {winner['score']} نقطة")
             return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
+            
         except Exception as e:
             logger.error(f"خطأ في إنهاء اللعبة: {e}")
             return {'response': TextMessage(text="حدث خطأ في إنهاء اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
