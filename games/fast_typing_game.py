@@ -1,6 +1,6 @@
 """
 لعبة الكتابة السريعة - Fast Typing Game
-اكتب النص بأسرع وقت ممكن
+اكتب النص بأسرع وقت ممكن - بدون لمح أو جاوب
 """
 
 from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
@@ -90,25 +90,28 @@ class FastTypingGame:
             return TextMessage(text="حدث خطأ في عرض السؤال")
     
     def next_question(self):
+        self.current_question += 1
         if self.current_question < self.total_questions:
+            self.current_round_answered = False
             return self._show_question()
         return None
     
     def check_answer(self, text, user_id, display_name):
         try:
+            # تجاهل الإجابات بعد أول إجابة صحيحة
             if self.current_round_answered:
                 return None
             
             text = text.strip()
             word = self.questions[self.current_question]
             
+            # التحقق من انتهاء الوقت
             if self.start_time:
                 elapsed = (datetime.now() - self.start_time).seconds
                 if elapsed > self.time_limit:
                     self.current_round_answered = True
-                    self.current_question += 1
                     
-                    if self.current_question < self.total_questions:
+                    if self.current_question + 1 < self.total_questions:
                         return {'response': TextMessage(text="انتهى الوقت"), 'points': 0, 'correct': False, 'next_question': True}
                     else:
                         return self._end_game()
@@ -116,6 +119,7 @@ class FastTypingGame:
             text_normalized = normalize_text(text)
             word_normalized = normalize_text(word)
             
+            # التحقق من الإجابة
             if text_normalized == word_normalized:
                 elapsed_time = (datetime.now() - self.start_time).total_seconds()
                 points = max(1, int(10 - elapsed_time / 6))
@@ -126,9 +130,8 @@ class FastTypingGame:
                 self.player_scores[user_id]['time'] += elapsed_time
                 
                 self.current_round_answered = True
-                self.current_question += 1
                 
-                if self.current_question < self.total_questions:
+                if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"صحيح {display_name}\nالوقت: {elapsed_time:.1f}ث\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
                 else:
                     return self._end_game()
