@@ -83,14 +83,14 @@ class OppositeGame:
         self.current_question = 0
         self.total_questions = 5
         self.player_scores = {}
-        self.answered_users = set()
+        self.current_round_answered = False
     
     def start_game(self):
         try:
             self.questions = random.sample(self.all_words, self.total_questions)
             self.current_question = 0
             self.player_scores = {}
-            self.answered_users = set()
+            self.current_round_answered = False
             logger.info(f"بدء لعبة الأضداد - عدد الأسئلة: {self.total_questions}")
             return self._show_question()
         except Exception as e:
@@ -128,17 +128,12 @@ class OppositeGame:
             return TextMessage(text="حدث خطأ في عرض السؤال")
     
     def next_question(self):
-        self.current_question += 1
         if self.current_question < self.total_questions:
-            self.answered_users = set()
             return self._show_question()
         return None
     
     def check_answer(self, answer, user_id, display_name):
         try:
-            if user_id in self.answered_users:
-                return None
-            
             word = self.questions[self.current_question]
             answer = answer.strip()
             
@@ -147,22 +142,29 @@ class OppositeGame:
                 return {'response': TextMessage(text=hint_text), 'points': 0, 'correct': False}
             
             if answer.lower() in ['جاوب', 'الجواب', 'الحل']:
-                self.answered_users.add(user_id)
-                if self.current_question + 1 < self.total_questions:
+                self.current_round_answered = True
+                self.current_question += 1
+                
+                if self.current_question < self.total_questions:
                     return {'response': TextMessage(text=f"الإجابة: {word['opposite']}"), 'points': 0, 'correct': False, 'next_question': True}
                 else:
                     result = self._end_game()
                     result['response'] = [TextMessage(text=f"الإجابة: {word['opposite']}"), result['response']]
                     return result
             
+            if self.current_round_answered:
+                return None
+            
             if normalize_text(answer) == normalize_text(word['opposite']):
                 points = 1
                 if user_id not in self.player_scores:
                     self.player_scores[user_id] = {'name': display_name, 'score': 0}
                 self.player_scores[user_id]['score'] += points
-                self.answered_users.add(user_id)
                 
-                if self.current_question + 1 < self.total_questions:
+                self.current_round_answered = True
+                self.current_question += 1
+                
+                if self.current_question < self.total_questions:
                     return {'response': TextMessage(text=f"إجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
                 else:
                     return self._end_game()
@@ -182,7 +184,7 @@ class OppositeGame:
             
             players_contents = []
             for i, (uid, player) in enumerate(sorted_players[:5]):
-                players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0}, {"type": "text", "text": player['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{player['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
+                players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0}, {"type": "text", "text": player['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{player['score']}", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
             
             winner_card = FlexMessage(
                 alt_text="نتائج اللعبة",
