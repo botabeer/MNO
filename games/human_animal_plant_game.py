@@ -12,8 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class HumanAnimalPlantGame:
-    """لعبة إنسان حيوان نبات بلاد"""
-    
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.letters = [
@@ -27,25 +25,18 @@ class HumanAnimalPlantGame:
         self.answered_users = {}
     
     def start_game(self):
-        """بدء اللعبة"""
         try:
-            self.questions = random.sample(
-                self.letters, 
-                min(self.total_questions, len(self.letters))
-            )
+            self.questions = random.sample(self.letters, min(self.total_questions, len(self.letters)))
             self.current_question = 0
             self.player_scores = {}
             self.answered_users = {}
-            
             logger.info(f"بدء لعبة إنسان حيوان نبات بلاد - عدد الأسئلة: {self.total_questions}")
             return self._show_question()
-        
         except Exception as e:
             logger.error(f"خطأ في بدء لعبة إنسان حيوان نبات بلاد: {e}")
             return TextMessage(text="حدث خطأ في بدء اللعبة")
     
     def _show_question(self):
-        """عرض السؤال الحالي"""
         try:
             letter = self.questions[self.current_question]
             progress = f"{self.current_question + 1}/{self.total_questions}"
@@ -59,134 +50,29 @@ class HumanAnimalPlantGame:
                         "layout": "vertical",
                         "spacing": "md",
                         "contents": [
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "إنسان حيوان نبات بلاد",
-                                        "weight": "bold",
-                                        "size": "lg",
-                                        "color": COLORS['white'],
-                                        "align": "center"
-                                    }
-                                ],
-                                "backgroundColor": COLORS['primary'],
-                                "paddingAll": "20px",
-                                "cornerRadius": "12px"
-                            },
-                            {
-                                "type": "box",
-                                "layout": "baseline",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "السؤال",
-                                        "size": "xs",
-                                        "color": COLORS['text_light'],
-                                        "flex": 0
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": progress,
-                                        "size": "xs",
-                                        "color": COLORS['primary'],
-                                        "weight": "bold",
-                                        "align": "end"
-                                    }
-                                ],
-                                "margin": "lg"
-                            },
-                            {
-                                "type": "separator",
-                                "margin": "md"
-                            },
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": letter,
-                                        "size": "5xl",
-                                        "color": COLORS['primary'],
-                                        "weight": "bold",
-                                        "align": "center"
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": "اكتب 4 كلمات تبدأ بهذا الحرف",
-                                        "size": "sm",
-                                        "margin": "md",
-                                        "wrap": True,
-                                        "align": "center"
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": "كل كلمة في سطر منفصل",
-                                        "size": "xs",
-                                        "color": COLORS['text_light'],
-                                        "margin": "xs",
-                                        "align": "center"
-                                    }
-                                ],
-                                "margin": "lg"
-                            },
-                            {
-                                "type": "separator",
-                                "margin": "lg"
-                            },
-                            {
-                                "type": "box",
-                                "layout": "horizontal",
-                                "contents": [
-                                    {
-                                        "type": "button",
-                                        "action": {
-                                            "type": "message",
-                                            "label": "لمح",
-                                            "text": "لمح"
-                                        },
-                                        "style": "secondary",
-                                        "height": "sm"
-                                    },
-                                    {
-                                        "type": "button",
-                                        "action": {
-                                            "type": "message",
-                                            "label": "جاوب",
-                                            "text": "جاوب"
-                                        },
-                                        "style": "secondary",
-                                        "height": "sm"
-                                    }
-                                ],
-                                "spacing": "sm",
-                                "margin": "lg"
-                            }
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "إنسان حيوان نبات بلاد", "weight": "bold", "size": "lg", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                            {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
+                            {"type": "separator", "margin": "md"},
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": letter, "size": "5xl", "color": COLORS['primary'], "weight": "bold", "align": "center"}, {"type": "text", "text": "اكتب 4 كلمات تبدأ بهذا الحرف", "size": "sm", "margin": "md", "wrap": True, "align": "center"}, {"type": "text", "text": "كل كلمة في سطر منفصل", "size": "xs", "color": COLORS['text_light'], "margin": "xs", "align": "center"}], "margin": "lg"},
+                            {"type": "separator", "margin": "lg"},
+                            {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm"}], "spacing": "sm", "margin": "lg"}
                         ],
                         "paddingAll": "20px"
                     }
                 })
             )
-        
         except Exception as e:
             logger.error(f"خطأ في عرض السؤال: {e}")
             return TextMessage(text="حدث خطأ في عرض السؤال")
     
     def next_question(self):
-        """الانتقال للسؤال التالي"""
         self.current_question += 1
-        
         if self.current_question < self.total_questions:
             self.answered_users = {}
             return self._show_question()
-        
         return None
     
     def check_answer(self, text, user_id, display_name):
-        """التحقق من إجابة اللاعب"""
         try:
             if user_id in self.answered_users:
                 return None
@@ -194,111 +80,53 @@ class HumanAnimalPlantGame:
             text = text.strip()
             letter = self.questions[self.current_question]
             
-            # معالجة طلب التلميح
             if text.lower() in ['لمح', 'تلميح']:
                 hint_text = f"يبدأ بحرف: {letter}\nمثال: إنسان حيوان نبات بلاد"
-                logger.info(f"تلميح لـ {display_name}: {hint_text}")
-                
-                return {
-                    'response': TextMessage(text=hint_text),
-                    'points': 0,
-                    'correct': False
-                }
+                return {'response': TextMessage(text=hint_text), 'points': 0, 'correct': False}
             
-            # معالجة طلب الإجابة
             if text.lower() in ['جاوب', 'الجواب', 'الحل']:
                 self.answered_users[user_id] = True
-                
                 if self.current_question + 1 < self.total_questions:
-                    return {
-                        'response': TextMessage(
-                            text=f"اكتب 4 كلمات تبدأ بحرف: {letter}"
-                        ),
-                        'points': 0,
-                        'correct': False,
-                        'next_question': True
-                    }
+                    return {'response': TextMessage(text=f"اكتب 4 كلمات تبدأ بحرف: {letter}"), 'points': 0, 'correct': False, 'next_question': True}
                 else:
-                    return self._end_game()
+                    result = self._end_game()
+                    result['response'] = [TextMessage(text=f"اكتب 4 كلمات تبدأ بحرف: {letter}"), result['response']]
+                    return result
             
-            # التحقق من الكلمات
             lines = text.split('\n')
-            
             if len(lines) >= 4:
                 words = [line.strip() for line in lines if line.strip()]
-                
                 if len(words) >= 4:
-                    # عد الكلمات الصحيحة
-                    valid_count = sum(
-                        1 for word in words[:4] 
-                        if word and word[0] == letter
-                    )
+                    valid_count = sum(1 for word in words[:4] if word and word[0] == letter)
                     
                     if valid_count >= 1:
                         points = valid_count * 3
-                        
                         if user_id not in self.player_scores:
-                            self.player_scores[user_id] = {
-                                'name': display_name,
-                                'score': 0
-                            }
-                        
+                            self.player_scores[user_id] = {'name': display_name, 'score': 0}
                         self.player_scores[user_id]['score'] += points
                         self.answered_users[user_id] = True
                         
-                        logger.info(f"إجابة صحيحة من {display_name}: {valid_count}/4 كلمات")
-                        
                         if self.current_question + 1 < self.total_questions:
-                            return {
-                                'response': TextMessage(
-                                    text=f"صحيح {display_name}\nالكلمات الصحيحة: {valid_count}/4\n+{points} نقطة"
-                                ),
-                                'points': points,
-                                'correct': True,
-                                'won': valid_count == 4,
-                                'next_question': True
-                            }
+                            return {'response': TextMessage(text=f"صحيح {display_name}\nالكلمات الصحيحة: {valid_count}/4\n+{points} نقطة"), 'points': points, 'correct': True, 'won': valid_count == 4, 'next_question': True}
                         else:
                             return self._end_game()
             
             return None
-        
         except Exception as e:
             logger.error(f"خطأ في التحقق من الإجابة: {e}")
             return None
     
     def _end_game(self):
-        """إنهاء اللعبة وعرض النتائج"""
         try:
             if not self.player_scores:
-                return {
-                    'response': TextMessage(text="انتهت اللعبة"),
-                    'points': 0,
-                    'correct': False,
-                    'won': False,
-                    'game_over': True
-                }
+                return {'response': TextMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
             
-            sorted_players = sorted(
-                self.player_scores.items(),
-                key=lambda x: x[1]['score'],
-                reverse=True
-            )
-            
+            sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
             winner = sorted_players[0][1]
             
             players_contents = []
             for i, (uid, player) in enumerate(sorted_players[:5]):
-                players_contents.append({
-                    "type": "box",
-                    "layout": "baseline",
-                    "contents": [
-                        {"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0},
-                        {"type": "text", "text": player['name'], "size": "sm", "flex": 3, "margin": "sm"},
-                        {"type": "text", "text": f"{player['score']}", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end"}
-                    ],
-                    "margin": "md" if i > 0 else "sm"
-                })
+                players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0}, {"type": "text", "text": player['name'], "size": "sm", "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{player['score']}", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "md" if i > 0 else "sm"})
             
             winner_card = FlexMessage(
                 alt_text="نتائج اللعبة",
@@ -320,22 +148,7 @@ class HumanAnimalPlantGame:
                 })
             )
             
-            logger.info(f"انتهت اللعبة - الفائز: {winner['name']}")
-            
-            return {
-                'response': winner_card,
-                'points': winner['score'],
-                'correct': True,
-                'won': True,
-                'game_over': True
-            }
-        
+            return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
         except Exception as e:
             logger.error(f"خطأ في إنهاء اللعبة: {e}")
-            return {
-                'response': TextMessage(text="حدث خطأ في إنهاء اللعبة"),
-                'points': 0,
-                'correct': False,
-                'won': False,
-                'game_over': True
-            }
+            return {'response': TextMessage(text="حدث خطأ في إنهاء اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
