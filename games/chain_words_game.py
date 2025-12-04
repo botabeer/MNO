@@ -33,18 +33,18 @@ class ChainWordsGame:
         ]
         self.current_word = None
         self.used_words = set()
-        self.round_count = 0
-        self.max_rounds = 5
+        self.current_question = 0
+        self.total_questions = 5
         self.player_scores = {}
-        self.answered_users = set()
+        self.current_round_answered = False
     
     def start_game(self):
         try:
             self.current_word = random.choice(self.start_words)
             self.used_words = {normalize_text(self.current_word)}
-            self.round_count = 0
+            self.current_question = 0
             self.player_scores = {}
-            self.answered_users = set()
+            self.current_round_answered = False
             logger.info(f"بدء لعبة سلسلة الكلمات - الكلمة الأولى: {self.current_word}")
             return self._show_question()
         except Exception as e:
@@ -54,7 +54,7 @@ class ChainWordsGame:
     def _show_question(self):
         try:
             last_letter = self.current_word[-1]
-            progress = f"{self.round_count + 1}/{self.max_rounds}"
+            progress = f"{self.current_question + 1}/{self.total_questions}"
             
             return FlexMessage(
                 alt_text="سلسلة الكلمات",
@@ -81,53 +81,60 @@ class ChainWordsGame:
             return TextMessage(text="حدث خطأ في عرض السؤال")
     
     def next_question(self):
-        if self.round_count < self.max_rounds:
-            self.answered_users = set()
+        self.current_question += 1
+        if self.current_question < self.total_questions:
+            self.current_round_answered = False
             return self._show_question()
         return None
     
     def check_answer(self, answer, user_id, display_name):
         try:
-            if user_id in self.answered_users:
+            # تجاهل الإجابات بعد أول إجابة صحيحة
+            if self.current_round_answered:
                 return None
             
             answer = answer.strip()
             last_letter = self.current_word[-1]
             
+            # معالجة لمح
             if answer.lower() in ['لمح', 'تلميح']:
                 hint_text = f"يبدأ بحرف: {last_letter}"
                 return {'response': TextMessage(text=hint_text), 'points': 0, 'correct': False}
             
+            # معالجة جاوب
             if answer.lower() in ['جاوب', 'الجواب', 'الحل']:
-                self.answered_users.add(user_id)
-                if self.round_count + 1 < self.max_rounds:
+                self.current_round_answered = True
+                
+                if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"أي كلمة تبدأ بحرف: {last_letter}"), 'points': 0, 'correct': False, 'next_question': True}
                 else:
                     result = self._end_game()
                     result['response'] = [TextMessage(text=f"أي كلمة تبدأ بحرف: {last_letter}"), result['response']]
                     return result
             
+            # تطبيع الحروف للمقارنة
             normalized_last = 'ه' if last_letter in ['ة', 'ه'] else last_letter
             normalized_answer = normalize_text(answer)
             
+            # التحقق من الكلمات المستخدمة
             if normalized_answer in self.used_words:
                 return {'response': TextMessage(text="الكلمة مستخدمة من قبل"), 'points': 0, 'correct': False}
             
             first_letter = answer[0].lower()
             first_letter = 'ه' if first_letter in ['ة', 'ه'] else first_letter
             
+            # التحقق من الإجابة
             if first_letter == normalized_last or (normalized_last == 'ه' and first_letter in ['ه', 'ة']):
                 self.used_words.add(normalized_answer)
                 self.current_word = answer
-                self.round_count += 1
                 points = 1
                 
                 if user_id not in self.player_scores:
                     self.player_scores[user_id] = {'name': display_name, 'score': 0}
                 self.player_scores[user_id]['score'] += points
-                self.answered_users.add(user_id)
+                self.current_round_answered = True
                 
-                if self.round_count < self.max_rounds:
+                if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"صحيح {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
                 else:
                     return self._end_game()
