@@ -31,6 +31,7 @@ class Database:
                 games_played INTEGER DEFAULT 0,
                 wins INTEGER DEFAULT 0,
                 is_active INTEGER DEFAULT 1,
+                is_withdrawn INTEGER DEFAULT 0,
                 last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -75,15 +76,15 @@ class Database:
                 
                 if exists:
                     cursor.execute('''UPDATE users 
-                        SET display_name = ?, is_active = 1, 
+                        SET display_name = ?, is_active = 1, is_withdrawn = 0,
                             last_activity = CURRENT_TIMESTAMP,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE user_id = ?
                     ''', (display_name, user_id))
                 else:
                     cursor.execute('''INSERT INTO users 
-                        (user_id, display_name, is_active, last_activity)
-                        VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+                        (user_id, display_name, is_active, is_withdrawn, last_activity)
+                        VALUES (?, ?, 1, 0, CURRENT_TIMESTAMP)
                     ''', (user_id, display_name))
                 
                 conn.commit()
@@ -106,7 +107,7 @@ class Database:
                 cursor = conn.cursor()
                 cursor.execute('''UPDATE users 
                     SET last_activity = CURRENT_TIMESTAMP 
-                    WHERE user_id = ? AND is_active = 1
+                    WHERE user_id = ? AND is_active = 1 AND is_withdrawn = 0
                 ''', (user_id,))
                 conn.commit()
                 return True
@@ -155,9 +156,9 @@ class Database:
         try:
             conn = Database.get_connection()
             cursor = conn.cursor()
-            cursor.execute('SELECT is_active FROM users WHERE user_id = ?', (user_id,))
+            cursor.execute('SELECT is_active, is_withdrawn FROM users WHERE user_id = ?', (user_id,))
             result = cursor.fetchone()
-            return result is not None and result[0] == 1
+            return result is not None and result[0] == 1 and result[1] == 0
         except Exception as e:
             logger.error(f"خطأ التحقق من التسجيل: {e}")
             return False
@@ -166,8 +167,52 @@ class Database:
                 conn.close()
     
     @staticmethod
+    def is_user_withdrawn(user_id):
+        """التحقق من انسحاب المستخدم"""
+        conn = None
+        try:
+            conn = Database.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('SELECT is_withdrawn FROM users WHERE user_id = ?', (user_id,))
+            result = cursor.fetchone()
+            return result is not None and result[0] == 1
+        except Exception as e:
+            logger.error(f"خطأ التحقق من الانسحاب: {e}")
+            return False
+        finally:
+            if conn:
+                conn.close()
+    
+    @staticmethod
+    def withdraw_user(user_id):
+        """انسحاب المستخدم (يبقى في قاعدة البيانات لكن لا يشارك)"""
+        with Database._lock:
+            conn = None
+            try:
+                conn = Database.get_connection()
+                cursor = conn.cursor()
+                
+                cursor.execute('''UPDATE users 
+                    SET is_withdrawn = 1, updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                ''', (user_id,))
+                
+                withdrawn = cursor.rowcount > 0
+                conn.commit()
+                
+                if withdrawn:
+                    logger.info(f"تم انسحاب المستخدم {user_id}")
+                return withdrawn
+            except Exception as e:
+                logger.error(f"خطأ الانسحاب: {e}")
+                return False
+            finally:
+                if conn:
+                    conn.close()
+    
+    @staticmethod
     def delete_user(user_id):
-        """إلغاء تفعيل مستخدم"""
+        """إلغاء تفعيل مستخدم (لم يعد مستخدماً)"""
         with Database._lock:
             conn = None
             try:
@@ -202,7 +247,7 @@ class Database:
                 cursor = conn.cursor()
                 
                 cursor.execute('''UPDATE users 
-                    SET is_active = 1, last_activity = CURRENT_TIMESTAMP,
+                    SET is_active = 1, is_withdrawn = 0, last_activity = CURRENT_TIMESTAMP,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ?
                 ''', (user_id,))
@@ -246,10 +291,10 @@ class Database:
                 conn = Database.get_connection()
                 cursor = conn.cursor()
                 
-                cursor.execute('SELECT is_active FROM users WHERE user_id = ?', (user_id,))
+                cursor.execute('SELECT is_active, is_withdrawn FROM users WHERE user_id = ?', (user_id,))
                 result = cursor.fetchone()
-                if not result or result[0] != 1:
-                    logger.warning(f"محاولة تحديث نقاط لمستخدم غير مفعل: {user_id}")
+                if not result or result[0] != 1 or result[1] == 1:
+                    logger.warning(f"محاولة تحديث نقاط لمستخدم غير مفعل أو منسحب: {user_id}")
                     return False
                 
                 cursor.execute('''UPDATE users
@@ -284,7 +329,7 @@ class Database:
             conn = Database.get_connection()
             cursor = conn.cursor()
             cursor.execute('''SELECT total_points, games_played, wins, display_name
-                FROM users WHERE user_id = ? AND is_active = 1
+                FROM users WHERE user_id = ? AND is_withdrawn = 0
             ''', (user_id,))
             result = cursor.fetchone()
             
@@ -311,14 +356,14 @@ class Database:
     
     @staticmethod
     def get_leaderboard(limit=20):
-        """جلب لوحة الصدارة"""
+        """جلب لوحة الصدارة - يشمل الجميع ما عدا المنسحبين"""
         conn = None
         try:
             conn = Database.get_connection()
             cursor = conn.cursor()
             cursor.execute('''SELECT display_name, total_points, games_played, wins
                 FROM users
-                WHERE games_played > 0 AND is_active = 1
+                WHERE is_withdrawn = 0
                 ORDER BY total_points DESC, wins DESC
                 LIMIT ?
             ''', (limit,))
@@ -346,9 +391,9 @@ class Database:
         try:
             conn = Database.get_connection()
             cursor = conn.cursor()
-            cursor.execute('''SELECT display_name, total_points, games_played, is_active, last_activity
+            cursor.execute('''SELECT display_name, total_points, games_played, is_active, is_withdrawn, last_activity
                 FROM users
-                ORDER BY is_active DESC, total_points DESC
+                ORDER BY total_points DESC
             ''')
             results = cursor.fetchall()
             
@@ -356,8 +401,8 @@ class Database:
             players = []
             for r in results:
                 try:
-                    last_activity = datetime.strptime(r[4], '%Y-%m-%d %H:%M:%S')
-                    active = r[3] == 1 and last_activity >= cutoff_date
+                    last_activity = datetime.strptime(r[5], '%Y-%m-%d %H:%M:%S')
+                    active = r[3] == 1 and r[4] == 0 and last_activity >= cutoff_date
                 except:
                     active = False
                     
@@ -365,7 +410,8 @@ class Database:
                     'display_name': r[0],
                     'total_points': r[1],
                     'games_played': r[2],
-                    'active': active
+                    'active': active,
+                    'withdrawn': r[4] == 1
                 })
             return players
         except Exception as e:
