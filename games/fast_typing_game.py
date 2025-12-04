@@ -46,14 +46,14 @@ class FastTypingGame:
         self.player_scores = {}
         self.start_time = None
         self.time_limit = 60
-        self.answered_users = set()
+        self.current_round_answered = False
     
     def start_game(self):
         try:
             self.questions = random.sample(self.words, min(self.total_questions, len(self.words)))
             self.current_question = 0
             self.player_scores = {}
-            self.answered_users = set()
+            self.current_round_answered = False
             self.start_time = datetime.now()
             logger.info(f"بدء لعبة الكتابة السريعة - عدد الأسئلة: {self.total_questions}")
             return self._show_question()
@@ -79,9 +79,7 @@ class FastTypingGame:
                             {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الكتابة السريعة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                             {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
                             {"type": "separator", "margin": "md"},
-                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": word, "size": "lg", "color": COLORS['primary'], "weight": "bold", "align": "center", "wrap": True}, {"type": "text", "text": "اكتب النص بأسرع وقت", "size": "sm", "margin": "md", "align": "center"}], "margin": "lg"},
-                            {"type": "separator", "margin": "lg"},
-                            {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm"}], "spacing": "sm", "margin": "lg"}
+                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": word, "size": "lg", "color": COLORS['primary'], "weight": "bold", "align": "center", "wrap": True}, {"type": "text", "text": "اكتب النص بأسرع وقت", "size": "sm", "margin": "md", "align": "center"}], "margin": "lg"}
                         ],
                         "paddingAll": "20px"
                     }
@@ -92,37 +90,25 @@ class FastTypingGame:
             return TextMessage(text="حدث خطأ في عرض السؤال")
     
     def next_question(self):
-        self.current_question += 1
         if self.current_question < self.total_questions:
-            self.answered_users = set()
             return self._show_question()
         return None
     
     def check_answer(self, text, user_id, display_name):
         try:
-            if user_id in self.answered_users:
+            if self.current_round_answered:
                 return None
             
             text = text.strip()
             word = self.questions[self.current_question]
             
-            if text.lower() in ['لمح', 'تلميح']:
-                hint_text = f"أول حرف: {word[0]}\nعدد الحروف: {len(word)}"
-                return {'response': TextMessage(text=hint_text), 'points': 0, 'correct': False}
-            
-            if text.lower() in ['جاوب', 'الجواب', 'الحل']:
-                self.answered_users.add(user_id)
-                if self.current_question + 1 < self.total_questions:
-                    return {'response': TextMessage(text=f"الإجابة: {word}"), 'points': 0, 'correct': False, 'next_question': True}
-                else:
-                    result = self._end_game()
-                    result['response'] = [TextMessage(text=f"الإجابة: {word}"), result['response']]
-                    return result
-            
             if self.start_time:
                 elapsed = (datetime.now() - self.start_time).seconds
                 if elapsed > self.time_limit:
-                    if self.current_question + 1 < self.total_questions:
+                    self.current_round_answered = True
+                    self.current_question += 1
+                    
+                    if self.current_question < self.total_questions:
                         return {'response': TextMessage(text="انتهى الوقت"), 'points': 0, 'correct': False, 'next_question': True}
                     else:
                         return self._end_game()
@@ -132,15 +118,17 @@ class FastTypingGame:
             
             if text_normalized == word_normalized:
                 elapsed_time = (datetime.now() - self.start_time).total_seconds()
-                points = 1
+                points = max(1, int(10 - elapsed_time / 6))
                 
                 if user_id not in self.player_scores:
                     self.player_scores[user_id] = {'name': display_name, 'score': 0, 'time': 0}
                 self.player_scores[user_id]['score'] += points
                 self.player_scores[user_id]['time'] += elapsed_time
-                self.answered_users.add(user_id)
                 
-                if self.current_question + 1 < self.total_questions:
+                self.current_round_answered = True
+                self.current_question += 1
+                
+                if self.current_question < self.total_questions:
                     return {'response': TextMessage(text=f"صحيح {display_name}\nالوقت: {elapsed_time:.1f}ث\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
                 else:
                     return self._end_game()
