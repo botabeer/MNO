@@ -9,11 +9,28 @@ logger = logging.getLogger(__name__)
 class Database:
     DB_NAME = 'game_scores.db'
     _lock = Lock()
+    _connection_pool = []
+    MAX_POOL_SIZE = 5
+    
+    @staticmethod
+    def get_connection():
+        """الحصول على اتصال من pool أو إنشاء جديد"""
+        if Database._connection_pool:
+            return Database._connection_pool.pop()
+        return sqlite3.connect(Database.DB_NAME, timeout=10.0)
+    
+    @staticmethod
+    def return_connection(conn):
+        """إرجاع الاتصال إلى pool"""
+        if len(Database._connection_pool) < Database.MAX_POOL_SIZE:
+            Database._connection_pool.append(conn)
+        else:
+            conn.close()
     
     @staticmethod
     def init():
         try:
-            conn = sqlite3.connect(Database.DB_NAME)
+            conn = Database.get_connection()
             cursor = conn.cursor()
             
             cursor.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -44,64 +61,94 @@ class Database:
             cursor.execute('''CREATE INDEX IF NOT EXISTS idx_users_activity 
                 ON users(last_activity, is_active)''')
             
+            cursor.execute('''CREATE INDEX IF NOT EXISTS idx_game_history_user
+                ON game_history(user_id, played_at)''')
+            
             conn.commit()
-            conn.close()
+            Database.return_connection(conn)
             logger.info("✅ تم تهيئة قاعدة البيانات بنجاح")
         except Exception as e:
             logger.error(f"❌ خطأ تهيئة DB: {e}")
+            if conn:
+                conn.close()
     
     @staticmethod
     def register_or_update_user(user_id, display_name):
         with Database._lock:
+            conn = None
             try:
-                conn = sqlite3.connect(Database.DB_NAME)
+                conn = Database.get_connection()
                 cursor = conn.cursor()
-                cursor.execute('''INSERT INTO users (user_id, display_name, is_active, last_activity)
-                    VALUES (?, ?, 1, CURRENT_TIMESTAMP)
-                    ON CONFLICT(user_id) DO UPDATE SET
-                    display_name = excluded.display_name,
-                    is_active = 1,
-                    last_activity = CURRENT_TIMESTAMP,
-                    updated_at = CURRENT_TIMESTAMP
-                ''', (user_id, display_name))
+                
+                # التحقق من وجود المستخدم
+                cursor.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
+                exists = cursor.fetchone()
+                
+                if exists:
+                    cursor.execute('''UPDATE users 
+                        SET display_name = ?,
+                            is_active = 1,
+                            last_activity = CURRENT_TIMESTAMP,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE user_id = ?
+                    ''', (display_name, user_id))
+                else:
+                    cursor.execute('''INSERT INTO users 
+                        (user_id, display_name, is_active, last_activity)
+                        VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+                    ''', (user_id, display_name))
+                
                 conn.commit()
-                conn.close()
+                Database.return_connection(conn)
                 logger.info(f"✅ تسجيل/تحديث مستخدم: {display_name}")
                 return True
             except Exception as e:
                 logger.error(f"❌ خطأ تسجيل: {e}")
+                if conn:
+                    conn.close()
                 return False
     
     @staticmethod
     def update_last_activity(user_id):
         with Database._lock:
+            conn = None
             try:
-                conn = sqlite3.connect(Database.DB_NAME)
+                conn = Database.get_connection()
                 cursor = conn.cursor()
-                cursor.execute('''UPDATE users SET last_activity = CURRENT_TIMESTAMP 
-                    WHERE user_id = ? AND is_active = 1''', (user_id,))
+                cursor.execute('''UPDATE users 
+                    SET last_activity = CURRENT_TIMESTAMP 
+                    WHERE user_id = ? AND is_active = 1
+                ''', (user_id,))
                 conn.commit()
-                conn.close()
+                Database.return_connection(conn)
                 return True
             except Exception as e:
                 logger.error(f"❌ خطأ تحديث النشاط: {e}")
+                if conn:
+                    conn.close()
                 return False
     
     @staticmethod
     def cleanup_inactive_users():
         with Database._lock:
+            conn = None
             try:
-                conn = sqlite3.connect(Database.DB_NAME)
+                conn = Database.get_connection()
                 cursor = conn.cursor()
-                cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
                 
-                cursor.execute('''UPDATE users SET is_active = 0
-                    WHERE last_activity < ? AND is_active = 1''', 
-                    (cutoff_date.strftime('%Y-%m-%d %H:%M:%S'),))
+                # حساب التاريخ الحدي
+                cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
+                cutoff_str = cutoff_date.strftime('%Y-%m-%d %H:%M:%S')
+                
+                cursor.execute('''UPDATE users 
+                    SET is_active = 0,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE last_activity < ? AND is_active = 1
+                ''', (cutoff_str,))
                 
                 deactivated_count = cursor.rowcount
                 conn.commit()
-                conn.close()
+                Database.return_connection(conn)
                 
                 if deactivated_count > 0:
                     logger.info(f"🧹 تم إلغاء تفعيل {deactivated_count} مستخدم غير نشط")
@@ -109,95 +156,114 @@ class Database:
                 return deactivated_count
             except Exception as e:
                 logger.error(f"❌ خطأ تنظيف المستخدمين: {e}")
+                if conn:
+                    conn.close()
                 return 0
     
     @staticmethod
     def is_user_registered(user_id):
+        conn = None
         try:
-            conn = sqlite3.connect(Database.DB_NAME)
+            conn = Database.get_connection()
             cursor = conn.cursor()
             cursor.execute('SELECT is_active FROM users WHERE user_id = ?', (user_id,))
             result = cursor.fetchone()
-            conn.close()
+            Database.return_connection(conn)
             return result is not None and result[0] == 1
         except Exception as e:
             logger.error(f"❌ خطأ تحقق: {e}")
+            if conn:
+                conn.close()
             return False
     
     @staticmethod
     def delete_user(user_id):
         with Database._lock:
+            conn = None
             try:
-                conn = sqlite3.connect(Database.DB_NAME)
+                conn = Database.get_connection()
                 cursor = conn.cursor()
                 
                 cursor.execute('''UPDATE users 
                     SET is_active = 0,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE user_id = ?''', (user_id,))
+                    WHERE user_id = ?
+                ''', (user_id,))
                 
                 deactivated = cursor.rowcount > 0
                 conn.commit()
-                conn.close()
+                Database.return_connection(conn)
                 
                 if deactivated:
                     logger.info(f"✅ تم إلغاء تفعيل المستخدم {user_id}")
                 return deactivated
             except Exception as e:
                 logger.error(f"❌ خطأ إلغاء التفعيل: {e}")
+                if conn:
+                    conn.close()
                 return False
     
     @staticmethod
     def reactivate_user(user_id):
         with Database._lock:
+            conn = None
             try:
-                conn = sqlite3.connect(Database.DB_NAME)
+                conn = Database.get_connection()
                 cursor = conn.cursor()
                 
                 cursor.execute('''UPDATE users 
                     SET is_active = 1,
                         last_activity = CURRENT_TIMESTAMP,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE user_id = ?''', (user_id,))
+                    WHERE user_id = ?
+                ''', (user_id,))
                 
                 reactivated = cursor.rowcount > 0
                 conn.commit()
-                conn.close()
+                Database.return_connection(conn)
                 
                 if reactivated:
                     logger.info(f"✅ تم إعادة تفعيل المستخدم {user_id}")
                 return reactivated
             except Exception as e:
                 logger.error(f"❌ خطأ إعادة التفعيل: {e}")
+                if conn:
+                    conn.close()
                 return False
     
     @staticmethod
     def get_existing_user_name(user_id):
+        conn = None
         try:
-            conn = sqlite3.connect(Database.DB_NAME)
+            conn = Database.get_connection()
             cursor = conn.cursor()
             cursor.execute('SELECT display_name FROM users WHERE user_id = ?', (user_id,))
             result = cursor.fetchone()
-            conn.close()
+            Database.return_connection(conn)
             return result[0] if result else None
         except Exception as e:
             logger.error(f"❌ خطأ في جلب اسم المستخدم: {e}")
+            if conn:
+                conn.close()
             return None
     
     @staticmethod
     def update_user_points(user_id, points, won, game_type):
         with Database._lock:
+            conn = None
             try:
-                conn = sqlite3.connect(Database.DB_NAME)
+                conn = Database.get_connection()
                 cursor = conn.cursor()
                 
+                # التحقق من أن المستخدم نشط
                 cursor.execute('SELECT is_active FROM users WHERE user_id = ?', (user_id,))
                 result = cursor.fetchone()
                 if not result or result[0] != 1:
                     logger.warning(f"⚠️ محاولة تحديث نقاط لمستخدم غير مفعل: {user_id}")
-                    conn.close()
+                    Database.return_connection(conn)
                     return False
                 
+                # تحديث نقاط المستخدم
                 cursor.execute('''UPDATE users
                     SET total_points = total_points + ?,
                         games_played = games_played + 1,
@@ -207,28 +273,33 @@ class Database:
                     WHERE user_id = ?
                 ''', (points, 1 if won else 0, user_id))
                 
-                cursor.execute('''INSERT INTO game_history (user_id, game_type, points, won)
+                # إضافة سجل اللعبة
+                cursor.execute('''INSERT INTO game_history 
+                    (user_id, game_type, points, won)
                     VALUES (?, ?, ?, ?)
                 ''', (user_id, game_type, points, won))
                 
                 conn.commit()
-                conn.close()
+                Database.return_connection(conn)
                 logger.info(f"✅ تحديث نقاط المستخدم {user_id}: +{points} نقطة")
                 return True
             except Exception as e:
                 logger.error(f"❌ خطأ تحديث نقاط: {e}")
+                if conn:
+                    conn.close()
                 return False
     
     @staticmethod
     def get_user_stats(user_id):
+        conn = None
         try:
-            conn = sqlite3.connect(Database.DB_NAME)
+            conn = Database.get_connection()
             cursor = conn.cursor()
             cursor.execute('''SELECT total_points, games_played, wins, display_name
                 FROM users WHERE user_id = ? AND is_active = 1
             ''', (user_id,))
             result = cursor.fetchone()
-            conn.close()
+            Database.return_connection(conn)
             
             if result:
                 return {
@@ -246,6 +317,8 @@ class Database:
             }
         except Exception as e:
             logger.error(f"❌ خطأ احصائيات: {e}")
+            if conn:
+                conn.close()
             return {
                 'total_points': 0,
                 'games_played': 0,
@@ -255,33 +328,45 @@ class Database:
     
     @staticmethod
     def get_leaderboard(limit=20):
+        conn = None
         try:
-            conn = sqlite3.connect(Database.DB_NAME)
+            conn = Database.get_connection()
             cursor = conn.cursor()
             cursor.execute('''SELECT display_name, total_points, games_played, wins
                 FROM users
                 WHERE games_played > 0 AND is_active = 1
-                ORDER BY total_points DESC
+                ORDER BY total_points DESC, wins DESC
                 LIMIT ?
             ''', (limit,))
             results = cursor.fetchall()
-            conn.close()
-            return [{'display_name': r[0], 'total_points': r[1], 'games_played': r[2], 'wins': r[3]} for r in results]
+            Database.return_connection(conn)
+            return [
+                {
+                    'display_name': r[0], 
+                    'total_points': r[1], 
+                    'games_played': r[2], 
+                    'wins': r[3]
+                } 
+                for r in results
+            ]
         except Exception as e:
             logger.error(f"❌ خطأ صدارة: {e}")
+            if conn:
+                conn.close()
             return []
     
     @staticmethod
     def get_all_players():
+        conn = None
         try:
-            conn = sqlite3.connect(Database.DB_NAME)
+            conn = Database.get_connection()
             cursor = conn.cursor()
             cursor.execute('''SELECT display_name, total_points, games_played, is_active, last_activity
                 FROM users
                 ORDER BY is_active DESC, total_points DESC
             ''')
             results = cursor.fetchall()
-            conn.close()
+            Database.return_connection(conn)
             
             cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
             players = []
@@ -301,4 +386,36 @@ class Database:
             return players
         except Exception as e:
             logger.error(f"❌ خطأ جلب اللاعبين: {e}")
+            if conn:
+                conn.close()
+            return []
+    
+    @staticmethod
+    def get_user_game_history(user_id, limit=10):
+        """جلب سجل ألعاب المستخدم"""
+        conn = None
+        try:
+            conn = Database.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''SELECT game_type, points, won, played_at
+                FROM game_history
+                WHERE user_id = ?
+                ORDER BY played_at DESC
+                LIMIT ?
+            ''', (user_id, limit))
+            results = cursor.fetchall()
+            Database.return_connection(conn)
+            return [
+                {
+                    'game_type': r[0],
+                    'points': r[1],
+                    'won': r[2],
+                    'played_at': r[3]
+                }
+                for r in results
+            ]
+        except Exception as e:
+            logger.error(f"❌ خطأ جلب سجل الألعاب: {e}")
+            if conn:
+                conn.close()
             return []
