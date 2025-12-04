@@ -118,8 +118,8 @@ class NameFilter:
         if len(name) > 30:
             return False, "الاسم طويل جدا (الحد الاقصى 30 حرف)"
         
-        if len(name) < 2:
-            return False, "الاسم قصير جدا (الحد الأدنى حرفان)"
+        if len(name) < 1:
+            return False, "الاسم قصير جدا (الحد الأدنى حرف واحد)"
         
         normalized_name = NameFilter.normalize_arabic(name)
         for bad_word in NameFilter.get_bad_words():
@@ -209,8 +209,12 @@ def handle_message(event):
             
             del waiting_for_registration[user_id]
             Database.register_or_update_user(user_id, text)
-            msg = TextMessage(text=f"تم التسجيل بنجاح\nاسمك: {text}\nيمكنك الآن اللعب وجمع النقاط", quick_reply=get_quick_reply())
-            reply_message(event.reply_token, msg)
+            flex = FlexMessage(
+                alt_text="تم التسجيل بنجاح",
+                contents=FlexContainer.from_dict(UIBuilder.registration_success_card(text)),
+                quick_reply=get_quick_reply()
+            )
+            reply_message(event.reply_token, flex)
             return
         
         # معالجة حالة تغيير الاسم
@@ -229,8 +233,12 @@ def handle_message(event):
             
             del waiting_for_name_change[user_id]
             Database.register_or_update_user(user_id, text)
-            msg = TextMessage(text=f"تم تغيير الاسم بنجاح الى: {text}", quick_reply=get_quick_reply())
-            reply_message(event.reply_token, msg)
+            flex = FlexMessage(
+                alt_text="تم تغيير الاسم",
+                contents=FlexContainer.from_dict(UIBuilder.name_changed_card(text)),
+                quick_reply=get_quick_reply()
+            )
+            reply_message(event.reply_token, flex)
             return
 
         # معالجة إجابات الألعاب النشطة
@@ -325,25 +333,48 @@ def handle_message(event):
 
         if text == "تسجيل":
             if is_user_registered(user_id):
-                msg = TextMessage(text=f"انت مسجل بالفعل باسم: {display_name}", quick_reply=get_quick_reply())
+                flex = FlexMessage(
+                    alt_text="مسجل بالفعل",
+                    contents=FlexContainer.from_dict(UIBuilder.already_registered_card(display_name)),
+                    quick_reply=get_quick_reply()
+                )
+                reply_message(event.reply_token, flex)
             else:
                 existing_name = Database.get_existing_user_name(user_id)
                 if existing_name:
                     Database.reactivate_user(user_id)
-                    msg = TextMessage(text=f"مرحباً بعودتك\nتم إعادة تفعيل حسابك باسم: {existing_name}\n\nلتغيير الاسم اكتب: تغيير", quick_reply=get_quick_reply())
+                    flex = FlexMessage(
+                        alt_text="مرحباً بعودتك",
+                        contents=FlexContainer.from_dict(UIBuilder.welcome_back_card(existing_name)),
+                        quick_reply=get_quick_reply()
+                    )
+                    reply_message(event.reply_token, flex)
                 else:
                     waiting_for_registration[user_id] = True
-                    msg = TextMessage(text="اكتب اسمك في الشات الآن للعب\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
-            reply_message(event.reply_token, msg)
+                    flex = FlexMessage(
+                        alt_text="التسجيل",
+                        contents=FlexContainer.from_dict(UIBuilder.registration_card()),
+                        quick_reply=get_quick_reply()
+                    )
+                    reply_message(event.reply_token, flex)
             return
 
         if text in ["تغيير", "تغيير الاسم"]:
             if not is_user_registered(user_id):
-                msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
+                flex = FlexMessage(
+                    alt_text="يجب التسجيل أولاً",
+                    contents=FlexContainer.from_dict(UIBuilder.need_registration_card()),
+                    quick_reply=get_quick_reply()
+                )
+                reply_message(event.reply_token, flex)
             else:
                 waiting_for_name_change[user_id] = True
-                msg = TextMessage(text=f"اسمك الحالي: {display_name}\n\nاكتب اسمك الجديد في الشات الآن\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
-            reply_message(event.reply_token, msg)
+                flex = FlexMessage(
+                    alt_text="تغيير الاسم",
+                    contents=FlexContainer.from_dict(UIBuilder.change_name_card(display_name)),
+                    quick_reply=get_quick_reply()
+                )
+                reply_message(event.reply_token, flex)
             return
 
         if text == "انسحب":
@@ -432,16 +463,6 @@ def handle_message(event):
         }
 
         if text in game_commands:
-            # التحقق من وجود لعبة نشطة
-            if group_id in game_manager.active_games:
-                current_game_type = game_manager.active_games[group_id]['type']
-                msg = TextMessage(
-                    text=f"يوجد لعبة نشطة حالياً ({current_game_type})\nاكتب 'ايقاف' لإنهائها أولاً",
-                    quick_reply=get_quick_reply()
-                )
-                reply_message(event.reply_token, msg)
-                return
-            
             # لعبة المافيا لا تحتاج تسجيل
             if text != "مافيا" and not is_user_registered(user_id):
                 msg = TextMessage(text="يجب التسجيل اولا لبدء الالعاب", quick_reply=get_quick_reply())
