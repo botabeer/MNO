@@ -299,13 +299,45 @@ class UIBuilder:
                 "paddingAll": "20px"
             }
         }
+
+    @staticmethod
+    def leaderboard_card(leaders):
+        """لوحة الصدارة"""
+        leader_contents = []
         
+        for i, l in enumerate(leaders[:20]):
+            rank = f"{i+1}."
+            leader_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": rank, "size": "sm", "flex": 0, "margin": "none"}, {"type": "text", "text": l['display_name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": str(l['total_points']), "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 1}], "margin": "md" if i > 0 else "sm"})
+        
+        if not leader_contents:
+            leader_contents.append({"type": "text", "text": "لا توجد احصائيات بعد", "size": "sm", "color": COLORS['text_light'], "align": "center"})
+        
+        return {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": [
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "لوحة الصدارة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                    {"type": "box", "layout": "vertical", "contents": leader_contents, "margin": "lg"},
+                    {"type": "separator", "margin": "lg", "color": COLORS['border']},
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تم التطوير بواسطة عبير الدوسري 2025", "size": "xs", "color": COLORS['text_light'], "align": "center"}], "margin": "md"}
+                ],
+                "backgroundColor": COLORS['card_bg'],
+                "paddingAll": "20px"
+            }
+        }
+
+    @staticmethod
     def all_players_card(players):
+        """جميع اللاعبين"""
         player_contents = []
         
         for i, p in enumerate(players[:30]):
             status = "نشط" if p.get('active', True) else "غير نشط"
-            player_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": status, "size": "xs", "flex": 0}, {"type": "text", "text": p['display_name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": str(p['total_points']), "size": "sm", "color": COLORS['text_light'], "align": "end", "flex": 1}], "margin": "md" if i > 0 else "sm"})
+            status_color = COLORS['success'] if p.get('active', True) else COLORS['text_light']
+            player_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": status, "size": "xs", "color": status_color, "flex": 0}, {"type": "text", "text": p['display_name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": str(p['total_points']), "size": "sm", "color": COLORS['text_light'], "align": "end", "flex": 1}], "margin": "md" if i > 0 else "sm"})
         
         if not player_contents:
             player_contents.append({"type": "text", "text": "لا يوجد لاعبون", "size": "sm", "color": COLORS['text_light'], "align": "center"})
