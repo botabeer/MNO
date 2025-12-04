@@ -11,12 +11,15 @@ from ui_builder import UIBuilder
 from games.game_manager import GameManager
 from database import Database
 import os, logging, re, atexit, time
+from functools import wraps
+from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# التحقق من المتغيرات البيئية
 for var in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']:
     if not os.getenv(var):
         logger.error(f"متغير البيئة {var} غير موجود")
@@ -37,6 +40,31 @@ atexit.register(lambda: scheduler.shutdown())
 
 waiting_for_registration = {}
 waiting_for_name_change = {}
+
+# إضافة Rate Limiting
+user_message_times = {}
+RATE_LIMIT_MESSAGES = 30
+RATE_LIMIT_PERIOD = 3600  # ساعة واحدة
+
+def check_rate_limit(user_id):
+    """التحقق من عدد الرسائل في الفترة الزمنية"""
+    current_time = time.time()
+    
+    if user_id not in user_message_times:
+        user_message_times[user_id] = []
+    
+    # إزالة الرسائل القديمة
+    user_message_times[user_id] = [
+        t for t in user_message_times[user_id] 
+        if current_time - t < RATE_LIMIT_PERIOD
+    ]
+    
+    # التحقق من الحد الأقصى
+    if len(user_message_times[user_id]) >= RATE_LIMIT_MESSAGES:
+        return False
+    
+    user_message_times[user_id].append(current_time)
+    return True
 
 BOT_COMMANDS = [
     'بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة', 'ألعاب', 'العاب', 'تسجيل', 
@@ -89,6 +117,9 @@ class NameFilter:
         name = name.strip()
         if len(name) > 30:
             return False, "الاسم طويل جدا (الحد الاقصى 30 حرف)"
+        
+        if len(name) < 2:
+            return False, "الاسم قصير جدا (الحد الأدنى حرفان)"
         
         normalized_name = NameFilter.normalize_arabic(name)
         for bad_word in NameFilter.get_bad_words():
@@ -155,6 +186,14 @@ def handle_message(event):
         user_id = event.source.user_id
         group_id = getattr(event.source, 'group_id', None) or user_id
         
+        # التحقق من Rate Limiting
+        if not check_rate_limit(user_id):
+            logger.warning(f"تجاوز الحد الأقصى للرسائل: {user_id}")
+            msg = TextMessage(text="لقد تجاوزت الحد الأقصى للرسائل. حاول لاحقاً.")
+            reply_message(event.reply_token, msg)
+            return
+        
+        # معالجة حالة انتظار التسجيل
         if user_id in waiting_for_registration:
             if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
                 del waiting_for_registration[user_id]
@@ -174,6 +213,7 @@ def handle_message(event):
             reply_message(event.reply_token, msg)
             return
         
+        # معالجة حالة تغيير الاسم
         if user_id in waiting_for_name_change:
             if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
                 del waiting_for_name_change[user_id]
@@ -193,9 +233,15 @@ def handle_message(event):
             reply_message(event.reply_token, msg)
             return
 
+        # معالجة إجابات الألعاب النشطة
         if not is_bot_command(text):
             game = game_manager.get_game(group_id)
-            if game and is_user_registered(user_id):
+            if game:
+                # السماح للاعبين غير المسجلين بلعب المافيا فقط
+                game_type = game_manager.active_games.get(group_id, {}).get('type', '')
+                if game_type != 'mafia' and not is_user_registered(user_id):
+                    return None
+                
                 try:
                     Database.update_last_activity(user_id)
                 except:
@@ -205,11 +251,12 @@ def handle_message(event):
                 result = game_manager.check_answer(group_id, text, user_id, display_name)
                 
                 if result:
-                    if result.get('correct') and result.get('points', 0) > 0:
-                        Database.update_user_points(
-                            user_id, result['points'], result.get('won', False),
-                            game_manager.active_games.get(group_id, {}).get('type', 'unknown')
-                        )
+                    # تحديث النقاط للألعاب التي تتطلب تسجيل
+                    if result.get('correct') and result.get('points', 0) > 0 and game_type != 'mafia':
+                        if is_user_registered(user_id):
+                            Database.update_user_points(
+                                user_id, result['points'], result.get('won', False), game_type
+                            )
 
                     response = result.get('response')
                     if response:
@@ -223,6 +270,7 @@ def handle_message(event):
                                 response.quick_reply = get_quick_reply()
                             reply_message(event.reply_token, response)
 
+                    # إرسال السؤال التالي
                     if result.get('next_question') and not result.get('game_over'):
                         next_q = game_manager.next_question(group_id)
                         if next_q:
@@ -238,13 +286,16 @@ def handle_message(event):
                         game_manager.stop_game(group_id)
             return
 
+        # تحديث آخر نشاط
         try:
-            Database.update_last_activity(user_id)
+            if is_user_registered(user_id):
+                Database.update_last_activity(user_id)
         except:
             pass
 
         display_name = get_user_display_name(user_id) or "مستخدم"
 
+        # معالجة الأوامر الأساسية
         if text.lower() in ["بدايه", "start", "ابدا", "بداية"]:
             flex = FlexMessage(
                 alt_text="مرحبا", 
@@ -344,6 +395,7 @@ def handle_message(event):
             reply_message(event.reply_token, msg)
             return
 
+        # الألعاب بدون تسجيل
         if text in ["سؤال", "سوال"]:
             msg = TextMessage(text=game_manager.get_random_question(), quick_reply=get_quick_reply())
             reply_message(event.reply_token, msg)
@@ -365,12 +417,14 @@ def handle_message(event):
             return
         
         if text == "توافق":
+            # لعبة التوافق لا تحتاج تسجيل
             response = game_manager.start_game("compatibility", group_id)
             if isinstance(response, FlexMessage):
                 response.quick_reply = get_quick_reply()
             reply_message(event.reply_token, response)
             return
 
+        # الألعاب التي تحتاج تسجيل
         game_commands = {
             "اغنيه": "song", "لعبه": "human_animal", "سلسله": "chain",
             "اسرع": "fast_typing", "ضد": "opposite", "تكوين": "letters",
@@ -378,7 +432,18 @@ def handle_message(event):
         }
 
         if text in game_commands:
-            if not is_user_registered(user_id) and text != "مافيا":
+            # التحقق من وجود لعبة نشطة
+            if group_id in game_manager.active_games:
+                current_game_type = game_manager.active_games[group_id]['type']
+                msg = TextMessage(
+                    text=f"يوجد لعبة نشطة حالياً ({current_game_type})\nاكتب 'ايقاف' لإنهائها أولاً",
+                    quick_reply=get_quick_reply()
+                )
+                reply_message(event.reply_token, msg)
+                return
+            
+            # لعبة المافيا لا تحتاج تسجيل
+            if text != "مافيا" and not is_user_registered(user_id):
                 msg = TextMessage(text="يجب التسجيل اولا لبدء الالعاب", quick_reply=get_quick_reply())
                 reply_message(event.reply_token, msg)
                 return
@@ -399,7 +464,7 @@ def handle_message(event):
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return {'status': 'healthy', 'service': 'line-bot'}, 200
+    return {'status': 'healthy', 'service': 'line-bot', 'timestamp': datetime.now().isoformat()}, 200
 
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 5000))
