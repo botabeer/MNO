@@ -130,33 +130,38 @@ class SongGame:
             return TextMessage(text="حدث خطأ في عرض السؤال")
     
     def next_question(self):
+        self.current_question += 1
         if self.current_question < self.total_questions:
+            self.current_round_answered = False
             return self._show_question()
         return None
     
     def check_answer(self, answer, user_id, display_name):
         try:
+            # تجاهل الإجابات بعد أول إجابة صحيحة
+            if self.current_round_answered:
+                return None
+            
             song = self.questions[self.current_question]
             answer = answer.strip()
             
+            # معالجة لمح
             if answer.lower() in ['لمح', 'تلميح']:
                 hint_text = f"أول حرف: {song['singer'][0]}\nعدد الحروف: {len(song['singer'])}"
                 return {'response': TextMessage(text=hint_text), 'points': 0, 'correct': False}
             
+            # معالجة جاوب
             if answer.lower() in ['جاوب', 'الجواب', 'الحل']:
                 self.current_round_answered = True
-                self.current_question += 1
                 
-                if self.current_question < self.total_questions:
+                if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"الإجابة: {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
                 else:
                     result = self._end_game()
                     result['response'] = [TextMessage(text=f"الإجابة: {song['singer']}"), result['response']]
                     return result
             
-            if self.current_round_answered:
-                return None
-            
+            # التحقق من الإجابة
             if normalize_text(answer) == normalize_text(song['singer']):
                 points = 1
                 if user_id not in self.player_scores:
@@ -164,9 +169,8 @@ class SongGame:
                 self.player_scores[user_id]['score'] += points
                 
                 self.current_round_answered = True
-                self.current_question += 1
                 
-                if self.current_question < self.total_questions:
+                if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"إجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
                 else:
                     return self._end_game()
