@@ -64,7 +64,6 @@ class CompatibilityGame:
         names = sorted([name1.lower().strip(), name2.lower().strip()])
         combined = "".join(names)
         hash_value = int(hashlib.md5(combined.encode()).hexdigest(), 16)
-        # نسبة متوازنة بين 50-95 لتكون مريحة
         compatibility = 50 + (hash_value % 46)
         return compatibility
 
@@ -112,7 +111,6 @@ class CompatibilityGame:
         else:
             extra_text = "علاقة جيدة تحتاج للاهتمام"
 
-        # بطاقة نتيجة أنيقة ومريحة للعين
         result_card = FlexMessage(
             alt_text="نتيجة التوافق",
             contents=FlexContainer.from_dict({
