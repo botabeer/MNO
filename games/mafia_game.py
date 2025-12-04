@@ -142,7 +142,7 @@ class MafiaGame:
                         ], "backgroundColor": info["color"], "paddingAll": "20px", "cornerRadius": "10px"},
                         {"type": "text", "text": info["desc"], "size": "sm", "color": COLORS['text_dark'], "wrap": True, "margin": "lg", "align": "center"},
                         {"type": "separator", "margin": "md"},
-                        {"type": "text", "text": "لا تشارك دورك مع أي شخص في القروب", "size": "xs", "color": COLORS['text_light'], "align": "center", "margin": "md", "wrap": True}
+                        {"type": "text", "text": "لا تشارك دورك مع أي شخص", "size": "xs", "color": COLORS['text_light'], "align": "center", "margin": "md"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
@@ -156,8 +156,8 @@ class MafiaGame:
                 import time
                 time.sleep(1)
                 self.send_action_buttons(user_id, role)
-        except:
-            pass
+        except Exception as e:
+            print(f"خطأ في إرسال الدور الخاص: {e}")
 
     def send_action_buttons(self, user_id, role):
         alive = [p for u, p in self.players.items() if p["alive"] and u != user_id]
@@ -189,8 +189,8 @@ class MafiaGame:
         
         try:
             self.line_bot_api.push_message(user_id, flex)
-        except:
-            pass
+        except Exception as e:
+            print(f"خطأ في إرسال أزرار الإجراءات: {e}")
 
     def night_flex(self):
         return FlexMessage(
