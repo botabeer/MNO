@@ -128,33 +128,38 @@ class OppositeGame:
             return TextMessage(text="حدث خطأ في عرض السؤال")
     
     def next_question(self):
+        self.current_question += 1
         if self.current_question < self.total_questions:
+            self.current_round_answered = False
             return self._show_question()
         return None
     
     def check_answer(self, answer, user_id, display_name):
         try:
+            # تجاهل الإجابات بعد أول إجابة صحيحة
+            if self.current_round_answered:
+                return None
+            
             word = self.questions[self.current_question]
             answer = answer.strip()
             
+            # معالجة لمح
             if answer.lower() in ['لمح', 'تلميح']:
                 hint_text = f"أول حرف: {word['opposite'][0]}\nعدد الحروف: {len(word['opposite'])}"
                 return {'response': TextMessage(text=hint_text), 'points': 0, 'correct': False}
             
+            # معالجة جاوب
             if answer.lower() in ['جاوب', 'الجواب', 'الحل']:
                 self.current_round_answered = True
-                self.current_question += 1
                 
-                if self.current_question < self.total_questions:
+                if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"الإجابة: {word['opposite']}"), 'points': 0, 'correct': False, 'next_question': True}
                 else:
                     result = self._end_game()
                     result['response'] = [TextMessage(text=f"الإجابة: {word['opposite']}"), result['response']]
                     return result
             
-            if self.current_round_answered:
-                return None
-            
+            # التحقق من الإجابة
             if normalize_text(answer) == normalize_text(word['opposite']):
                 points = 1
                 if user_id not in self.player_scores:
@@ -162,9 +167,8 @@ class OppositeGame:
                 self.player_scores[user_id]['score'] += points
                 
                 self.current_round_answered = True
-                self.current_question += 1
                 
-                if self.current_question < self.total_questions:
+                if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"إجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
                 else:
                     return self._end_game()
@@ -196,7 +200,11 @@ class OppositeGame:
                         "spacing": "md",
                         "contents": [
                             {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
+                            {"type": "box", "layout": "vertical", "contents": [
+                                {"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, 
+                                {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, 
+                                {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}
+                            ], "margin": "lg"},
                             {"type": "separator", "margin": "lg", "color": COLORS['border']},
                             {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
                             {"type": "separator", "margin": "lg", "color": COLORS['border']},
