@@ -20,7 +20,7 @@ class CompatibilityGame:
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "نسبة التوافق", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "اكتب اسمين بهذا الشكل:", "size": "md", "color": COLORS['text_dark'], "wrap": True, "weight": "bold", "align": "center"}, {"type": "text", "text": "اسم و اسم", "size": "xl", "color": COLORS['primary'], "margin": "md", "weight": "bold", "align": "center"}], "margin": "lg", "spacing": "sm"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "أمثلة:", "size": "sm", "color": COLORS['text_light'], "weight": "bold"}, {"type": "text", "text": "محمد و فاطمة", "size": "sm", "color": COLORS['text_light'], "margin": "sm"}, {"type": "text", "text": "علي و سارة", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}], "margin": "lg"}
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "أمثلة:", "size": "sm", "color": COLORS['text_light'], "weight": "bold"}, {"type": "text", "text": "الحوت و عبير", "size": "sm", "color": COLORS['text_light'], "margin": "sm"}, {"type": "text", "text": "الحوت و القوس", "size": "sm", "color": COLORS['text_light'], "margin": "xs"}], "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
