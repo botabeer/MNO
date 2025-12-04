@@ -22,14 +22,14 @@ class HumanAnimalPlantGame:
         self.current_question = 0
         self.total_questions = 5
         self.player_scores = {}
-        self.answered_users = {}
+        self.current_round_answered = False
     
     def start_game(self):
         try:
             self.questions = random.sample(self.letters, min(self.total_questions, len(self.letters)))
             self.current_question = 0
             self.player_scores = {}
-            self.answered_users = {}
+            self.current_round_answered = False
             logger.info(f"بدء لعبة إنسان حيوان نبات بلاد - عدد الأسئلة: {self.total_questions}")
             return self._show_question()
         except Exception as e:
@@ -68,24 +68,28 @@ class HumanAnimalPlantGame:
     def next_question(self):
         self.current_question += 1
         if self.current_question < self.total_questions:
-            self.answered_users = {}
+            self.current_round_answered = False
             return self._show_question()
         return None
     
     def check_answer(self, text, user_id, display_name):
         try:
-            if user_id in self.answered_users:
+            # تجاهل الإجابات بعد أول إجابة صحيحة
+            if self.current_round_answered:
                 return None
             
             text = text.strip()
             letter = self.questions[self.current_question]
             
+            # معالجة لمح
             if text.lower() in ['لمح', 'تلميح']:
                 hint_text = f"يبدأ بحرف: {letter}\nمثال: إنسان حيوان نبات بلاد"
                 return {'response': TextMessage(text=hint_text), 'points': 0, 'correct': False}
             
+            # معالجة جاوب
             if text.lower() in ['جاوب', 'الجواب', 'الحل']:
-                self.answered_users[user_id] = True
+                self.current_round_answered = True
+                
                 if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"اكتب 4 كلمات تبدأ بحرف: {letter}"), 'points': 0, 'correct': False, 'next_question': True}
                 else:
@@ -93,6 +97,7 @@ class HumanAnimalPlantGame:
                     result['response'] = [TextMessage(text=f"اكتب 4 كلمات تبدأ بحرف: {letter}"), result['response']]
                     return result
             
+            # التحقق من الإجابة
             lines = text.split('\n')
             if len(lines) >= 4:
                 words = [line.strip() for line in lines if line.strip()]
@@ -104,7 +109,7 @@ class HumanAnimalPlantGame:
                         if user_id not in self.player_scores:
                             self.player_scores[user_id] = {'name': display_name, 'score': 0}
                         self.player_scores[user_id]['score'] += points
-                        self.answered_users[user_id] = True
+                        self.current_round_answered = True
                         
                         if self.current_question + 1 < self.total_questions:
                             return {'response': TextMessage(text=f"صحيح {display_name}\nالكلمات الصحيحة: {valid_count}/4\n+{points} نقطة"), 'points': points, 'correct': True, 'won': valid_count == 4, 'next_question': True}
