@@ -231,22 +231,14 @@ class SongGame:
             
             # معالجة طلب التلميح
             if answer.lower() in ['لمح', 'تلميح']:
-                if user_id not in self.hints_used:
-                    self.hints_used[user_id] = True
-                    hint_text = f"أول حرف: {song['singer'][0]}\nعدد الحروف: {len(song['singer'])}"
-                    logger.info(f"تلميح لـ {display_name}: {hint_text}")
-                    
-                    return {
-                        'response': TextMessage(text=hint_text),
-                        'points': 0,
-                        'correct': False
-                    }
-                else:
-                    return {
-                        'response': TextMessage(text="لقد استخدمت التلميح بالفعل"),
-                        'points': 0,
-                        'correct': False
-                    }
+                hint_text = f"أول حرف: {song['singer'][0]}\nعدد الحروف: {len(song['singer'])}"
+                logger.info(f"تلميح لـ {display_name}: {hint_text}")
+                
+                return {
+                    'response': TextMessage(text=hint_text),
+                    'points': 0,
+                    'correct': False
+                }
             
             # معالجة طلب الإجابة
             if answer.lower() in ['جاوب', 'الجواب', 'الحل']:
