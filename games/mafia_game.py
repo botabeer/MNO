@@ -66,7 +66,7 @@ class MafiaGame:
                         ], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                         
                         {"type": "text", "text": "الفكرة الأساسية", "size": "md", "color": COLORS['text_dark'], "weight": "bold", "margin": "lg"},
-                        {"type": "text", "text": "لعبة اجتماعية بين المافيا والمواطنين. المافيا يحاول يقتل الجميع والمواطنون يحاولون يكتشفونه", "size": "sm", "color": COLORS['text_light'], "wrap": True, "margin": "xs"},
+                        {"type": "text", "text": "لعبة اجتماعية بين المافيا والمواطنين المافيا يحاول يقتل الجميع والمواطنون يحاولون يكتشفونه", "size": "sm", "color": COLORS['text_light'], "wrap": True, "margin": "xs"},
                         
                         {"type": "separator", "margin": "md"},
                         {"type": "text", "text": "الأدوار", "size": "md", "color": COLORS['text_dark'], "weight": "bold", "margin": "md"},
@@ -157,7 +157,7 @@ class MafiaGame:
                 time.sleep(1)
                 self.send_action_buttons(user_id, role)
         except Exception as e:
-            print(f"خطأ في إرسال الدور الخاص: {e}")
+            print(f"Error sending private role: {e}")
 
     def send_action_buttons(self, user_id, role):
         alive = [p for u, p in self.players.items() if p["alive"] and u != user_id]
@@ -190,7 +190,7 @@ class MafiaGame:
         try:
             self.line_bot_api.push_message(user_id, flex)
         except Exception as e:
-            print(f"خطأ في إرسال أزرار الإجراءات: {e}")
+            print(f"Error sending action buttons: {e}")
 
     def night_flex(self):
         return FlexMessage(
