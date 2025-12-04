@@ -43,14 +43,14 @@ class CategoryLetterGame:
         self.current_question = 0
         self.total_questions = 5
         self.player_scores = {}
-        self.answered_users = set()
+        self.current_round_answered = False
     
     def start_game(self):
         try:
             self.questions = random.sample(self.challenges, self.total_questions)
             self.current_question = 0
             self.player_scores = {}
-            self.answered_users = set()
+            self.current_round_answered = False
             logger.info(f"بدء لعبة الفئة والحرف - عدد الأسئلة: {self.total_questions}")
             return self._show_question()
         except Exception as e:
@@ -89,26 +89,30 @@ class CategoryLetterGame:
     def next_question(self):
         self.current_question += 1
         if self.current_question < self.total_questions:
-            self.answered_users = set()
+            self.current_round_answered = False
             return self._show_question()
         return None
     
     def check_answer(self, text, user_id, display_name):
         try:
-            if user_id in self.answered_users:
+            # تجاهل الإجابات بعد أول إجابة صحيحة
+            if self.current_round_answered:
                 return None
             
             challenge = self.questions[self.current_question]
             text = text.strip()
             
+            # معالجة لمح
             if text.lower() in ['لمح', 'تلميح']:
                 sample = challenge['answers'][0]
                 hint_text = f"أول حرف: {sample[0]}\nعدد الحروف: {len(sample)}"
                 return {'response': TextMessage(text=hint_text), 'points': 0, 'correct': False}
             
+            # معالجة جاوب
             if text.lower() in ['جاوب', 'الجواب', 'الحل']:
-                self.answered_users.add(user_id)
+                self.current_round_answered = True
                 answers = ' - '.join(challenge['answers'][:3])
+                
                 if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"بعض الإجابات:\n{answers}"), 'points': 0, 'correct': False, 'next_question': True}
                 else:
@@ -116,6 +120,7 @@ class CategoryLetterGame:
                     result['response'] = [TextMessage(text=f"بعض الإجابات:\n{answers}"), result['response']]
                     return result
             
+            # التحقق من الإجابة
             normalized = normalize_text(text)
             valid_answers = [normalize_text(ans) for ans in challenge['answers']]
             
@@ -124,7 +129,7 @@ class CategoryLetterGame:
                 if user_id not in self.player_scores:
                     self.player_scores[user_id] = {'name': display_name, 'score': 0}
                 self.player_scores[user_id]['score'] += points
-                self.answered_users.add(user_id)
+                self.current_round_answered = True
                 
                 if self.current_question + 1 < self.total_questions:
                     return {'response': TextMessage(text=f"إجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
