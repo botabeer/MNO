@@ -16,9 +16,7 @@ from datetime import datetime
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
@@ -73,11 +71,11 @@ waiting_for_name_change = {}
 
 # Rate Limiting محسّن
 user_message_times = {}
-RATE_LIMIT_MESSAGES = 50  # زيادة الحد
+RATE_LIMIT_MESSAGES = 50
 RATE_LIMIT_PERIOD = 3600
 
 def check_rate_limit(user_id):
-    """التحقق من عدد الرسائل - محسّن"""
+    """التحقق من عدد الرسائل"""
     current_time = time.time()
     
     if user_id not in user_message_times:
@@ -104,7 +102,7 @@ BOT_COMMANDS = [
 ]
 
 def get_quick_reply():
-    """القائمة السريعة - بدون إيموجي"""
+    """القائمة السريعة"""
     return QuickReply(items=[
         QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
         QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
@@ -174,6 +172,9 @@ def is_bot_command(text):
 def is_user_registered(user_id):
     return Database.is_user_registered(user_id)
 
+def is_user_withdrawn(user_id):
+    return Database.is_user_withdrawn(user_id)
+
 def get_user_display_name(user_id):
     stats = Database.get_user_stats(user_id)
     if stats and stats.get('display_name'):
@@ -222,6 +223,10 @@ def handle_message(event):
         text = event.message.text.strip()
         user_id = event.source.user_id
         group_id = getattr(event.source, 'group_id', None) or user_id
+        
+        # تجاهل المنسحبين
+        if is_user_withdrawn(user_id) and not is_bot_command(text):
+            return
         
         # التحقق من Rate Limiting
         if not check_rate_limit(user_id):
@@ -289,6 +294,8 @@ def handle_message(event):
             game = game_manager.get_game(group_id)
             if game:
                 game_type = game_manager.active_games.get(group_id, {}).get('type', '')
+                
+                # لعبة المافيا لا تحتاج تسجيل
                 if game_type != 'mafia' and not is_user_registered(user_id):
                     return None
                 
@@ -301,6 +308,7 @@ def handle_message(event):
                 result = game_manager.check_answer(group_id, text, user_id, display_name)
                 
                 if result:
+                    # تحديث النقاط فقط للألعاب غير المافيا
                     if result.get('correct') and result.get('points', 0) > 0 and game_type != 'mafia':
                         if is_user_registered(user_id):
                             Database.update_user_points(
@@ -320,20 +328,21 @@ def handle_message(event):
                                 response.quick_reply = get_quick_reply()
                             reply_message(event.reply_token, response)
 
+                    # الانتقال للسؤال التالي
                     if result.get('next_question') and not result.get('game_over'):
+                        time.sleep(2)
                         next_q = game_manager.next_question(group_id)
                         if next_q:
                             try:
                                 if isinstance(next_q, FlexMessage):
                                     next_q.quick_reply = get_quick_reply()
-                                time.sleep(1)
                                 push_message(group_id, next_q)
                             except Exception as e:
                                 logger.error(f"خطأ في إرسال السؤال التالي: {e}")
 
                     if result.get('game_over'):
                         game_manager.stop_game(group_id)
-            return
+                return
 
         # تحديث النشاط
         try:
@@ -432,9 +441,9 @@ def handle_message(event):
             if not is_user_registered(user_id):
                 msg = TextMessage(text="انت غير مسجل", quick_reply=get_quick_reply())
             else:
-                Database.delete_user(user_id)
+                Database.withdraw_user(user_id)
                 msg = TextMessage(
-                    text="تم الغاء تسجيلك بنجاح", 
+                    text="تم الانسحاب. لن يتم احتساب اجاباتك بعد الآن", 
                     quick_reply=get_quick_reply()
                 )
             reply_message(event.reply_token, msg)
