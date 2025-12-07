@@ -9,13 +9,13 @@ from .category_letter_game import CategoryLetterGame
 from .mafia_game import MafiaGame
 
 __all__ = [
-    'SongGame', 
-    'OppositeGame', 
-    'CompatibilityGame', 
-    'FastTypingGame', 
-    'ChainWordsGame', 
-    'HumanAnimalPlantGame', 
-    'LettersWordsGame', 
-    'CategoryLetterGame', 
+    'SongGame',
+    'OppositeGame',
+    'CompatibilityGame',
+    'FastTypingGame',
+    'ChainWordsGame',
+    'HumanAnimalPlantGame',
+    'LettersWordsGame',
+    'CategoryLetterGame',
     'MafiaGame'
 ]
