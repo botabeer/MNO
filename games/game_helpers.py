@@ -1,101 +1,74 @@
-# games/game_helpers.py
-import unicodedata
+# game_helpers.py
 import re
-from typing import Tuple, List, Dict
+from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 from constants import COLORS
 
-def normalize_text(text: str) -> str:
-    if not text:
+def normalize_text(s: str) -> str:
+    if not isinstance(s, str):
         return ""
-    text = text.strip().lower()
-    # remove diacritics
-    text = "".join(ch for ch in unicodedata.normalize("NFKD", text) if not unicodedata.combining(ch))
-    # unify ta marbuta and ha
-    text = text.replace("ة", "ه")
-    text = re.sub(r"[^0-9\u0600-\u06FFa-z\s]", "", text)
-    text = re.sub(r"\s+", " ", text)
-    return text
+    s = s.strip().lower()
+    # Basic Arabic normalization (remove tatweel, diacritics, hamza variations)
+    s = re.sub(r'[\u064B-\u0652ـ]', '', s)  # tashkeel
+    s = s.replace('أ','ا').replace('إ','ا').replace('آ','ا').replace('ى','ي')
+    s = s.replace('ؤ','و').replace('ئ','ي')
+    s = re.sub(r'[^0-9\u0621-\u064A a-zA-Z]', '', s)
+    return s
 
-def create_game_header(title: str) -> dict:
+def create_game_header(title: str):
     return {
         "type": "box",
         "layout": "vertical",
         "contents": [
-            {"type": "text", "text": title, "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}
+            {"type": "text", "text": title, "weight": "bold", "size": "lg", "color": COLORS['white'], "align": "center"}
         ],
         "backgroundColor": COLORS['primary'],
-        "paddingAll": "16px",
-        "cornerRadius": "10px"
+        "paddingAll": "12px",
+        "cornerRadius": "8px"
     }
 
-def create_progress_box(current: int, total: int) -> dict:
-    return {
-        "type": "box",
-        "layout": "baseline",
-        "contents": [
-            {"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light']},
-            {"type": "text", "text": f"{current}/{total}", "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}
-        ],
-        "margin": "md"
-    }
+def create_progress_box(current: int, total: int):
+    return {"type": "text", "text": f"{current}/{total}", "size": "sm", "color": COLORS['text_light'], "align": "center", "margin": "md"}
 
-def create_separator() -> dict:
-    return {"type": "separator", "margin": "md", "color": COLORS['border']}
+def create_separator():
+    return {"type": "separator", "margin": "lg", "color": COLORS['border']}
 
-def create_action_buttons() -> list:
+def create_action_buttons():
     return [
-        {
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [
-                {"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1},
-                {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "primary", "height": "sm", "flex": 1}
-            ],
-            "spacing": "sm",
-            "margin": "lg"
-        }
+        {"type": "box", "layout": "horizontal", "contents": [
+            {"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm"},
+            {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm"}
+        ], "spacing": "sm", "margin": "lg"}
     ]
 
-def create_winner_card(winner: dict, sorted_players: List[Tuple[str, dict]], game_tag: str) -> dict:
-    # winner is {'name': name, 'score': n}
-    players_contents = []
-    for i, p in enumerate(sorted_players[:8]):
-        players_contents.append({
-            "type": "box", "layout": "baseline",
+def create_winner_card(winner: dict, sorted_players: list, game_name: str):
+    # winner is dict with 'name' and 'score'
+    contents = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
             "contents": [
-                {"type": "text", "text": f"{i+1}.", "size": "sm", "flex": 0},
-                {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"},
-                {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}
+                {"type":"text","text":"انتهت اللعبة","weight":"bold","size":"xl","color":COLORS['white']},
+                {"type":"text","text":"الفائز","size":"sm","color":COLORS['text_light']},
+                {"type":"text","text":winner['name'],"size":"xxl","color":COLORS['primary'],"weight":"bold"},
+                {"type":"text","text":f"{winner['score']} نقطة","size":"sm","color":COLORS['success']}
             ],
-            "margin": "md" if i > 0 else "sm"
-        })
-
-    body = {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "md",
-        "contents": [
-            create_game_header("انتهت اللعبة"),
-            {
-                "type": "box", "layout": "vertical", "contents": [
-                    {"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"},
-                    {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"},
-                    {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}
-                ], "margin": "lg"
-            },
-            {"type": "separator", "margin": "lg", "color": COLORS['border']},
-            {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
-            {"type": "separator", "margin": "lg", "color": COLORS['border']},
-            {"type": "button", "action": {"type": "message", "label": "إعادة", "text": game_tag}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
-        ],
-        "backgroundColor": COLORS['card_bg'],
-        "paddingAll": "20px"
+            "backgroundColor": COLORS['card_bg'],
+            "paddingAll": "16px"
+        }
     }
-    return {"type": "bubble", "body": body}
+    # append players list
+    players_list = []
+    for i, p in enumerate(sorted_players[:10]):
+        players_list.append({"type":"text","text":f"{i+1}. {p[1]['name']} - {p[1]['score']}","size":"sm","color":COLORS['text_dark']})
+    contents['body']['layout'] = 'vertical'
+    contents['body']['contents'].extend([{"type":"separator","margin":"lg","color":COLORS['border']}] + players_list)
+    return contents
 
 def create_hint_text(answer: str) -> str:
+    # returns first letter and length
     if not answer:
-        return ""
-    first = answer[0]
-    length = len(answer)
-    return f"يبدأ بحرف: {first}\nعدد الحروف: {length}"
+        return "لا يوجد تلميح"
+    a = answer.strip()
+    return f"يبدا بحرف: {a[0]}\nعدد الحروف: {len(a)}"
