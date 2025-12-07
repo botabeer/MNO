@@ -1,4 +1,16 @@
-from flask import Flask, request, abort
+# app.py (refactored)
+import os
+import logging
+import re
+import atexit
+import signal
+import time
+from datetime import datetime
+from typing import Optional, Tuple
+from collections import deque, defaultdict
+from concurrent.futures import ThreadPoolExecutor
+
+from flask import Flask, request, abort, jsonify
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
@@ -7,504 +19,474 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from apscheduler.schedulers.background import BackgroundScheduler
+
+# المشروع يعتمد هذه الوحدات كما كانت عندك
 from ui_builder import UIBuilder
 from games.game_manager import GameManager
 from database import Database
-import os, logging, re, atexit, time
-from datetime import datetime
 
+# ---------- Logging ----------
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("mafia-bot")
 
+# ---------- Config ----------
+RATE_LIMIT_MESSAGES = int(os.getenv("RATE_LIMIT_MESSAGES", "50"))
+RATE_LIMIT_PERIOD = int(os.getenv("RATE_LIMIT_PERIOD", "3600"))  # seconds
+MAX_NAME_LEN = int(os.getenv("MAX_NAME_LEN", "30"))
+THREADPOOL_WORKERS = int(os.getenv("THREADPOOL_WORKERS", "4"))
+
+required_env = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
+
+def ensure_env():
+    missing = [v for v in required_env if not os.getenv(v)]
+    if missing:
+        logger.error("Missing environment variables: %s", missing)
+        raise RuntimeError(f"Missing environment variables: {missing}")
+
+# ---------- Flask App ----------
 app = Flask(__name__)
 
-# التحقق من متغيرات البيئة المطلوبة
-required_vars = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
-for var in required_vars:
-    if not os.getenv(var):
-        logger.error(f"Missing environment variable: {var}")
-        raise ValueError(f"Environment variable {var} is required")
+# ---------- LINE API Init ----------
+def init_line_api():
+    ensure_env()
+    try:
+        config = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
+        handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
+        api_client = ApiClient(config)
+        messaging_api = MessagingApi(api_client)
+        logger.info("LINE API initialized")
+        return handler, messaging_api
+    except Exception as e:
+        logger.exception("Failed to initialize LINE API")
+        raise
 
-# تهيئة LINE Bot API
-try:
-    configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
-    handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
-    api_client = ApiClient(configuration)
-    line_bot_api = MessagingApi(api_client)
-    logger.info("LINE Bot API initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize LINE Bot API: {e}")
-    raise
+handler, line_bot_api = init_line_api()
 
-# تهيئة قاعدة البيانات
+# ---------- Database Init ----------
 try:
     Database.init()
-    logger.info("Database initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize database: {e}")
+    logger.info("Database initialized")
+except Exception:
+    logger.exception("Database initialization failed")
     raise
 
-# تهيئة مدير الألعاب
+# ---------- Game Manager ----------
 game_manager = GameManager(line_bot_api)
 
-# تهيئة الجدولة لتنظيف المستخدمين غير النشطين
+# ---------- Scheduler ----------
 scheduler = BackgroundScheduler()
-scheduler.add_job(
-    func=Database.cleanup_inactive_users,
-    trigger="interval",
-    hours=24,
-    id='cleanup_users'
-)
+scheduler.add_job(Database.cleanup_inactive_users, 'interval', hours=24, id='cleanup_users')
+scheduler.start()
+logger.info("Scheduler started")
 
-try:
-    scheduler.start()
-    logger.info("Scheduler started successfully")
-except Exception as e:
-    logger.error(f"Failed to start scheduler: {e}")
+def _shutdown_scheduler(signum=None, frame=None):
+    try:
+        logger.info("Shutting down scheduler...")
+        scheduler.shutdown(wait=False)
+    except Exception:
+        logger.exception("Error shutting down scheduler")
 
-atexit.register(lambda: scheduler.shutdown())
+# handle signals for graceful shutdown
+signal.signal(signal.SIGTERM, _shutdown_scheduler)
+signal.signal(signal.SIGINT, _shutdown_scheduler)
+atexit.register(_shutdown_scheduler)
 
-# متغيرات عامة للتحكم بحالة المستخدمين
-waiting_for_registration = {}
-waiting_for_name_change = {}
-user_message_times = {}
-RATE_LIMIT_MESSAGES = 50
-RATE_LIMIT_PERIOD = 3600
+# ---------- In-memory state (improved) ----------
+# NOTE: For production with multiple processes, replace these with Redis or DB-backed keys.
+waiting_for_registration = set()          # user ids waiting for registration
+waiting_for_name_change = set()          # user ids waiting for name change
 
-def check_rate_limit(user_id):
-    """التحقق من عدد الرسائل المرسلة في الساعة"""
-    current_time = time.time()
-    if user_id not in user_message_times:
-        user_message_times[user_id] = []
-    
-    user_message_times[user_id] = [
-        t for t in user_message_times[user_id]
-        if current_time - t < RATE_LIMIT_PERIOD
-    ]
-    
-    if len(user_message_times[user_id]) >= RATE_LIMIT_MESSAGES:
-        return False
-    
-    user_message_times[user_id].append(current_time)
-    return True
+# rate-limiter: per-user deque of timestamps (most efficient pop-left)
+user_message_times = defaultdict(lambda: deque())
 
-# قائمة أوامر البوت
-BOT_COMMANDS = [
-    'بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة', 'العاب', 'ألعاب',
-    'تسجيل', 'تغيير', 'تغيير الاسم', 'انسحب', 'نقاطي', 'احصائياتي', 'الصداره',
-    'المتصدرين', 'الصدارة', 'اللاعبين', 'ايقاف', 'stop', 'إيقاف', 'سؤال', 'سوال',
-    'تحدي', 'اعتراف', 'منشن', 'توافق', 'اغنيه', 'لعبه', 'سلسله', 'اسرع', 'ضد',
-    'تكوين', 'فئه', 'مافيا', 'لمح', 'تلميح', 'جاوب', 'الجواب', 'الغاء', 'إلغاء',
-    'انضم مافيا', 'بدء مافيا', 'شرح مافيا', 'إنهاء الليل', 'تصويت مافيا', 
-    'إنهاء التصويت', 'حالة مافيا'
-]
+# threadpool for background sends (avoid sleeping inside request)
+executor = ThreadPoolExecutor(max_workers=THREADPOOL_WORKERS)
 
+# ---------- NameFilter ----------
 class NameFilter:
-    """فئة لفلترة والتحقق من صحة الأسماء"""
-    
+    BAD_WORDS = {
+        'غبي','احمق','حمار','كلب','خنزير','قذر','وسخ',
+        'حقير','نذل','خائن','كذاب','لعين','ملعون'
+    }
+    diacritics_re = re.compile(r'[\u064B-\u065F]')
+    ws_re = re.compile(r'\s+')
+
     @staticmethod
-    def get_bad_words():
-        """قائمة الكلمات الممنوعة"""
-        return [
-            'غبي', 'احمق', 'حمار', 'كلب', 'خنزير', 'قذر', 'وسخ', 
-            'حقير', 'نذل', 'خائن', 'كذاب', 'لعين', 'ملعون'
-        ]
-    
-    @staticmethod
-    def normalize_arabic(text):
-        """توحيد النص العربي"""
+    def normalize_arabic(text: str) -> str:
         if not text:
             return ""
-        
-        text = text.lower().strip()
-        text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
-        text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
-        text = text.replace('ة', 'ه').replace('ى', 'ي')
-        text = re.sub(r'[\u064B-\u065F]', '', text)
-        text = re.sub(r'\s+', ' ', text)
-        
+        text = text.strip().lower()
+        trans = str.maketrans({
+            'أ':'ا','إ':'ا','آ':'ا',
+            'ؤ':'و','ئ':'ي','ء':'',
+            'ة':'ه','ى':'ي'
+        })
+        text = text.translate(trans)
+        text = NameFilter.diacritics_re.sub('', text)
+        text = NameFilter.ws_re.sub(' ', text)
         return text
-    
-    @staticmethod
-    def validate_name(name):
-        """التحقق من صحة الاسم"""
-        if not name or name.strip() == "":
+
+    @classmethod
+    def validate_name(cls, name: str) -> Tuple[bool, str]:
+        if not name or not name.strip():
             return False, "الاسم لا يمكن ان يكون فارغا"
-        
+
         name = name.strip()
-        
-        if len(name) > 30:
-            return False, "الاسم طويل جدا (الحد الاقصى 30 حرف)"
-        
+        if len(name) > MAX_NAME_LEN:
+            return False, f"الاسم طويل جدا (الحد الاقصى {MAX_NAME_LEN} حرف)"
         if len(name) < 1:
             return False, "الاسم قصير جدا (الحد الأدنى حرف واحد)"
-        
-        normalized_name = NameFilter.normalize_arabic(name)
-        
-        for bad_word in NameFilter.get_bad_words():
-            normalized_bad = NameFilter.normalize_arabic(bad_word)
-            if normalized_bad in normalized_name:
+
+        normalized = cls.normalize_arabic(name)
+        for bad in cls.BAD_WORDS:
+            if cls.normalize_arabic(bad) in normalized:
                 return False, "الاسم يحتوي على كلمات غير لائقة"
-        
         return True, ""
 
-def is_bot_command(text):
-    """التحقق من كون النص أمر بوت"""
-    text_lower = text.lower()
-    
-    for cmd in BOT_COMMANDS:
-        if text_lower == cmd.lower():
-            return True
-    
-    if text_lower.startswith(('صوت ', 'اقتل ', 'افحص ', 'احمي ')):
-        return True
-    
-    return False
-
-def is_user_registered(user_id):
-    """التحقق من تسجيل المستخدم"""
-    return Database.is_user_registered(user_id)
-
-def is_user_withdrawn(user_id):
-    """التحقق من انسحاب المستخدم"""
-    return Database.is_user_withdrawn(user_id)
-
-def get_user_display_name(user_id):
-    """الحصول على اسم العرض للمستخدم"""
-    stats = Database.get_user_stats(user_id)
-    if stats and stats.get('display_name'):
-        return stats['display_name']
-    return None
+# ---------- Helpers ----------
+def get_source_key(event) -> str:
+    src = event.source
+    # group_id, room_id, user_id possibilities
+    return getattr(src, 'group_id', None) or getattr(src, 'room_id', None) or getattr(src, 'user_id', None)
 
 def reply_message(reply_token, messages):
-    """إرسال رد على رسالة"""
+    if not isinstance(messages, list):
+        messages = [messages]
     try:
-        if not isinstance(messages, list):
-            messages = [messages]
-        line_bot_api.reply_message(
-            ReplyMessageRequest(reply_token=reply_token, messages=messages)
-        )
-    except Exception as e:
-        logger.error(f"Error sending reply: {e}")
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
+    except Exception:
+        logger.exception("Failed to reply message")
 
 def push_message(to, messages):
-    """إرسال رسالة مباشرة"""
+    if not isinstance(messages, list):
+        messages = [messages]
     try:
-        if not isinstance(messages, list):
-            messages = [messages]
-        line_bot_api.push_message(
-            PushMessageRequest(to=to, messages=messages)
-        )
-    except Exception as e:
-        logger.error(f"Error sending push message: {e}")
+        line_bot_api.push_message(PushMessageRequest(to=to, messages=messages))
+    except Exception:
+        logger.exception("Failed to push message to %s", to)
 
+def send_next_question_async(target_group):
+    """Send next question in a thread to avoid blocking handler"""
+    try:
+        next_q = game_manager.next_question(target_group)
+        if next_q:
+            push_message(target_group, next_q)
+    except Exception:
+        logger.exception("Failed to send next question")
+
+def is_bot_command(text: str) -> bool:
+    if not text:
+        return False
+    text_lower = text.strip().lower()
+    BOT_COMMANDS = {
+        'بدايه','start','ابدا','بداية','مساعده','help','مساعدة',
+        'العاب','ألعاب','تسجيل','تغيير','تغيير الاسم','انسحب','نقاطي',
+        'احصائياتي','الصداره','المتصدرين','الصدارة','اللاعبين','ايقاف',
+        'stop','إيقاف','سؤال','سوال','تحدي','اعتراف','منشن','توافق',
+        'اغنيه','لعبه','سلسله','اسرع','ضد','تكوين','فئه','مافيا',
+        'لمح','تلميح','جاوب','الجواب','الغاء','إلغاء','انضم مافيا',
+        'بدء مافيا','شرح مافيا','إنهاء الليل','تصويت مافيا','إنهاء التصويت',
+        'حالة مافيا'
+    }
+    if text_lower in BOT_COMMANDS:
+        return True
+    if any(text_lower.startswith(prefix) for prefix in ('صوت ', 'اقتل ', 'افحص ', 'احمي ')):
+        return True
+    return False
+
+def check_rate_limit(user_id: str) -> bool:
+    now = time.time()
+    dq = user_message_times[user_id]
+    # pop old timestamps
+    while dq and now - dq[0] >= RATE_LIMIT_PERIOD:
+        dq.popleft()
+    if len(dq) >= RATE_LIMIT_MESSAGES:
+        return False
+    dq.append(now)
+    return True
+
+# ---------- Webhook Handler ----------
 @app.route("/callback", methods=['POST'])
 def callback():
-    """نقطة استقبال الرسائل من LINE"""
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
-    
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.error("Invalid signature")
+        logger.warning("Invalid signature")
         abort(400)
-    except Exception as e:
-        logger.error(f"Error processing request: {e}", exc_info=True)
+    except Exception:
+        logger.exception("Error handling webhook")
         abort(500)
-    
     return 'OK'
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """معالجة الرسائل الواردة"""
     try:
-        text = event.message.text.strip()
-        user_id = event.source.user_id
-        group_id = getattr(event.source, 'group_id', None) or user_id
-        
-        # تجاهل رسائل المستخدمين المنسحبين
-        if is_user_withdrawn(user_id) and not is_bot_command(text):
+        text = (event.message.text or "").strip()
+        user_id = getattr(event.source, 'user_id', None)
+        if not user_id:
+            logger.warning("No user_id in event source; ignoring")
             return
-        
-        # التحقق من حد الرسائل
+
+        group_key = get_source_key(event)
+
+        # Ignore withdrawn users for non-bot commands
+        try:
+            if Database.is_user_withdrawn(user_id) and not is_bot_command(text):
+                return
+        except Exception:
+            logger.exception("Failed to check withdrawn status")
+
+        # rate limit
         if not check_rate_limit(user_id):
-            logger.warning(f"Rate limit exceeded for user: {user_id}")
-            msg = TextMessage(text="لقد تجاوزت الحد الأقصى للرسائل. انتظر قليلا")
-            reply_message(event.reply_token, msg)
+            logger.warning("Rate limit exceeded for %s", user_id)
+            reply_message(event.reply_token, TextMessage(text="لقد تجاوزت الحد الأقصى للرسائل. انتظر قليلا"))
             return
-        
-        # معالجة حالة انتظار التسجيل
+
+        # registration flow
         if user_id in waiting_for_registration:
-            if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
-                del waiting_for_registration[user_id]
-                msg = TextMessage(text="تم الغاء التسجيل")
-                reply_message(event.reply_token, msg)
+            if text.lower() in {"انسحب", "إلغاء", "الغاء"}:
+                waiting_for_registration.discard(user_id)
+                reply_message(event.reply_token, TextMessage(text="تم الغاء التسجيل"))
                 return
-            
-            is_valid, error_msg = NameFilter.validate_name(text)
-            if not is_valid:
-                msg = TextMessage(text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء")
-                reply_message(event.reply_token, msg)
+            valid, err = NameFilter.validate_name(text)
+            if not valid:
+                reply_message(event.reply_token, TextMessage(text=f"{err}\n\nاكتب اسم صحيح او اكتب الغاء"))
                 return
-            
-            del waiting_for_registration[user_id]
-            Database.register_or_update_user(user_id, text)
-            flex = FlexMessage(
-                alt_text="تم التسجيل بنجاح",
-                contents=FlexContainer.from_dict(UIBuilder.registration_success_card(text))
-            )
-            reply_message(event.reply_token, flex)
-            return
-        
-        # معالجة حالة انتظار تغيير الاسم
-        if user_id in waiting_for_name_change:
-            if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
-                del waiting_for_name_change[user_id]
-                msg = TextMessage(text="تم الغاء تغيير الاسم")
-                reply_message(event.reply_token, msg)
+            waiting_for_registration.discard(user_id)
+            try:
+                Database.register_or_update_user(user_id, text)
+            except Exception:
+                logger.exception("Failed to register user %s", user_id)
+                reply_message(event.reply_token, TextMessage(text="حدث خطأ أثناء التسجيل"))
                 return
-            
-            is_valid, error_msg = NameFilter.validate_name(text)
-            if not is_valid:
-                msg = TextMessage(text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء")
-                reply_message(event.reply_token, msg)
-                return
-            
-            del waiting_for_name_change[user_id]
-            Database.register_or_update_user(user_id, text)
-            flex = FlexMessage(
-                alt_text="تم تغيير الاسم",
-                contents=FlexContainer.from_dict(UIBuilder.name_changed_card(text))
-            )
+            flex = FlexMessage(alt_text="تم التسجيل بنجاح",
+                               contents=FlexContainer.from_dict(UIBuilder.registration_success_card(text)))
             reply_message(event.reply_token, flex)
             return
 
-        # معالجة إجابات الألعاب
+        # name change flow
+        if user_id in waiting_for_name_change:
+            if text.lower() in {"انسحب", "إلغاء", "الغاء"}:
+                waiting_for_name_change.discard(user_id)
+                reply_message(event.reply_token, TextMessage(text="تم الغاء تغيير الاسم"))
+                return
+            valid, err = NameFilter.validate_name(text)
+            if not valid:
+                reply_message(event.reply_token, TextMessage(text=f"{err}\n\nاكتب اسم صحيح او اكتب الغاء"))
+                return
+            waiting_for_name_change.discard(user_id)
+            try:
+                Database.register_or_update_user(user_id, text)
+            except Exception:
+                logger.exception("Failed to update user name %s", user_id)
+                reply_message(event.reply_token, TextMessage(text="حدث خطأ أثناء تغيير الاسم"))
+                return
+            flex = FlexMessage(alt_text="تم تغيير الاسم",
+                               contents=FlexContainer.from_dict(UIBuilder.name_changed_card(text)))
+            reply_message(event.reply_token, flex)
+            return
+
+        # game-answer handling for messages that are not bot commands
         if not is_bot_command(text):
-            game = game_manager.get_game(group_id)
+            game = game_manager.get_game(group_key)
             if game:
-                game_type = game_manager.active_games.get(group_id, {}).get('type', '')
-                
-                # التحقق من التسجيل للألعاب التي تتطلب نقاط
-                if game_type not in ['mafia', 'compatibility'] and not is_user_registered(user_id):
-                    return
-                
+                game_type = game_manager.active_games.get(group_key, {}).get('type', '')
+                if game_type not in ['mafia', 'compatibility']:
+                    try:
+                        if not Database.is_user_registered(user_id):
+                            return
+                    except Exception:
+                        logger.exception("Failed registration check")
+
                 try:
                     Database.update_last_activity(user_id)
-                except:
-                    pass
-                
-                display_name = get_user_display_name(user_id) or "مستخدم"
-                result = game_manager.check_answer(group_id, text, user_id, display_name)
-                
+                except Exception:
+                    logger.exception("Failed to update last activity")
+
+                display_name = Database.get_user_stats(user_id).get('display_name') if Database.get_user_stats(user_id) else "مستخدم"
+                result = game_manager.check_answer(group_key, text, user_id, display_name)
                 if result:
-                    # تحديث النقاط للألعاب التي تتطلب نقاط
-                    if (result.get('correct') and 
-                        result.get('points', 0) > 0 and 
-                        game_type not in ['mafia', 'compatibility']):
-                        if is_user_registered(user_id):
-                            Database.update_user_points(
-                                user_id,
-                                result['points'],
-                                result.get('won', False),
-                                game_type
-                            )
-                    
-                    # إرسال الرد
-                    response = result.get('response')
-                    if response:
-                        reply_message(event.reply_token, response)
-                    
-                    # إرسال السؤال التالي
+                    # points update
+                    if result.get('correct') and result.get('points', 0) > 0 and game_type not in ['mafia', 'compatibility']:
+                        try:
+                            Database.update_user_points(user_id, result['points'], result.get('won', False), game_type)
+                        except Exception:
+                            logger.exception("Failed to update points for %s", user_id)
+
+                    if result.get('response'):
+                        reply_message(event.reply_token, result.get('response'))
+
                     if result.get('next_question') and not result.get('game_over'):
-                        time.sleep(2)
-                        next_q = game_manager.next_question(group_id)
-                        if next_q:
-                            try:
-                                push_message(group_id, next_q)
-                            except Exception as e:
-                                logger.error(f"Error sending next question: {e}")
-                    
-                    # إنهاء اللعبة
+                        # send next question asynchronously (avoid sleep)
+                        executor.submit(send_next_question_async, group_key)
+
                     if result.get('game_over'):
-                        game_manager.stop_game(group_id)
-                
+                        game_manager.stop_game(group_key)
                 return
 
-        # تحديث آخر نشاط للمستخدم
+        # update last activity
         try:
-            if is_user_registered(user_id):
+            if Database.is_user_registered(user_id):
                 Database.update_last_activity(user_id)
-        except:
-            pass
+        except Exception:
+            logger.exception("Failed to update last activity")
 
-        display_name = get_user_display_name(user_id) or "مستخدم"
+        display_name = None
+        try:
+            stats = Database.get_user_stats(user_id)
+            if stats:
+                display_name = stats.get('display_name')
+        except Exception:
+            logger.exception("Failed to get user stats")
 
-        # معالجة الأوامر الأساسية
-        if text.lower() in ["بدايه", "start", "ابدا", "بداية"]:
-            flex = FlexMessage(
-                alt_text="مرحبا",
-                contents=FlexContainer.from_dict(
-                    UIBuilder.welcome_card(display_name, is_user_registered(user_id))
-                )
-            )
+        display_name = display_name or "مستخدم"
+
+        # ---- Basic commands ----
+        normalized_text = text.strip()
+        # welcome
+        if normalized_text.lower() in {"بدايه", "start", "ابدا", "بداية"}:
+            flex = FlexMessage(alt_text="مرحبا",
+                               contents=FlexContainer.from_dict(UIBuilder.welcome_card(display_name, Database.is_user_registered(user_id))))
             reply_message(event.reply_token, flex)
             return
 
-        if text.lower() in ["مساعده", "help", "مساعدة"]:
-            flex = FlexMessage(
-                alt_text="المساعده",
-                contents=FlexContainer.from_dict(UIBuilder.help_card())
-            )
+        if normalized_text.lower() in {"مساعده", "help", "مساعدة"}:
+            flex = FlexMessage(alt_text="المساعده",
+                               contents=FlexContainer.from_dict(UIBuilder.help_card()))
             reply_message(event.reply_token, flex)
             return
 
-        if text in ["ألعاب", "العاب"]:
-            flex = FlexMessage(
-                alt_text="قائمة الألعاب",
-                contents=FlexContainer.from_dict(
-                    UIBuilder.games_menu_card(is_user_registered(user_id))
-                )
-            )
+        if normalized_text in {"ألعاب", "العاب"}:
+            flex = FlexMessage(alt_text="قائمة الألعاب",
+                               contents=FlexContainer.from_dict(UIBuilder.games_menu_card(Database.is_user_registered(user_id))))
             reply_message(event.reply_token, flex)
             return
 
-        # أمر التسجيل
-        if text == "تسجيل":
-            if is_user_registered(user_id):
-                flex = FlexMessage(
-                    alt_text="مسجل بالفعل",
-                    contents=FlexContainer.from_dict(
-                        UIBuilder.already_registered_card(display_name)
-                    )
-                )
-                reply_message(event.reply_token, flex)
-            else:
-                existing_name = Database.get_existing_user_name(user_id)
-                if existing_name:
-                    Database.reactivate_user(user_id)
-                    flex = FlexMessage(
-                        alt_text="مرحبا بعودتك",
-                        contents=FlexContainer.from_dict(
-                            UIBuilder.welcome_back_card(existing_name)
-                        )
-                    )
+        if normalized_text == "تسجيل":
+            try:
+                if Database.is_user_registered(user_id):
+                    flex = FlexMessage(alt_text="مسجل بالفعل",
+                                       contents=FlexContainer.from_dict(UIBuilder.already_registered_card(display_name)))
                     reply_message(event.reply_token, flex)
                 else:
-                    waiting_for_registration[user_id] = True
-                    flex = FlexMessage(
-                        alt_text="التسجيل",
-                        contents=FlexContainer.from_dict(UIBuilder.registration_card())
-                    )
+                    existing_name = Database.get_existing_user_name(user_id)
+                    if existing_name:
+                        Database.reactivate_user(user_id)
+                        flex = FlexMessage(alt_text="مرحبا بعودتك",
+                                           contents=FlexContainer.from_dict(UIBuilder.welcome_back_card(existing_name)))
+                        reply_message(event.reply_token, flex)
+                    else:
+                        waiting_for_registration.add(user_id)
+                        flex = FlexMessage(alt_text="التسجيل",
+                                           contents=FlexContainer.from_dict(UIBuilder.registration_card()))
+                        reply_message(event.reply_token, flex)
+            except Exception:
+                logger.exception("Error handling registration command")
+                reply_message(event.reply_token, TextMessage(text="حدث خطأ أثناء معالجة التسجيل"))
+            return
+
+        if normalized_text in {"تغيير", "تغيير الاسم"}:
+            try:
+                if not Database.is_user_registered(user_id):
+                    flex = FlexMessage(alt_text="يجب التسجيل أولا",
+                                       contents=FlexContainer.from_dict(UIBuilder.need_registration_card()))
                     reply_message(event.reply_token, flex)
+                else:
+                    waiting_for_name_change.add(user_id)
+                    flex = FlexMessage(alt_text="تغيير الاسم",
+                                       contents=FlexContainer.from_dict(UIBuilder.change_name_card(display_name)))
+                    reply_message(event.reply_token, flex)
+            except Exception:
+                logger.exception("Error handling name change")
+                reply_message(event.reply_token, TextMessage(text="حدث خطأ"))
             return
 
-        # أمر تغيير الاسم
-        if text in ["تغيير", "تغيير الاسم"]:
-            if not is_user_registered(user_id):
-                flex = FlexMessage(
-                    alt_text="يجب التسجيل أولا",
-                    contents=FlexContainer.from_dict(UIBuilder.need_registration_card())
-                )
+        if normalized_text == "انسحب":
+            try:
+                if not Database.is_user_registered(user_id):
+                    reply_message(event.reply_token, TextMessage(text="انت غير مسجل"))
+                else:
+                    Database.withdraw_user(user_id)
+                    reply_message(event.reply_token, TextMessage(text="تم الانسحاب. لن يتم احتساب اجاباتك بعد الآن"))
+            except Exception:
+                logger.exception("Error handling withdraw")
+                reply_message(event.reply_token, TextMessage(text="حدث خطأ"))
+            return
+
+        if normalized_text in {"نقاطي", "احصائياتي"}:
+            try:
+                if not Database.is_user_registered(user_id):
+                    reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا"))
+                    return
+                stats = Database.get_user_stats(user_id)
+                flex = FlexMessage(alt_text="احصائياتك",
+                                   contents=FlexContainer.from_dict(UIBuilder.stats_card(display_name, stats)))
                 reply_message(event.reply_token, flex)
-            else:
-                waiting_for_name_change[user_id] = True
-                flex = FlexMessage(
-                    alt_text="تغيير الاسم",
-                    contents=FlexContainer.from_dict(
-                        UIBuilder.change_name_card(display_name)
-                    )
-                )
+            except Exception:
+                logger.exception("Error getting stats")
+                reply_message(event.reply_token, TextMessage(text="حدث خطأ"))
+            return
+
+        if normalized_text in {"الصداره", "المتصدرين", "الصدارة"}:
+            try:
+                leaders = Database.get_leaderboard(20)
+                flex = FlexMessage(alt_text="لوحه الصداره",
+                                   contents=FlexContainer.from_dict(UIBuilder.leaderboard_card(leaders)))
                 reply_message(event.reply_token, flex)
+            except Exception:
+                logger.exception("Error getting leaderboard")
+                reply_message(event.reply_token, TextMessage(text="حدث خطأ"))
             return
 
-        # أمر الانسحاب
-        if text == "انسحب":
-            if not is_user_registered(user_id):
-                msg = TextMessage(text="انت غير مسجل")
-            else:
-                Database.withdraw_user(user_id)
-                msg = TextMessage(text="تم الانسحاب. لن يتم احتساب اجاباتك بعد الآن")
-            reply_message(event.reply_token, msg)
+        if normalized_text == "اللاعبين":
+            try:
+                players = Database.get_all_players()
+                flex = FlexMessage(alt_text="جميع اللاعبين",
+                                   contents=FlexContainer.from_dict(UIBuilder.all_players_card(players)))
+                reply_message(event.reply_token, flex)
+            except Exception:
+                logger.exception("Error getting players")
+                reply_message(event.reply_token, TextMessage(text="حدث خطأ"))
             return
 
-        # أمر عرض النقاط والإحصائيات
-        if text in ["نقاطي", "احصائياتي"]:
-            if not is_user_registered(user_id):
-                msg = TextMessage(text="يجب التسجيل اولا")
+        if normalized_text in {"ايقاف", "stop", "إيقاف"}:
+            try:
+                stopped = game_manager.stop_game(group_key)
+                msg = TextMessage(text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه")
                 reply_message(event.reply_token, msg)
-                return
-            
-            stats = Database.get_user_stats(user_id)
-            flex = FlexMessage(
-                alt_text="احصائياتك",
-                contents=FlexContainer.from_dict(UIBuilder.stats_card(display_name, stats))
-            )
-            reply_message(event.reply_token, flex)
+            except Exception:
+                logger.exception("Error stopping game")
+                reply_message(event.reply_token, TextMessage(text="حدث خطأ"))
             return
 
-        # أمر عرض لوحة الصدارة
-        if text in ["الصداره", "المتصدرين", "الصدارة"]:
-            leaders = Database.get_leaderboard(20)
-            flex = FlexMessage(
-                alt_text="لوحه الصداره",
-                contents=FlexContainer.from_dict(UIBuilder.leaderboard_card(leaders))
-            )
-            reply_message(event.reply_token, flex)
-            return
-        
-        # أمر عرض جميع اللاعبين
-        if text == "اللاعبين":
-            players = Database.get_all_players()
-            flex = FlexMessage(
-                alt_text="جميع اللاعبين",
-                contents=FlexContainer.from_dict(UIBuilder.all_players_card(players))
-            )
-            reply_message(event.reply_token, flex)
+        if normalized_text in {"سؤال", "سوال"}:
+            reply_message(event.reply_token, TextMessage(text=game_manager.get_random_question()))
             return
 
-        # أمر إيقاف اللعبة
-        if text in ["ايقاف", "stop", "إيقاف"]:
-            stopped = game_manager.stop_game(group_id)
-            msg = TextMessage(
-                text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه"
-            )
-            reply_message(event.reply_token, msg)
+        if normalized_text == "تحدي":
+            reply_message(event.reply_token, TextMessage(text=game_manager.get_random_challenge()))
             return
 
-        # الأوامر الترفيهية
-        if text in ["سؤال", "سوال"]:
-            msg = TextMessage(text=game_manager.get_random_question())
-            reply_message(event.reply_token, msg)
-            return
-        
-        if text == "تحدي":
-            msg = TextMessage(text=game_manager.get_random_challenge())
-            reply_message(event.reply_token, msg)
-            return
-        
-        if text == "اعتراف":
-            msg = TextMessage(text=game_manager.get_random_confession())
-            reply_message(event.reply_token, msg)
-            return
-        
-        if text.startswith("منشن"):
-            msg = TextMessage(text=game_manager.get_random_mention())
-            reply_message(event.reply_token, msg)
-            return
-        
-        # لعبة التوافق
-        if text == "توافق":
-            response = game_manager.start_game("compatibility", group_id)
-            reply_message(event.reply_token, response)
+        if normalized_text == "اعتراف":
+            reply_message(event.reply_token, TextMessage(text=game_manager.get_random_confession()))
             return
 
-        # قائمة الألعاب
+        if normalized_text.startswith("منشن"):
+            reply_message(event.reply_token, TextMessage(text=game_manager.get_random_mention()))
+            return
+
+        if normalized_text == "توافق":
+            response = game_manager.start_game("compatibility", group_key)
+            if response:
+                reply_message(event.reply_token, response)
+            return
+
+        # game mapping
         game_commands = {
             "اغنيه": "song",
             "لعبه": "human_animal",
@@ -515,45 +497,33 @@ def handle_message(event):
             "فئه": "category",
             "مافيا": "mafia"
         }
-
-        if text in game_commands:
-            # التحقق من التسجيل للألعاب التي تتطلب نقاط
-            if text not in ["مافيا", "توافق"] and not is_user_registered(user_id):
-                msg = TextMessage(text="يجب التسجيل اولا لبدء الالعاب")
-                reply_message(event.reply_token, msg)
-                return
-            
-            response = game_manager.start_game(game_commands[text], group_id)
+        if normalized_text in game_commands:
+            if normalized_text not in {"مافيا", "توافق"}:
+                try:
+                    if not Database.is_user_registered(user_id):
+                        reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا لبدء الالعاب"))
+                        return
+                except Exception:
+                    logger.exception("Error checking registration before starting game")
+            response = game_manager.start_game(game_commands[normalized_text], group_key)
             if response:
                 reply_message(event.reply_token, response)
             return
-            
-    except AttributeError as e:
-        logger.error(f"Message structure error: {e}", exc_info=True)
-    except Exception as e:
-        logger.error(f"Error handling message: {e}", exc_info=True)
 
+    except Exception:
+        logger.exception("Unhandled error in message handler")
+
+# ---------- health & index ----------
 @app.route('/health', methods=['GET'])
 def health_check():
-    """نقطة فحص صحة التطبيق"""
-    return {
-        'status': 'healthy',
-        'service': 'line-bot',
-        'timestamp': datetime.now().isoformat()
-    }, 200
+    return jsonify({'status': 'healthy', 'service': 'line-bot', 'timestamp': datetime.utcnow().isoformat()}), 200
 
 @app.route('/', methods=['GET'])
 def index():
-    """الصفحة الرئيسية"""
-    return {
-        'name': 'Mafia Bot',
-        'version': '2.0',
-        'status': 'running'
-    }, 200
+    return jsonify({'name': 'Mafia Bot', 'version': '2.0', 'status': 'running'}), 200
 
 if __name__ == "__main__":
-    # للتطوير المحلي فقط
-    # في Production، Gunicorn سيشغل التطبيق
     port = int(os.getenv('PORT', 5000))
-    logger.info(f"Starting application locally on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=True)
+    logger.info("Starting locally on port %s", port)
+    # debug False in production
+    app.run(host='0.0.0.0', port=port, debug=os.getenv("FLASK_DEBUG", "0") == "1")
