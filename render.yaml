@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: mafia-bot
+    name: mno-bot
     env: python
     region: oregon
     buildCommand: pip install -r requirements.txt
