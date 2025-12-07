@@ -5,6 +5,7 @@ __pycache__/
 .Python
 venv/
 env/
+ENV/
 *.egg-info/
 .env
 .env.local
@@ -20,3 +21,4 @@ logs/
 Thumbs.db
 *.bak
 *.backup
+.pytest_cache/
