@@ -1,10 +1,29 @@
+# --- Web Framework ---
 Flask
+
+# --- LINE Messaging API ---
 line-bot-sdk
+
+# --- Environment Variables ---
 python-dotenv
+
+# --- Google Generative AI ---
 google-generativeai
+
+# --- ASGI/WSGI Server ---
 gunicorn
+
+# --- Scheduler ---
 APScheduler
+
+# --- Redis (Caching / Sessions / Rate limit) ---
 redis
-pillow
+
+# --- Image Processing ---
+Pillow
+
+# --- Data Handling ---
 pandas
+
+# --- Visualization (اختياري) ---
 matplotlib
