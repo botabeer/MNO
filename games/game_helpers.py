@@ -12,6 +12,10 @@ def normalize_text(text):
     text = re.sub(r'\s+', '', text)
     return text
 
+def create_hint_text(word):
+    """إنشاء تلميح: أول حرف + عدد الحروف"""
+    return f"يبدأ بحرف: {word[0]}\nعدد الحروف: {len(word)}"
+
 def create_game_header(title):
     return {
         "type": "box",
