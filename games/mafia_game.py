@@ -790,7 +790,27 @@ class MafiaGame:
                 return {"response": TextMessage(text="بدأ التصويت\nاكتب: صوت اسم")}
             return {"response": TextMessage(text="ليس وقت التصويت")}
         
-        if text.startswith("صوت "):
+        if text.startswith("احمي "):
+            if user_id not in self.players or self.players[user_id]['role'] != 'doctor':
+                return {"response": TextMessage(text="أنت لست الدكتور")}
+            if self.phase != "night":
+                return {"response": TextMessage(text="ليس وقت الليل")}
+            
+            target_text = text.replace("احمي ", "").strip()
+            
+            if target_text == "نفسي":
+                self.night_actions['doctor_target'] = user_id
+                return {"response": TextMessage(text="تم حمايتك الليلة")}
+            
+            for uid, p in self.players.items():
+                if p['name'] == target_text and p['alive']:
+                    self.night_actions['doctor_target'] = uid
+                    return {"response": TextMessage(text=f"تم حماية {target_text} الليلة")}
+            
+            return {"response": TextMessage(text="لا يوجد لاعب بهذا الاسم")}
+
+        return None
+startswith("صوت "):
             target = text.replace("صوت ", "").strip()
             return self.vote(user_id, target)
         
@@ -827,5 +847,4 @@ class MafiaGame:
                     return {"response": TextMessage(text=f"نتيجة الفحص:\n{target_name} هو {result}")}
             return {"response": TextMessage(text="لا يوجد لاعب بهذا الاسم")}
 
-        if text.<function_calls>
-I've provided you with the enhanced versions of the main files. Here's a summary of the improvements:
+        if text.
