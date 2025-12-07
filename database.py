@@ -45,9 +45,9 @@ class Database:
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_activity ON users(last_activity, is_active)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_game_history_user ON game_history(user_id, played_at)')
             conn.commit()
-            logger.info("تم تهيئة قاعدة البيانات بنجاح")
+            logger.info("Database initialized successfully")
         except Exception as e:
-            logger.error(f"خطأ تهيئة قاعدة البيانات: {e}", exc_info=True)
+            logger.error(f"Database initialization error: {e}", exc_info=True)
             raise
         finally:
             if conn:
@@ -74,10 +74,10 @@ class Database:
                         VALUES (?, ?, 1, 0, CURRENT_TIMESTAMP)
                     ''', (user_id, display_name))
                 conn.commit()
-                logger.info(f"تسجيل/تحديث مستخدم: {display_name}")
+                logger.info(f"User registered/updated: {display_name}")
                 return True
             except Exception as e:
-                logger.error(f"خطأ في تسجيل المستخدم: {e}", exc_info=True)
+                logger.error(f"Error registering user: {e}", exc_info=True)
                 return False
             finally:
                 if conn:
@@ -97,7 +97,7 @@ class Database:
                 conn.commit()
                 return True
             except Exception as e:
-                logger.error(f"خطأ تحديث النشاط: {e}")
+                logger.error(f"Error updating activity: {e}")
                 return False
             finally:
                 if conn:
@@ -119,10 +119,10 @@ class Database:
                 deactivated_count = cursor.rowcount
                 conn.commit()
                 if deactivated_count > 0:
-                    logger.info(f"تم إلغاء تفعيل {deactivated_count} مستخدم")
+                    logger.info(f"Deactivated {deactivated_count} inactive users")
                 return deactivated_count
             except Exception as e:
-                logger.error(f"خطأ تنظيف المستخدمين: {e}")
+                logger.error(f"Error cleaning up users: {e}")
                 return 0
             finally:
                 if conn:
@@ -138,7 +138,7 @@ class Database:
             result = cursor.fetchone()
             return result is not None and result[0] == 1 and result[1] == 0
         except Exception as e:
-            logger.error(f"خطأ التحقق من التسجيل: {e}")
+            logger.error(f"Error checking registration: {e}")
             return False
         finally:
             if conn:
@@ -154,7 +154,7 @@ class Database:
             result = cursor.fetchone()
             return result is not None and result[0] == 1
         except Exception as e:
-            logger.error(f"خطأ التحقق من الانسحاب: {e}")
+            logger.error(f"Error checking withdrawal: {e}")
             return False
         finally:
             if conn:
@@ -174,10 +174,10 @@ class Database:
                 withdrawn = cursor.rowcount > 0
                 conn.commit()
                 if withdrawn:
-                    logger.info(f"تم انسحاب المستخدم {user_id}")
+                    logger.info(f"User withdrew: {user_id}")
                 return withdrawn
             except Exception as e:
-                logger.error(f"خطأ الانسحاب: {e}")
+                logger.error(f"Error withdrawing user: {e}")
                 return False
             finally:
                 if conn:
@@ -198,10 +198,10 @@ class Database:
                 reactivated = cursor.rowcount > 0
                 conn.commit()
                 if reactivated:
-                    logger.info(f"تم إعادة تفعيل المستخدم {user_id}")
+                    logger.info(f"User reactivated: {user_id}")
                 return reactivated
             except Exception as e:
-                logger.error(f"خطأ إعادة التفعيل: {e}")
+                logger.error(f"Error reactivating user: {e}")
                 return False
             finally:
                 if conn:
@@ -217,7 +217,7 @@ class Database:
             result = cursor.fetchone()
             return result[0] if result else None
         except Exception as e:
-            logger.error(f"خطأ في جلب اسم المستخدم: {e}")
+            logger.error(f"Error fetching user name: {e}")
             return None
         finally:
             if conn:
@@ -233,7 +233,7 @@ class Database:
                 cursor.execute('SELECT is_active, is_withdrawn FROM users WHERE user_id = ?', (user_id,))
                 result = cursor.fetchone()
                 if not result or result[0] != 1 or result[1] == 1:
-                    logger.warning(f"محاولة تحديث نقاط لمستخدم غير مفعل أو منسحب: {user_id}")
+                    logger.warning(f"Attempted to update points for inactive/withdrawn user: {user_id}")
                     return False
                 cursor.execute('''UPDATE users
                     SET total_points = total_points + ?,
@@ -248,10 +248,10 @@ class Database:
                     VALUES (?, ?, ?, ?)
                 ''', (user_id, game_type, points, won))
                 conn.commit()
-                logger.info(f"تحديث نقاط المستخدم {user_id}: +{points} نقطة")
+                logger.info(f"Updated points for user {user_id}: +{points}")
                 return True
             except Exception as e:
-                logger.error(f"خطأ تحديث نقاط: {e}")
+                logger.error(f"Error updating points: {e}")
                 return False
             finally:
                 if conn:
@@ -268,11 +268,16 @@ class Database:
             ''', (user_id,))
             result = cursor.fetchone()
             if result:
-                return {'total_points': result[0] or 0, 'games_played': result[1] or 0, 'wins': result[2] or 0, 'display_name': result[3] or 'مستخدم'}
-            return {'total_points': 0, 'games_played': 0, 'wins': 0, 'display_name': 'مستخدم'}
+                return {
+                    'total_points': result[0] or 0,
+                    'games_played': result[1] or 0,
+                    'wins': result[2] or 0,
+                    'display_name': result[3] or 'User'
+                }
+            return {'total_points': 0, 'games_played': 0, 'wins': 0, 'display_name': 'User'}
         except Exception as e:
-            logger.error(f"خطأ جلب الإحصائيات: {e}")
-            return {'total_points': 0, 'games_played': 0, 'wins': 0, 'display_name': 'مستخدم'}
+            logger.error(f"Error fetching stats: {e}")
+            return {'total_points': 0, 'games_played': 0, 'wins': 0, 'display_name': 'User'}
         finally:
             if conn:
                 conn.close()
@@ -288,9 +293,14 @@ class Database:
                 ORDER BY total_points DESC, wins DESC LIMIT ?
             ''', (limit,))
             results = cursor.fetchall()
-            return [{'display_name': r[0], 'total_points': r[1], 'games_played': r[2], 'wins': r[3]} for r in results]
+            return [{
+                'display_name': r[0],
+                'total_points': r[1],
+                'games_played': r[2],
+                'wins': r[3]
+            } for r in results]
         except Exception as e:
-            logger.error(f"خطأ جلب الصدارة: {e}")
+            logger.error(f"Error fetching leaderboard: {e}")
             return []
         finally:
             if conn:
@@ -314,10 +324,16 @@ class Database:
                     active = r[3] == 1 and r[4] == 0 and last_activity >= cutoff_date
                 except:
                     active = False
-                players.append({'display_name': r[0], 'total_points': r[1], 'games_played': r[2], 'active': active, 'withdrawn': r[4] == 1})
+                players.append({
+                    'display_name': r[0],
+                    'total_points': r[1],
+                    'games_played': r[2],
+                    'active': active,
+                    'withdrawn': r[4] == 1
+                })
             return players
         except Exception as e:
-            logger.error(f"خطأ جلب اللاعبين: {e}")
+            logger.error(f"Error fetching all players: {e}")
             return []
         finally:
             if conn:
