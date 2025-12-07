@@ -9,8 +9,6 @@ COLORS = {
     'text_secondary': '#7F8C8D',
     'text_light': '#95A5A6',
     'text_dark': '#2C3E50',
-    'text2': '#7F8C8D',
-    'text3': '#95A5A6',
     'success': '#52C5B6',
     'warning': '#F39C6B',
     'error': '#E17B7B',
