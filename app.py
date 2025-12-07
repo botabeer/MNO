@@ -2,8 +2,8 @@ from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
-    Configuration, ApiClient, MessagingApi, ReplyMessageRequest, PushMessageRequest,
-    TextMessage, FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
+    Configuration, ApiClient, MessagingApi, ReplyMessageRequest,
+    TextMessage, FlexMessage, FlexContainer
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -25,24 +25,24 @@ app = Flask(__name__)
 required_vars = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
 for var in required_vars:
     if not os.getenv(var):
-        logger.error(f"متغير البيئة {var} غير موجود")
-        raise ValueError(f"متغير البيئة {var} مطلوب")
+        logger.error(f"Missing environment variable: {var}")
+        raise ValueError(f"Environment variable {var} is required")
 
 try:
     configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
     handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
     api_client = ApiClient(configuration)
     line_bot_api = MessagingApi(api_client)
-    logger.info("تم تهيئة LINE Bot API بنجاح")
+    logger.info("LINE Bot API initialized successfully")
 except Exception as e:
-    logger.error(f"خطأ في تهيئة LINE Bot API: {e}")
+    logger.error(f"Failed to initialize LINE Bot API: {e}")
     raise
 
 try:
     Database.init()
-    logger.info("تم تهيئة قاعدة البيانات بنجاح")
+    logger.info("Database initialized successfully")
 except Exception as e:
-    logger.error(f"خطأ في تهيئة قاعدة البيانات: {e}")
+    logger.error(f"Failed to initialize database: {e}")
     raise
 
 game_manager = GameManager(line_bot_api)
@@ -51,9 +51,9 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(func=Database.cleanup_inactive_users, trigger="interval", hours=24, id='cleanup_users')
 try:
     scheduler.start()
-    logger.info("تم بدء المجدول بنجاح")
+    logger.info("Scheduler started successfully")
 except Exception as e:
-    logger.error(f"خطأ في بدء المجدول: {e}")
+    logger.error(f"Failed to start scheduler: {e}")
 
 atexit.register(lambda: scheduler.shutdown())
 
@@ -74,30 +74,13 @@ def check_rate_limit(user_id):
     return True
 
 BOT_COMMANDS = [
-    'بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة', 'ألعاب', 'العاب', 
-    'تسجيل', 'تغيير', 'تغيير الاسم', 'انسحب', 'نقاطي', 'احصائياتي', 'الصداره', 
-    'المتصدرين', 'الصدارة', 'اللاعبين', 'ايقاف', 'stop', 'إيقاف', 'سؤال', 'سوال', 
-    'تحدي', 'اعتراف', 'منشن', 'توافق', 'اغنيه', 'لعبه', 'سلسله', 'اسرع', 'ضد', 
+    'بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة', 'العاب', 'ألعاب',
+    'تسجيل', 'تغيير', 'تغيير الاسم', 'انسحب', 'نقاطي', 'احصائياتي', 'الصداره',
+    'المتصدرين', 'الصدارة', 'اللاعبين', 'ايقاف', 'stop', 'إيقاف', 'سؤال', 'سوال',
+    'تحدي', 'اعتراف', 'منشن', 'توافق', 'اغنيه', 'لعبه', 'سلسله', 'اسرع', 'ضد',
     'تكوين', 'فئه', 'مافيا', 'لمح', 'تلميح', 'جاوب', 'الجواب', 'الغاء', 'إلغاء',
     'انضم مافيا', 'بدء مافيا', 'شرح مافيا', 'إنهاء الليل', 'تصويت مافيا', 'إنهاء التصويت'
 ]
-
-def get_quick_reply():
-    return QuickReply(items=[
-        QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
-        QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
-        QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
-        QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
-        QuickReplyItem(action=MessageAction(label="توافق", text="توافق")),
-        QuickReplyItem(action=MessageAction(label="اغنية", text="اغنيه")),
-        QuickReplyItem(action=MessageAction(label="ضد", text="ضد")),
-        QuickReplyItem(action=MessageAction(label="تكوين", text="تكوين")),
-        QuickReplyItem(action=MessageAction(label="سلسلة", text="سلسله")),
-        QuickReplyItem(action=MessageAction(label="اسرع", text="اسرع")),
-        QuickReplyItem(action=MessageAction(label="لعبه", text="لعبه")),
-        QuickReplyItem(action=MessageAction(label="فئة", text="فئه")),
-        QuickReplyItem(action=MessageAction(label="مافيا", text="مافيا"))
-    ])
 
 class NameFilter:
     @staticmethod
@@ -159,7 +142,7 @@ def reply_message(reply_token, messages):
             messages = [messages]
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
     except Exception as e:
-        logger.error(f"خطأ في إرسال الرد: {e}")
+        logger.error(f"Error sending reply: {e}")
 
 def push_message(to, messages):
     try:
@@ -167,7 +150,7 @@ def push_message(to, messages):
             messages = [messages]
         line_bot_api.push_message(PushMessageRequest(to=to, messages=messages))
     except Exception as e:
-        logger.error(f"خطأ في إرسال push: {e}")
+        logger.error(f"Error sending push message: {e}")
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -176,10 +159,10 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.error("توقيع غير صالح")
+        logger.error("Invalid signature")
         abort(400)
     except Exception as e:
-        logger.error(f"خطأ في معالجة الطلب: {e}", exc_info=True)
+        logger.error(f"Error processing request: {e}", exc_info=True)
         abort(500)
     return 'OK'
 
@@ -194,7 +177,7 @@ def handle_message(event):
             return
         
         if not check_rate_limit(user_id):
-            logger.warning(f"تجاوز الحد الأقصى: {user_id}")
+            logger.warning(f"Rate limit exceeded for user: {user_id}")
             msg = TextMessage(text="لقد تجاوزت الحد الأقصى للرسائل. انتظر قليلاً")
             reply_message(event.reply_token, msg)
             return
@@ -202,34 +185,34 @@ def handle_message(event):
         if user_id in waiting_for_registration:
             if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
                 del waiting_for_registration[user_id]
-                msg = TextMessage(text="تم الغاء التسجيل", quick_reply=get_quick_reply())
+                msg = TextMessage(text="تم الغاء التسجيل")
                 reply_message(event.reply_token, msg)
                 return
             is_valid, error_msg = NameFilter.validate_name(text)
             if not is_valid:
-                msg = TextMessage(text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء", quick_reply=get_quick_reply())
+                msg = TextMessage(text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء")
                 reply_message(event.reply_token, msg)
                 return
             del waiting_for_registration[user_id]
             Database.register_or_update_user(user_id, text)
-            flex = FlexMessage(alt_text="تم التسجيل بنجاح", contents=FlexContainer.from_dict(UIBuilder.registration_success_card(text)), quick_reply=get_quick_reply())
+            flex = FlexMessage(alt_text="تم التسجيل بنجاح", contents=FlexContainer.from_dict(UIBuilder.registration_success_card(text)))
             reply_message(event.reply_token, flex)
             return
         
         if user_id in waiting_for_name_change:
             if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
                 del waiting_for_name_change[user_id]
-                msg = TextMessage(text="تم الغاء تغيير الاسم", quick_reply=get_quick_reply())
+                msg = TextMessage(text="تم الغاء تغيير الاسم")
                 reply_message(event.reply_token, msg)
                 return
             is_valid, error_msg = NameFilter.validate_name(text)
             if not is_valid:
-                msg = TextMessage(text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء", quick_reply=get_quick_reply())
+                msg = TextMessage(text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء")
                 reply_message(event.reply_token, msg)
                 return
             del waiting_for_name_change[user_id]
             Database.register_or_update_user(user_id, text)
-            flex = FlexMessage(alt_text="تم تغيير الاسم", contents=FlexContainer.from_dict(UIBuilder.name_changed_card(text)), quick_reply=get_quick_reply())
+            flex = FlexMessage(alt_text="تم تغيير الاسم", contents=FlexContainer.from_dict(UIBuilder.name_changed_card(text)))
             reply_message(event.reply_token, flex)
             return
 
@@ -237,8 +220,8 @@ def handle_message(event):
             game = game_manager.get_game(group_id)
             if game:
                 game_type = game_manager.active_games.get(group_id, {}).get('type', '')
-                if game_type != 'mafia' and game_type != 'compatibility' and not is_user_registered(user_id):
-                    return None
+                if game_type not in ['mafia', 'compatibility'] and not is_user_registered(user_id):
+                    return
                 try:
                     Database.update_last_activity(user_id)
                 except:
@@ -251,25 +234,15 @@ def handle_message(event):
                             Database.update_user_points(user_id, result['points'], result.get('won', False), game_type)
                     response = result.get('response')
                     if response:
-                        if isinstance(response, list):
-                            for r in response:
-                                if isinstance(r, (FlexMessage, TextMessage)):
-                                    r.quick_reply = get_quick_reply()
-                            reply_message(event.reply_token, response)
-                        else:
-                            if isinstance(response, (FlexMessage, TextMessage)):
-                                response.quick_reply = get_quick_reply()
-                            reply_message(event.reply_token, response)
+                        reply_message(event.reply_token, response)
                     if result.get('next_question') and not result.get('game_over'):
                         time.sleep(2)
                         next_q = game_manager.next_question(group_id)
                         if next_q:
                             try:
-                                if isinstance(next_q, FlexMessage):
-                                    next_q.quick_reply = get_quick_reply()
                                 push_message(group_id, next_q)
                             except Exception as e:
-                                logger.error(f"خطأ في إرسال السؤال التالي: {e}")
+                                logger.error(f"Error sending next question: {e}")
                     if result.get('game_over'):
                         game_manager.stop_game(group_id)
                 return
@@ -283,129 +256,123 @@ def handle_message(event):
         display_name = get_user_display_name(user_id) or "مستخدم"
 
         if text.lower() in ["بدايه", "start", "ابدا", "بداية"]:
-            flex = FlexMessage(alt_text="مرحبا", contents=FlexContainer.from_dict(UIBuilder.welcome_card(display_name, is_user_registered(user_id))), quick_reply=get_quick_reply())
+            flex = FlexMessage(alt_text="مرحبا", contents=FlexContainer.from_dict(UIBuilder.welcome_card(display_name, is_user_registered(user_id))))
             reply_message(event.reply_token, flex)
             return
 
         if text.lower() in ["مساعده", "help", "مساعدة"]:
-            flex = FlexMessage(alt_text="المساعده", contents=FlexContainer.from_dict(UIBuilder.help_card()), quick_reply=get_quick_reply())
+            flex = FlexMessage(alt_text="المساعده", contents=FlexContainer.from_dict(UIBuilder.help_card()))
             reply_message(event.reply_token, flex)
             return
 
         if text in ["ألعاب", "العاب"]:
-            flex = FlexMessage(alt_text="قائمة الألعاب", contents=FlexContainer.from_dict(UIBuilder.games_menu_card(is_user_registered(user_id))), quick_reply=get_quick_reply())
+            flex = FlexMessage(alt_text="قائمة الألعاب", contents=FlexContainer.from_dict(UIBuilder.games_menu_card(is_user_registered(user_id))))
             reply_message(event.reply_token, flex)
             return
 
         if text == "تسجيل":
             if is_user_registered(user_id):
-                flex = FlexMessage(alt_text="مسجل بالفعل", contents=FlexContainer.from_dict(UIBuilder.already_registered_card(display_name)), quick_reply=get_quick_reply())
+                flex = FlexMessage(alt_text="مسجل بالفعل", contents=FlexContainer.from_dict(UIBuilder.already_registered_card(display_name)))
                 reply_message(event.reply_token, flex)
             else:
                 existing_name = Database.get_existing_user_name(user_id)
                 if existing_name:
                     Database.reactivate_user(user_id)
-                    flex = FlexMessage(alt_text="مرحباً بعودتك", contents=FlexContainer.from_dict(UIBuilder.welcome_back_card(existing_name)), quick_reply=get_quick_reply())
+                    flex = FlexMessage(alt_text="مرحباً بعودتك", contents=FlexContainer.from_dict(UIBuilder.welcome_back_card(existing_name)))
                     reply_message(event.reply_token, flex)
                 else:
                     waiting_for_registration[user_id] = True
-                    flex = FlexMessage(alt_text="التسجيل", contents=FlexContainer.from_dict(UIBuilder.registration_card()), quick_reply=get_quick_reply())
+                    flex = FlexMessage(alt_text="التسجيل", contents=FlexContainer.from_dict(UIBuilder.registration_card()))
                     reply_message(event.reply_token, flex)
             return
 
         if text in ["تغيير", "تغيير الاسم"]:
             if not is_user_registered(user_id):
-                flex = FlexMessage(alt_text="يجب التسجيل أولاً", contents=FlexContainer.from_dict(UIBuilder.need_registration_card()), quick_reply=get_quick_reply())
+                flex = FlexMessage(alt_text="يجب التسجيل أولاً", contents=FlexContainer.from_dict(UIBuilder.need_registration_card()))
                 reply_message(event.reply_token, flex)
             else:
                 waiting_for_name_change[user_id] = True
-                flex = FlexMessage(alt_text="تغيير الاسم", contents=FlexContainer.from_dict(UIBuilder.change_name_card(display_name)), quick_reply=get_quick_reply())
+                flex = FlexMessage(alt_text="تغيير الاسم", contents=FlexContainer.from_dict(UIBuilder.change_name_card(display_name)))
                 reply_message(event.reply_token, flex)
             return
 
         if text == "انسحب":
             if not is_user_registered(user_id):
-                msg = TextMessage(text="انت غير مسجل", quick_reply=get_quick_reply())
+                msg = TextMessage(text="انت غير مسجل")
             else:
                 Database.withdraw_user(user_id)
-                msg = TextMessage(text="تم الانسحاب. لن يتم احتساب اجاباتك بعد الآن", quick_reply=get_quick_reply())
+                msg = TextMessage(text="تم الانسحاب. لن يتم احتساب اجاباتك بعد الآن")
             reply_message(event.reply_token, msg)
             return
 
         if text in ["نقاطي", "احصائياتي"]:
             if not is_user_registered(user_id):
-                msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
+                msg = TextMessage(text="يجب التسجيل اولا")
                 reply_message(event.reply_token, msg)
                 return
             stats = Database.get_user_stats(user_id)
-            flex = FlexMessage(alt_text="احصائياتك", contents=FlexContainer.from_dict(UIBuilder.stats_card(display_name, stats)), quick_reply=get_quick_reply())
+            flex = FlexMessage(alt_text="احصائياتك", contents=FlexContainer.from_dict(UIBuilder.stats_card(display_name, stats)))
             reply_message(event.reply_token, flex)
             return
 
         if text in ["الصداره", "المتصدرين", "الصدارة"]:
             leaders = Database.get_leaderboard(20)
-            flex = FlexMessage(alt_text="لوحه الصداره", contents=FlexContainer.from_dict(UIBuilder.leaderboard_card(leaders)), quick_reply=get_quick_reply())
+            flex = FlexMessage(alt_text="لوحه الصداره", contents=FlexContainer.from_dict(UIBuilder.leaderboard_card(leaders)))
             reply_message(event.reply_token, flex)
             return
         
         if text == "اللاعبين":
             players = Database.get_all_players()
-            flex = FlexMessage(alt_text="جميع اللاعبين", contents=FlexContainer.from_dict(UIBuilder.all_players_card(players)), quick_reply=get_quick_reply())
+            flex = FlexMessage(alt_text="جميع اللاعبين", contents=FlexContainer.from_dict(UIBuilder.all_players_card(players)))
             reply_message(event.reply_token, flex)
             return
 
         if text in ["ايقاف", "stop", "إيقاف"]:
             stopped = game_manager.stop_game(group_id)
-            msg = TextMessage(text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه", quick_reply=get_quick_reply())
+            msg = TextMessage(text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه")
             reply_message(event.reply_token, msg)
             return
 
         if text in ["سؤال", "سوال"]:
-            msg = TextMessage(text=game_manager.get_random_question(), quick_reply=get_quick_reply())
+            msg = TextMessage(text=game_manager.get_random_question())
             reply_message(event.reply_token, msg)
             return
         
         if text == "تحدي":
-            msg = TextMessage(text=game_manager.get_random_challenge(), quick_reply=get_quick_reply())
+            msg = TextMessage(text=game_manager.get_random_challenge())
             reply_message(event.reply_token, msg)
             return
         
         if text == "اعتراف":
-            msg = TextMessage(text=game_manager.get_random_confession(), quick_reply=get_quick_reply())
+            msg = TextMessage(text=game_manager.get_random_confession())
             reply_message(event.reply_token, msg)
             return
         
         if text.startswith("منشن"):
-            msg = TextMessage(text=game_manager.get_random_mention(), quick_reply=get_quick_reply())
+            msg = TextMessage(text=game_manager.get_random_mention())
             reply_message(event.reply_token, msg)
             return
         
         if text == "توافق":
             response = game_manager.start_game("compatibility", group_id)
-            if isinstance(response, FlexMessage):
-                response.quick_reply = get_quick_reply()
             reply_message(event.reply_token, response)
             return
 
-        game_commands = {"aغنيه": "song", "لعبه": "human_animal", "سلسله": "chain", "اسرع": "fast_typing", "ضد": "opposite", "تكوين": "letters", "فئه": "category", "مافيا": "mafia"}
+        game_commands = {"اغنيه": "song", "لعبه": "human_animal", "سلسله": "chain", "اسرع": "fast_typing", "ضد": "opposite", "تكوين": "letters", "فئه": "category", "مافيا": "mafia"}
 
         if text in game_commands:
             if text not in ["مافيا", "توافق"] and not is_user_registered(user_id):
-                msg = TextMessage(text="يجب التسجيل اولا لبدء الالعاب", quick_reply=get_quick_reply())
+                msg = TextMessage(text="يجب التسجيل اولا لبدء الالعاب")
                 reply_message(event.reply_token, msg)
                 return
             response = game_manager.start_game(game_commands[text], group_id)
             if response:
-                if isinstance(response, FlexMessage):
-                    response.quick_reply = get_quick_reply()
-                elif isinstance(response, TextMessage):
-                    response.quick_reply = get_quick_reply()
                 reply_message(event.reply_token, response)
             return
     except AttributeError as e:
-        logger.error(f"خطأ في بنية الرسالة: {e}", exc_info=True)
+        logger.error(f"Message structure error: {e}", exc_info=True)
     except Exception as e:
-        logger.error(f"خطأ في معالجة الرسالة: {e}", exc_info=True)
+        logger.error(f"Error handling message: {e}", exc_info=True)
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -418,5 +385,5 @@ def index():
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', '0') == '1'
-    logger.info(f"بدء التطبيق على المنفذ {port}")
+    logger.info(f"Starting application on port {port}")
     app.run(host='0.0.0.0', port=port, debug=debug)
