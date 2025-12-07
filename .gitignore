@@ -1,24 +1,73 @@
+# --------------------------
+# Python compiled / cache
+# --------------------------
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
+
+# --------------------------
+# Virtual environments
+# --------------------------
 venv/
 env/
 ENV/
-*.egg-info/
+.venv/
+.venv*/
+
+# --------------------------
+# Environment files
+# --------------------------
 .env
-.env.local
+.env.*
+!.env.example   # Keep template version
+
+# --------------------------
+# Database files
+# --------------------------
 *.db
 *.sqlite
 *.sqlite3
+
+# --------------------------
+# Editor configs
+# --------------------------
 .vscode/
 .idea/
 *.swp
+
+# --------------------------
+# Logs
+# --------------------------
 *.log
 logs/
-.DS_Store
-Thumbs.db
 *.bak
 *.backup
+
+# --------------------------
+# Tests & coverage
+# --------------------------
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# --------------------------
+# macOS / Windows files
+# --------------------------
+.DS_Store
+Thumbs.db
+
+# --------------------------
+# Docker-related
+# --------------------------
+docker-compose.override.yml
+*.pid
+
+# --------------------------
+# Project specific
+# --------------------------
+games/__pycache__/
+games/*.tmp
+temp/
+cache/
