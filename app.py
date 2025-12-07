@@ -2,54 +2,85 @@ from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
-    Configuration, ApiClient, MessagingApi,
-    ReplyMessageRequest, PushMessageRequest,
-    TextMessage, FlexMessage, FlexContainer,
-    QuickReply, QuickReplyItem, MessageAction
+    Configuration, ApiClient, MessagingApi, ReplyMessageRequest, PushMessageRequest,
+    TextMessage, FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from apscheduler.schedulers.background import BackgroundScheduler
 from ui_builder import UIBuilder
 from games.game_manager import GameManager
 from database import Database
-import os
-import logging
-import re
-import atexit
-import time
-import json
+import os, logging, re, atexit, time
+from datetime import datetime
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-required_env_vars = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
-for var in required_env_vars:
+required_vars = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
+for var in required_vars:
     if not os.getenv(var):
         logger.error(f"متغير البيئة {var} غير موجود")
         raise ValueError(f"متغير البيئة {var} مطلوب")
 
-configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
-handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
-
-Database.init()
-
-with ApiClient(configuration) as api_client:
+try:
+    configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
+    handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
+    api_client = ApiClient(configuration)
     line_bot_api = MessagingApi(api_client)
-    game_manager = GameManager(line_bot_api)
+    logger.info("تم تهيئة LINE Bot API بنجاح")
+except Exception as e:
+    logger.error(f"خطأ في تهيئة LINE Bot API: {e}")
+    raise
+
+try:
+    Database.init()
+    logger.info("تم تهيئة قاعدة البيانات بنجاح")
+except Exception as e:
+    logger.error(f"خطأ في تهيئة قاعدة البيانات: {e}")
+    raise
+
+game_manager = GameManager(line_bot_api)
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=Database.cleanup_inactive_users, trigger="interval", hours=24)
-scheduler.start()
+scheduler.add_job(func=Database.cleanup_inactive_users, trigger="interval", hours=24, id='cleanup_users')
+try:
+    scheduler.start()
+    logger.info("تم بدء المجدول بنجاح")
+except Exception as e:
+    logger.error(f"خطأ في بدء المجدول: {e}")
+
 atexit.register(lambda: scheduler.shutdown())
 
-group_registered_users = {}
 waiting_for_registration = {}
 waiting_for_name_change = {}
+user_message_times = {}
+RATE_LIMIT_MESSAGES = 50
+RATE_LIMIT_PERIOD = 3600
+
+def check_rate_limit(user_id):
+    current_time = time.time()
+    if user_id not in user_message_times:
+        user_message_times[user_id] = []
+    user_message_times[user_id] = [t for t in user_message_times[user_id] if current_time - t < RATE_LIMIT_PERIOD]
+    if len(user_message_times[user_id]) >= RATE_LIMIT_MESSAGES:
+        return False
+    user_message_times[user_id].append(current_time)
+    return True
+
+BOT_COMMANDS = [
+    'بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة', 'ألعاب', 'العاب', 
+    'تسجيل', 'تغيير', 'تغيير الاسم', 'انسحب', 'نقاطي', 'احصائياتي', 'الصداره', 
+    'المتصدرين', 'الصدارة', 'اللاعبين', 'ايقاف', 'stop', 'إيقاف', 'سؤال', 'سوال', 
+    'تحدي', 'اعتراف', 'منشن', 'توافق', 'اغنيه', 'لعبه', 'سلسله', 'اسرع', 'ضد', 
+    'تكوين', 'فئه', 'مافيا', 'لمح', 'تلميح', 'جاوب', 'الجواب', 'الغاء', 'إلغاء',
+    'انضم مافيا', 'بدء مافيا', 'شرح مافيا', 'إنهاء الليل', 'تصويت مافيا', 'إنهاء التصويت'
+]
 
 def get_quick_reply():
     return QuickReply(items=[
@@ -71,10 +102,7 @@ def get_quick_reply():
 class NameFilter:
     @staticmethod
     def get_bad_words():
-        return [
-            'غبي', 'احمق', 'حمار', 'كلب', 'خنزير', 'قذر', 'وسخ', 'حقير', 'نذل',
-            'خائن', 'كذاب', 'لعين', 'ملعون', 'عاهر', 'زاني', 'فاسق', 'منافق'
-        ]
+        return ['غبي', 'احمق', 'حمار', 'كلب', 'خنزير', 'قذر', 'وسخ', 'حقير', 'نذل', 'خائن', 'كذاب', 'لعين', 'ملعون']
     
     @staticmethod
     def normalize_arabic(text):
@@ -92,69 +120,67 @@ class NameFilter:
     def validate_name(name):
         if not name or name.strip() == "":
             return False, "الاسم لا يمكن ان يكون فارغا"
-        
-        if len(name.strip()) < 1:
-            return False, "الاسم قصير جدا"
-        
-        if len(name.strip()) > 30:
-            return False, "الاسم طويل جدا الحد الاقصى 30 حرف"
-        
-        if re.match(r'^[^a-zA-Zء-ي\s]+$', name):
-            return False, "الاسم يحتوي على رموز غير صالحة"
-        
-        if re.match(r'^[\d]+$', name):
-            return False, "الاسم لا يمكن ان يكون ارقام فقط"
-        
+        name = name.strip()
+        if len(name) > 30:
+            return False, "الاسم طويل جدا (الحد الاقصى 30 حرف)"
+        if len(name) < 1:
+            return False, "الاسم قصير جدا (الحد الأدنى حرف واحد)"
         normalized_name = NameFilter.normalize_arabic(name)
         for bad_word in NameFilter.get_bad_words():
             normalized_bad = NameFilter.normalize_arabic(bad_word)
             if normalized_bad in normalized_name:
                 return False, "الاسم يحتوي على كلمات غير لائقة"
-        
         return True, ""
 
-def is_user_registered(group_id, user_id):
-    return group_id in group_registered_users and user_id in group_registered_users[group_id]
-
-def register_user(group_id, user_id, display_name):
-    if group_id not in group_registered_users:
-        group_registered_users[group_id] = {}
-    group_registered_users[group_id][user_id] = display_name
-    Database.register_or_update_user(user_id, display_name)
-
-def update_user_name(group_id, user_id, new_name):
-    if group_id in group_registered_users and user_id in group_registered_users[group_id]:
-        group_registered_users[group_id][user_id] = new_name
-    Database.register_or_update_user(user_id, new_name)
-
-def unregister_user(group_id, user_id):
-    if group_id in group_registered_users and user_id in group_registered_users[group_id]:
-        del group_registered_users[group_id][user_id]
+def is_bot_command(text):
+    text_lower = text.lower()
+    for cmd in BOT_COMMANDS:
+        if text_lower == cmd.lower():
+            return True
+    if text_lower.startswith(('صوت ', 'اقتل ', 'افحص ', 'احمي ')):
         return True
     return False
 
-def get_user_display_name(group_id, user_id):
-    if is_user_registered(group_id, user_id):
-        return group_registered_users[group_id][user_id]
+def is_user_registered(user_id):
+    return Database.is_user_registered(user_id)
+
+def is_user_withdrawn(user_id):
+    return Database.is_user_withdrawn(user_id)
+
+def get_user_display_name(user_id):
     stats = Database.get_user_stats(user_id)
     if stats and stats.get('display_name'):
         return stats['display_name']
     return None
 
+def reply_message(reply_token, messages):
+    try:
+        if not isinstance(messages, list):
+            messages = [messages]
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
+    except Exception as e:
+        logger.error(f"خطأ في إرسال الرد: {e}")
+
+def push_message(to, messages):
+    try:
+        if not isinstance(messages, list):
+            messages = [messages]
+        line_bot_api.push_message(PushMessageRequest(to=to, messages=messages))
+    except Exception as e:
+        logger.error(f"خطأ في إرسال push: {e}")
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
-    
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
         logger.error("توقيع غير صالح")
         abort(400)
     except Exception as e:
-        logger.error(f"خطأ في معالجة الطلب: {e}")
+        logger.error(f"خطأ في معالجة الطلب: {e}", exc_info=True)
         abort(500)
-    
     return 'OK'
 
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -164,361 +190,233 @@ def handle_message(event):
         user_id = event.source.user_id
         group_id = getattr(event.source, 'group_id', None) or user_id
         
-        Database.update_last_activity(user_id)
-
+        if is_user_withdrawn(user_id) and not is_bot_command(text):
+            return
+        
+        if not check_rate_limit(user_id):
+            logger.warning(f"تجاوز الحد الأقصى: {user_id}")
+            msg = TextMessage(text="لقد تجاوزت الحد الأقصى للرسائل. انتظر قليلاً")
+            reply_message(event.reply_token, msg)
+            return
+        
         if user_id in waiting_for_registration:
-            if text.lower() in ["الغاء", "إلغاء"]:
+            if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
                 del waiting_for_registration[user_id]
                 msg = TextMessage(text="تم الغاء التسجيل", quick_reply=get_quick_reply())
-                with ApiClient(configuration) as api_client:
-                    api_instance = MessagingApi(api_client)
-                    api_instance.reply_message(ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[msg]
-                    ))
+                reply_message(event.reply_token, msg)
                 return
-            
             is_valid, error_msg = NameFilter.validate_name(text)
             if not is_valid:
                 msg = TextMessage(text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء", quick_reply=get_quick_reply())
-                with ApiClient(configuration) as api_client:
-                    api_instance = MessagingApi(api_client)
-                    api_instance.reply_message(ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[msg]
-                    ))
+                reply_message(event.reply_token, msg)
                 return
-            
-            register_group = waiting_for_registration[user_id]
             del waiting_for_registration[user_id]
-            register_user(register_group, user_id, text)
-            msg = TextMessage(text=f"تم التسجيل بنجاح\n\nاسمك {text}\n\nيمكنك الان اللعب وجمع النقاط", quick_reply=get_quick_reply())
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+            Database.register_or_update_user(user_id, text)
+            flex = FlexMessage(alt_text="تم التسجيل بنجاح", contents=FlexContainer.from_dict(UIBuilder.registration_success_card(text)), quick_reply=get_quick_reply())
+            reply_message(event.reply_token, flex)
             return
         
         if user_id in waiting_for_name_change:
-            if text.lower() in ["الغاء", "إلغاء"]:
+            if text.lower() in ["انسحب", "إلغاء", "الغاء"]:
                 del waiting_for_name_change[user_id]
                 msg = TextMessage(text="تم الغاء تغيير الاسم", quick_reply=get_quick_reply())
-                with ApiClient(configuration) as api_client:
-                    api_instance = MessagingApi(api_client)
-                    api_instance.reply_message(ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[msg]
-                    ))
+                reply_message(event.reply_token, msg)
                 return
-            
             is_valid, error_msg = NameFilter.validate_name(text)
             if not is_valid:
                 msg = TextMessage(text=f"{error_msg}\n\nاكتب اسم صحيح او اكتب الغاء", quick_reply=get_quick_reply())
-                with ApiClient(configuration) as api_client:
-                    api_instance = MessagingApi(api_client)
-                    api_instance.reply_message(ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[msg]
-                    ))
+                reply_message(event.reply_token, msg)
                 return
-            
-            change_group = waiting_for_name_change[user_id]
             del waiting_for_name_change[user_id]
-            update_user_name(change_group, user_id, text)
-            msg = TextMessage(text=f"تم تغيير الاسم بنجاح الى {text}", quick_reply=get_quick_reply())
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+            Database.register_or_update_user(user_id, text)
+            flex = FlexMessage(alt_text="تم تغيير الاسم", contents=FlexContainer.from_dict(UIBuilder.name_changed_card(text)), quick_reply=get_quick_reply())
+            reply_message(event.reply_token, flex)
             return
 
-        display_name = get_user_display_name(group_id, user_id) or "مستخدم"
+        if not is_bot_command(text):
+            game = game_manager.get_game(group_id)
+            if game:
+                game_type = game_manager.active_games.get(group_id, {}).get('type', '')
+                if game_type != 'mafia' and game_type != 'compatibility' and not is_user_registered(user_id):
+                    return None
+                try:
+                    Database.update_last_activity(user_id)
+                except:
+                    pass
+                display_name = get_user_display_name(user_id) or "مستخدم"
+                result = game_manager.check_answer(group_id, text, user_id, display_name)
+                if result:
+                    if result.get('correct') and result.get('points', 0) > 0 and game_type not in ['mafia', 'compatibility']:
+                        if is_user_registered(user_id):
+                            Database.update_user_points(user_id, result['points'], result.get('won', False), game_type)
+                    response = result.get('response')
+                    if response:
+                        if isinstance(response, list):
+                            for r in response:
+                                if isinstance(r, (FlexMessage, TextMessage)):
+                                    r.quick_reply = get_quick_reply()
+                            reply_message(event.reply_token, response)
+                        else:
+                            if isinstance(response, (FlexMessage, TextMessage)):
+                                response.quick_reply = get_quick_reply()
+                            reply_message(event.reply_token, response)
+                    if result.get('next_question') and not result.get('game_over'):
+                        time.sleep(2)
+                        next_q = game_manager.next_question(group_id)
+                        if next_q:
+                            try:
+                                if isinstance(next_q, FlexMessage):
+                                    next_q.quick_reply = get_quick_reply()
+                                push_message(group_id, next_q)
+                            except Exception as e:
+                                logger.error(f"خطأ في إرسال السؤال التالي: {e}")
+                    if result.get('game_over'):
+                        game_manager.stop_game(group_id)
+                return
+
+        try:
+            if is_user_registered(user_id):
+                Database.update_last_activity(user_id)
+        except:
+            pass
+
+        display_name = get_user_display_name(user_id) or "مستخدم"
 
         if text.lower() in ["بدايه", "start", "ابدا", "بداية"]:
-            flex = FlexMessage(
-                alt_text="مرحبا",
-                contents=FlexContainer.from_dict(UIBuilder.welcome_card(display_name, is_user_registered(group_id, user_id))),
-                quick_reply=get_quick_reply()
-            )
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[flex]
-                ))
+            flex = FlexMessage(alt_text="مرحبا", contents=FlexContainer.from_dict(UIBuilder.welcome_card(display_name, is_user_registered(user_id))), quick_reply=get_quick_reply())
+            reply_message(event.reply_token, flex)
             return
 
         if text.lower() in ["مساعده", "help", "مساعدة"]:
-            flex = FlexMessage(
-                alt_text="المساعده",
-                contents=FlexContainer.from_dict(UIBuilder.help_card()),
-                quick_reply=get_quick_reply()
-            )
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[flex]
-                ))
+            flex = FlexMessage(alt_text="المساعده", contents=FlexContainer.from_dict(UIBuilder.help_card()), quick_reply=get_quick_reply())
+            reply_message(event.reply_token, flex)
             return
 
-        if text == "ألعاب" or text == "العاب":
-            flex = FlexMessage(
-                alt_text="قائمة الألعاب",
-                contents=FlexContainer.from_dict(UIBuilder.games_menu_card(is_user_registered(group_id, user_id))),
-                quick_reply=get_quick_reply()
-            )
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[flex]
-                ))
+        if text in ["ألعاب", "العاب"]:
+            flex = FlexMessage(alt_text="قائمة الألعاب", contents=FlexContainer.from_dict(UIBuilder.games_menu_card(is_user_registered(user_id))), quick_reply=get_quick_reply())
+            reply_message(event.reply_token, flex)
             return
 
         if text == "تسجيل":
-            if is_user_registered(group_id, user_id):
-                msg = TextMessage(text=f"انت مسجل بالفعل باسم {display_name}", quick_reply=get_quick_reply())
+            if is_user_registered(user_id):
+                flex = FlexMessage(alt_text="مسجل بالفعل", contents=FlexContainer.from_dict(UIBuilder.already_registered_card(display_name)), quick_reply=get_quick_reply())
+                reply_message(event.reply_token, flex)
             else:
-                waiting_for_registration[user_id] = group_id
-                msg = TextMessage(text="مرحبا بك في التسجيل\n\nالرجاء كتابة اسمك\n\nالشروط\nمن حرف الى 30 حرف\nلا يحتوي على كلمات غير لائقة\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+                existing_name = Database.get_existing_user_name(user_id)
+                if existing_name:
+                    Database.reactivate_user(user_id)
+                    flex = FlexMessage(alt_text="مرحباً بعودتك", contents=FlexContainer.from_dict(UIBuilder.welcome_back_card(existing_name)), quick_reply=get_quick_reply())
+                    reply_message(event.reply_token, flex)
+                else:
+                    waiting_for_registration[user_id] = True
+                    flex = FlexMessage(alt_text="التسجيل", contents=FlexContainer.from_dict(UIBuilder.registration_card()), quick_reply=get_quick_reply())
+                    reply_message(event.reply_token, flex)
             return
 
-        if text == "تغيير" or text == "تغيير الاسم":
-            if not is_user_registered(group_id, user_id):
-                msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
+        if text in ["تغيير", "تغيير الاسم"]:
+            if not is_user_registered(user_id):
+                flex = FlexMessage(alt_text="يجب التسجيل أولاً", contents=FlexContainer.from_dict(UIBuilder.need_registration_card()), quick_reply=get_quick_reply())
+                reply_message(event.reply_token, flex)
             else:
-                waiting_for_name_change[user_id] = group_id
-                msg = TextMessage(text=f"اسمك الحالي {display_name}\n\nالرجاء كتابة الاسم الجديد\n\nاكتب الغاء للالغاء", quick_reply=get_quick_reply())
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+                waiting_for_name_change[user_id] = True
+                flex = FlexMessage(alt_text="تغيير الاسم", contents=FlexContainer.from_dict(UIBuilder.change_name_card(display_name)), quick_reply=get_quick_reply())
+                reply_message(event.reply_token, flex)
             return
 
         if text == "انسحب":
-            if unregister_user(group_id, user_id):
-                msg = TextMessage(text="تم الغاء تسجيلك", quick_reply=get_quick_reply())
-            else:
+            if not is_user_registered(user_id):
                 msg = TextMessage(text="انت غير مسجل", quick_reply=get_quick_reply())
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+            else:
+                Database.withdraw_user(user_id)
+                msg = TextMessage(text="تم الانسحاب. لن يتم احتساب اجاباتك بعد الآن", quick_reply=get_quick_reply())
+            reply_message(event.reply_token, msg)
             return
 
         if text in ["نقاطي", "احصائياتي"]:
-            if not is_user_registered(group_id, user_id):
+            if not is_user_registered(user_id):
                 msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
-                with ApiClient(configuration) as api_client:
-                    api_instance = MessagingApi(api_client)
-                    api_instance.reply_message(ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[msg]
-                    ))
+                reply_message(event.reply_token, msg)
                 return
             stats = Database.get_user_stats(user_id)
-            flex = FlexMessage(
-                alt_text="احصائياتك",
-                contents=FlexContainer.from_dict(UIBuilder.stats_card(display_name, stats)),
-                quick_reply=get_quick_reply()
-            )
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[flex]
-                ))
+            flex = FlexMessage(alt_text="احصائياتك", contents=FlexContainer.from_dict(UIBuilder.stats_card(display_name, stats)), quick_reply=get_quick_reply())
+            reply_message(event.reply_token, flex)
             return
 
         if text in ["الصداره", "المتصدرين", "الصدارة"]:
             leaders = Database.get_leaderboard(20)
-            flex = FlexMessage(
-                alt_text="لوحه الصداره",
-                contents=FlexContainer.from_dict(UIBuilder.leaderboard_card(leaders)),
-                quick_reply=get_quick_reply()
-            )
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[flex]
-                ))
+            flex = FlexMessage(alt_text="لوحه الصداره", contents=FlexContainer.from_dict(UIBuilder.leaderboard_card(leaders)), quick_reply=get_quick_reply())
+            reply_message(event.reply_token, flex)
             return
         
         if text == "اللاعبين":
             players = Database.get_all_players()
-            flex = FlexMessage(
-                alt_text="جميع اللاعبين",
-                contents=FlexContainer.from_dict(UIBuilder.all_players_card(players)),
-                quick_reply=get_quick_reply()
-            )
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[flex]
-                ))
+            flex = FlexMessage(alt_text="جميع اللاعبين", contents=FlexContainer.from_dict(UIBuilder.all_players_card(players)), quick_reply=get_quick_reply())
+            reply_message(event.reply_token, flex)
             return
 
         if text in ["ايقاف", "stop", "إيقاف"]:
             stopped = game_manager.stop_game(group_id)
-            msg = TextMessage(
-                text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه",
-                quick_reply=get_quick_reply()
-            )
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+            msg = TextMessage(text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه", quick_reply=get_quick_reply())
+            reply_message(event.reply_token, msg)
             return
 
         if text in ["سؤال", "سوال"]:
             msg = TextMessage(text=game_manager.get_random_question(), quick_reply=get_quick_reply())
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+            reply_message(event.reply_token, msg)
             return
         
         if text == "تحدي":
             msg = TextMessage(text=game_manager.get_random_challenge(), quick_reply=get_quick_reply())
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+            reply_message(event.reply_token, msg)
             return
         
         if text == "اعتراف":
             msg = TextMessage(text=game_manager.get_random_confession(), quick_reply=get_quick_reply())
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+            reply_message(event.reply_token, msg)
             return
         
         if text.startswith("منشن"):
             msg = TextMessage(text=game_manager.get_random_mention(), quick_reply=get_quick_reply())
-            with ApiClient(configuration) as api_client:
-                api_instance = MessagingApi(api_client)
-                api_instance.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[msg]
-                ))
+            reply_message(event.reply_token, msg)
             return
         
         if text == "توافق":
             response = game_manager.start_game("compatibility", group_id)
-            if response:
-                messages = [response] if not isinstance(response, list) else response
-                with ApiClient(configuration) as api_client:
-                    api_instance = MessagingApi(api_client)
-                    api_instance.reply_message(ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=messages
-                    ))
+            if isinstance(response, FlexMessage):
+                response.quick_reply = get_quick_reply()
+            reply_message(event.reply_token, response)
             return
 
-        game_commands = {
-            "اغنيه": "song", "لعبه": "human_animal", "سلسله": "chain",
-            "اسرع": "fast_typing", "ضد": "opposite", "تكوين": "letters",
-            "فئه": "category", "مافيا": "mafia"
-        }
+        game_commands = {"aغنيه": "song", "لعبه": "human_animal", "سلسله": "chain", "اسرع": "fast_typing", "ضد": "opposite", "تكوين": "letters", "فئه": "category", "مافيا": "mafia"}
 
         if text in game_commands:
-            if not is_user_registered(group_id, user_id) and text != "مافيا":
-                msg = TextMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
-                with ApiClient(configuration) as api_client:
-                    api_instance = MessagingApi(api_client)
-                    api_instance.reply_message(ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[msg]
-                    ))
+            if text not in ["مافيا", "توافق"] and not is_user_registered(user_id):
+                msg = TextMessage(text="يجب التسجيل اولا لبدء الالعاب", quick_reply=get_quick_reply())
+                reply_message(event.reply_token, msg)
                 return
-            
             response = game_manager.start_game(game_commands[text], group_id)
             if response:
-                messages = [response] if not isinstance(response, list) else response
-                with ApiClient(configuration) as api_client:
-                    api_instance = MessagingApi(api_client)
-                    api_instance.reply_message(ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=messages
-                    ))
+                if isinstance(response, FlexMessage):
+                    response.quick_reply = get_quick_reply()
+                elif isinstance(response, TextMessage):
+                    response.quick_reply = get_quick_reply()
+                reply_message(event.reply_token, response)
             return
-
-        game = game_manager.get_game(group_id)
-        if game:
-            if not is_user_registered(group_id, user_id):
-                return
-            
-            result = game_manager.check_answer(group_id, text, user_id, display_name)
-            if result:
-                if result.get('correct') and result.get('points', 0) > 0:
-                    Database.update_user_points(
-                        user_id,
-                        result['points'],
-                        result.get('won', False),
-                        game_manager.active_games.get(group_id, {}).get('type', 'unknown')
-                    )
-
-                response = result.get('response')
-                if response:
-                    messages = [response] if not isinstance(response, list) else response
-                    with ApiClient(configuration) as api_client:
-                        api_instance = MessagingApi(api_client)
-                        api_instance.reply_message(ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=messages
-                        ))
-
-                if result.get('next_question') and not result.get('game_over'):
-                    next_q = game_manager.next_question(group_id)
-                    if next_q:
-                        try:
-                            time.sleep(1)
-                            with ApiClient(configuration) as api_client:
-                                api_instance = MessagingApi(api_client)
-                                api_instance.push_message(PushMessageRequest(
-                                    to=group_id,
-                                    messages=[next_q]
-                                ))
-                        except Exception as e:
-                            logger.error(f"خطأ في إرسال السؤال التالي: {e}")
-
-                if result.get('game_over'):
-                    game_manager.stop_game(group_id)
-    
+    except AttributeError as e:
+        logger.error(f"خطأ في بنية الرسالة: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"خطأ في معالجة الرسالة: {e}", exc_info=True)
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return {'status': 'healthy', 'service': 'line-bot'}, 200
+    return {'status': 'healthy', 'service': 'line-bot', 'timestamp': datetime.now().isoformat()}, 200
+
+@app.route('/', methods=['GET'])
+def index():
+    return {'name': 'Mafia Bot', 'version': '2.0', 'status': 'running'}, 200
 
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', '0') == '1'
+    logger.info(f"بدء التطبيق على المنفذ {port}")
     app.run(host='0.0.0.0', port=port, debug=debug)
