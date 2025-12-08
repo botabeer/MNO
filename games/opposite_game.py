@@ -1,5 +1,6 @@
 # games/opposite_game.py
 import random
+from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
 from constants import COLORS
 from games.game_helpers import (
     normalize_text,
@@ -10,6 +11,7 @@ from games.game_helpers import (
     create_winner_card,
     create_hint_text
 )
+
 
 class OppositeGame:
     def __init__(self, line_bot_api, total_questions=5, **kwargs):
@@ -31,34 +33,27 @@ class OppositeGame:
         self.hints_used = {}
         self.registered = set()
 
-    # ---------------------------------------------------
-    # تسجيل اللاعبين
-    # ---------------------------------------------------
+    # -----------------------------------------
     def register_player(self, uid, name):
         self.registered.add(uid)
 
-    # ---------------------------------------------------
-    # بدء اللعبة
-    # ---------------------------------------------------
+    # -----------------------------------------
     def start_game(self):
         self.questions = random.sample(
-            self.all_words,
-            min(self.total_questions, len(self.all_words))
+            self.all_words, min(self.total_questions, len(self.all_words))
         )
         self.current_question = 0
-        self.player_scores = {}
-        self.answered_users = set()
-        self.hints_used = {}
+        self.player_scores.clear()
+        self.answered_users.clear()
+        self.hints_used.clear()
 
-        return self._build_question_card()
+        return self._build_question_flex()
 
-    # ---------------------------------------------------
-    # إنشاء بطاقة السؤال
-    # ---------------------------------------------------
-    def _build_question_card(self):
+    # -----------------------------------------
+    def _build_question_flex(self):
         q = self.questions[self.current_question]
 
-        card = {
+        body = {
             "type": "bubble",
             "body": {
                 "type": "box",
@@ -75,10 +70,10 @@ class OppositeGame:
                         "text": f"ما هو عكس: {q['word']}",
                         "size": "lg",
                         "weight": "bold",
-                        "color": COLORS["text_dark"],
                         "align": "center",
-                        "wrap": True,
-                        "margin": "lg"
+                        "color": COLORS["text_dark"],
+                        "margin": "lg",
+                        "wrap": True
                     },
                     create_separator(),
                     *create_action_buttons()
@@ -86,99 +81,80 @@ class OppositeGame:
             }
         }
 
-        return card
+        return FlexMessage(
+            alt_text="لعبة الأضداد",
+            contents=FlexContainer.from_dict(body)
+        )
 
-    # ---------------------------------------------------
-    # السؤال التالي
-    # ---------------------------------------------------
+    # -----------------------------------------
     def next_question(self):
         self.current_question += 1
 
         if self.current_question < self.total_questions:
-            self.answered_users = set()
-            self.hints_used = {}
-            return self._build_question_card()
+            self.answered_users.clear()
+            self.hints_used.clear()
+            return self._build_question_flex()
 
         return self._end_game()
 
-    # ---------------------------------------------------
-    # فحص الإجابة
-    # ---------------------------------------------------
+    # -----------------------------------------
+    def _build_text_flex(self, text, color=None):
+        """إنشاء رسالة فليكس نصية بسيطة بشكل موحد."""
+        body = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "paddingAll": "16px",
+                "layout": "vertical",
+                "contents": [{
+                    "type": "text",
+                    "text": text,
+                    "wrap": True,
+                    "color": color if color else COLORS["text_dark"]
+                }]
+            }
+        }
+        return FlexMessage(alt_text=text, contents=FlexContainer.from_dict(body))
+
+    # -----------------------------------------
     def check_answer(self, answer, user_id, display_name):
         if user_id not in self.registered:
-            # تجاهل المستخدمين غير المسجلين
             return None
 
+        # منع تكرار الإجابة
         if user_id in self.answered_users:
             return None
 
         q = self.questions[self.current_question]
         ans = normalize_text(answer)
 
-        # ---------------- تلميح ----------------
+        # ------------------ التلميح ------------------
         if ans in ["لمح", "تلميح"]:
             if user_id not in self.hints_used:
                 self.hints_used[user_id] = True
                 hint = create_hint_text(q["opposite"])
                 return {
-                    "response": {
-                        "type": "bubble",
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "paddingAll": "16px",
-                            "contents": [{
-                                "type": "text",
-                                "text": hint,
-                                "color": COLORS["primary"],
-                                "wrap": True
-                            }]
-                        }
-                    },
+                    "response": self._build_text_flex(hint, COLORS["primary"]),
                     "correct": False
                 }
             return {
-                "response": {
-                    "type": "bubble",
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "paddingAll": "16px",
-                        "contents": [{
-                            "type": "text",
-                            "text": "استخدمت التلميح بالفعل",
-                            "color": COLORS["warning"],
-                            "wrap": True
-                        }]
-                    }
-                },
+                "response": self._build_text_flex("استخدمت التلميح بالفعل", COLORS["warning"]),
                 "correct": False
             }
 
-        # ---------------- طلب الجواب ----------------
-        if ans in ["جاوب", "الجواب", "الحل"]:
+        # ------------------ طلب الجواب ------------------
+        if ans in ["جاوب", "الحل", "الجواب"]:
             self.answered_users.add(user_id)
 
             if self.current_question + 1 < self.total_questions:
                 return {
-                    "response": {
-                        "type": "bubble",
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "paddingAll": "16px",
-                            "contents": [{
-                                "type": "text",
-                                "text": f"الإجابة: {q['opposite']}",
-                                "wrap": True
-                            }]
-                        }
-                    },
+                    "response": self._build_text_flex(f"الإجابة: {q['opposite']}"),
                     "next_question": True
                 }
+
             return self._end_game()
 
-        # ---------------- إجابة صحيحة ----------------
+        # ------------------ إجابة صحيحة ------------------
         if ans == normalize_text(q["opposite"]):
             self.answered_users.add(user_id)
 
@@ -187,46 +163,23 @@ class OppositeGame:
 
             if self.current_question + 1 < self.total_questions:
                 return {
-                    "response": {
-                        "type": "bubble",
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "paddingAll": "16px",
-                            "contents": [{
-                                "type": "text",
-                                "text": f"إجابة صحيحة يا {display_name}!\n+1 نقطة",
-                                "color": COLORS["success"],
-                                "wrap": True
-                            }]
-                        }
-                    },
+                    "response": self._build_text_flex(
+                        f"إجابة صحيحة يا {display_name}!\n+1 نقطة",
+                        COLORS["success"]
+                    ),
                     "next_question": True
                 }
 
             return self._end_game()
 
-        # ---------------- إجابة خاطئة ----------------
+        # ------------------ إجابة خاطئة ------------------
         return None
 
-    # ---------------------------------------------------
-    # نهاية اللعبة
-    # ---------------------------------------------------
+    # -----------------------------------------
     def _end_game(self):
         if not self.player_scores:
             return {
-                "response": {
-                    "type": "bubble",
-                    "body": {
-                        "type": "box",
-                        "paddingAll": "16px",
-                        "contents": [{
-                            "type": "text",
-                            "text": "انتهت اللعبة",
-                            "wrap": True
-                        }]
-                    }
-                },
+                "response": self._build_text_flex("انتهت اللعبة"),
                 "game_over": True
             }
 
@@ -235,15 +188,16 @@ class OppositeGame:
             key=lambda x: x[1]["score"],
             reverse=True
         )
-
         winner = sorted_players[0][1]
 
-        card = create_winner_card(winner, sorted_players, "لعبة الأضداد")
+        winner_card = create_winner_card(winner, sorted_players, "لعبة الأضداد")
 
         return {
-            "response": card,
+            "response": FlexMessage(
+                alt_text="نتائج اللعبة",
+                contents=FlexContainer.from_dict(winner_card)
+            ),
             "game_over": True,
             "winner": winner,
-            "all_players": sorted_players,
-            "game_name": "لعبة الأضداد"
+            "all_players": sorted_players
         }
