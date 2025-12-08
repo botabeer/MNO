@@ -1,8 +1,7 @@
-# __init__.py
-# حزمة الألعاب - واجهة بسيطة للاستيراد
+# games/__init__.py
+from .constants import *
 from .game_manager import GameManager
 from .game_helpers import *
-from .constants import *
 from .category_letter_game import CategoryLetterGame
 from .chain_words_game import ChainWordsGame
 from .compatibility_game import CompatibilityGame
