@@ -30,6 +30,13 @@ ENV/
 *.sqlite3
 
 # --------------------------
+# Runtime JSON storage
+# --------------------------
+data/*.json
+data/*.tmp
+data/*.cache
+
+# --------------------------
 # Editor configs
 # --------------------------
 .vscode/
