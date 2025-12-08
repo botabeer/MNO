@@ -8,27 +8,31 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
+    """Database helper for managing user data, scores, and game history."""
+
     DB_NAME = "game_scores.db"
     _lock = Lock()
 
-    # -----------------------------
+    # =============================
     #  Connection Helper
-    # -----------------------------
+    # =============================
     @staticmethod
     def get_connection():
+        """Returns a SQLite connection with WAL-mode enabled."""
         conn = sqlite3.connect(
             Database.DB_NAME, timeout=10.0, check_same_thread=False
         )
-        conn.row_factory = sqlite3.Row  # return rows as dict-like objects
-        conn.execute("PRAGMA journal_mode=WAL")  # better concurrency
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
 
-    # -----------------------------
+    # =============================
     #  Initialize Database
-    # -----------------------------
+    # =============================
     @staticmethod
     def init():
+        """Creates tables and indexes if they do not exist."""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -66,7 +70,7 @@ class Database:
 
                 # Indexes
                 cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_users_points ON users(total_points DESC, is_active)"
+                    "CREATE INDEX IF NOT EXISTS idx_users_points ON users(total_points DESC, wins DESC)"
                 )
                 cursor.execute(
                     "CREATE INDEX IF NOT EXISTS idx_users_activity ON users(last_activity, is_active)"
@@ -78,15 +82,15 @@ class Database:
                 logger.info("Database initialized successfully")
 
         except Exception as e:
-            logger.error(f"Database initialization error: {e}", exc_info=True)
+            logger.error("Database initialization error", exc_info=True)
             raise
 
-    # -----------------------------
+    # =============================
     #  Utility Helper
-    # -----------------------------
+    # =============================
     @staticmethod
     def _parse_datetime(dt_str):
-        """Handles different datetime formats from SQLite."""
+        """Parses SQLite datetime formats safely."""
         if not dt_str:
             return None
 
@@ -99,22 +103,23 @@ class Database:
             try:
                 return datetime.strptime(dt_str, fmt)
             except:
-                pass
+                continue
 
-        return None  # fallback if format unknown
+        return None
 
-    # -----------------------------
+    # =============================
     #  User Registration / Update
-    # -----------------------------
+    # =============================
     @staticmethod
     def register_or_update_user(user_id, display_name):
+        """Registers new user or updates existing profile."""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
                     cursor = conn.cursor()
 
                     cursor.execute(
-                        "SELECT user_id FROM users WHERE user_id = ?", (user_id,)
+                        "SELECT 1 FROM users WHERE user_id = ?", (user_id,)
                     )
                     exists = cursor.fetchone()
 
@@ -122,7 +127,7 @@ class Database:
                         cursor.execute(
                             """
                             UPDATE users
-                            SET display_name = ?, 
+                            SET display_name = ?,
                                 is_active = 1,
                                 is_withdrawn = 0,
                                 last_activity = CURRENT_TIMESTAMP,
@@ -134,8 +139,8 @@ class Database:
                     else:
                         cursor.execute(
                             """
-                            INSERT INTO users (user_id, display_name, is_active, is_withdrawn, last_activity)
-                            VALUES (?, ?, 1, 0, CURRENT_TIMESTAMP)
+                            INSERT INTO users (user_id, display_name)
+                            VALUES (?, ?)
                             """,
                             (user_id, display_name),
                         )
@@ -144,14 +149,15 @@ class Database:
                     return True
 
             except Exception as e:
-                logger.error(f"Error registering user: {e}", exc_info=True)
+                logger.error("Error registering user", exc_info=True)
                 return False
 
-    # -----------------------------
+    # =============================
     #  Update Last Activity
-    # -----------------------------
+    # =============================
     @staticmethod
     def update_last_activity(user_id):
+        """Updates the last activity timestamp for an active user."""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
@@ -164,19 +170,21 @@ class Database:
                         (user_id,),
                     )
                     return True
-            except Exception as e:
-                logger.error(f"Error updating activity: {e}")
+            except Exception:
+                logger.error("Error updating activity", exc_info=True)
                 return False
 
-    # -----------------------------
+    # =============================
     #  Cleanup Inactive Users
-    # -----------------------------
+    # =============================
     @staticmethod
     def cleanup_inactive_users():
+        """Marks users as inactive if they haven't logged in within INACTIVITY_DAYS."""
         with Database._lock:
             try:
-                cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
-                cutoff_str = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
+                cutoff = (datetime.now() - timedelta(days=INACTIVITY_DAYS)).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
                 with Database.get_connection() as conn:
                     cursor = conn.execute(
@@ -185,75 +193,85 @@ class Database:
                         SET is_active = 0, updated_at = CURRENT_TIMESTAMP
                         WHERE last_activity < ? AND is_active = 1
                         """,
-                        (cutoff_str,),
+                        (cutoff,),
                     )
 
                     count = cursor.rowcount
                     if count > 0:
                         logger.info(f"Deactivated {count} inactive users")
+
                     return count
 
-            except Exception as e:
-                logger.error(f"Error cleaning up users: {e}")
+            except Exception:
+                logger.error("Error cleaning inactive users", exc_info=True)
                 return 0
 
-    # -----------------------------
+    # =============================
     #  User Status Checks
-    # -----------------------------
+    # =============================
     @staticmethod
     def is_user_registered(user_id):
+        """Checks if a user is active and not withdrawn."""
         try:
             with Database.get_connection() as conn:
                 cur = conn.execute(
-                    "SELECT is_active, is_withdrawn FROM users WHERE user_id = ?",
+                    """
+                    SELECT is_active, is_withdrawn 
+                    FROM users 
+                    WHERE user_id = ?
+                    """,
                     (user_id,),
                 )
                 r = cur.fetchone()
-                return r and r["is_active"] == 1 and r["is_withdrawn"] == 0
-        except Exception as e:
-            logger.error(f"Error checking registration: {e}")
+                return bool(r and r["is_active"] == 1 and r["is_withdrawn"] == 0)
+
+        except Exception:
+            logger.error("Error checking user registration", exc_info=True)
             return False
 
     @staticmethod
     def is_user_withdrawn(user_id):
+        """Returns True if user marked as withdrawn."""
         try:
             with Database.get_connection() as conn:
                 cur = conn.execute(
-                    "SELECT is_withdrawn FROM users WHERE user_id = ?", (user_id,)
+                    "SELECT is_withdrawn FROM users WHERE user_id = ?",
+                    (user_id,),
                 )
                 r = cur.fetchone()
-                return r and r["is_withdrawn"] == 1
-        except Exception as e:
-            logger.error(f"Error checking withdrawal: {e}")
+                return bool(r and r["is_withdrawn"] == 1)
+
+        except Exception:
+            logger.error("Error checking user withdrawal", exc_info=True)
             return False
 
-    # -----------------------------
+    # =============================
     #  Withdraw & Reactivate
-    # -----------------------------
+    # =============================
     @staticmethod
     def withdraw_user(user_id):
+        """Marks user as withdrawn."""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
                     cur = conn.execute(
                         """
                         UPDATE users
-                        SET is_withdrawn = 1, updated_at = CURRENT_TIMESTAMP
+                        SET is_withdrawn = 1,
+                            updated_at = CURRENT_TIMESTAMP
                         WHERE user_id = ?
                         """,
                         (user_id,),
                     )
-                    ok = cur.rowcount > 0
-                    if ok:
-                        logger.info(f"User withdrew: {user_id}")
-                    return ok
+                    return cur.rowcount > 0
 
-            except Exception as e:
-                logger.error(f"Error withdrawing user: {e}")
+            except Exception:
+                logger.error("Error withdrawing user", exc_info=True)
                 return False
 
     @staticmethod
     def reactivate_user(user_id):
+        """Reactivates withdrawn or inactive user."""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
@@ -268,51 +286,54 @@ class Database:
                         """,
                         (user_id,),
                     )
-                    ok = cur.rowcount > 0
-                    if ok:
-                        logger.info(f"User reactivated: {user_id}")
-                    return ok
+                    return cur.rowcount > 0
 
-            except Exception as e:
-                logger.error(f"Error reactivating user: {e}")
+            except Exception:
+                logger.error("Error reactivating user", exc_info=True)
                 return False
 
-    # -----------------------------
+    # =============================
     #  Fetch User Name
-    # -----------------------------
+    # =============================
     @staticmethod
     def get_existing_user_name(user_id):
+        """Returns user's display name."""
         try:
             with Database.get_connection() as conn:
                 cur = conn.execute(
-                    "SELECT display_name FROM users WHERE user_id = ?", (user_id,)
+                    "SELECT display_name FROM users WHERE user_id = ?",
+                    (user_id,),
                 )
-                r = cur.fetchone()
-                return r["display_name"] if r else None
-        except Exception as e:
-            logger.error(f"Error fetching user name: {e}")
+                row = cur.fetchone()
+                return row["display_name"] if row else None
+
+        except Exception:
+            logger.error("Error fetching username", exc_info=True)
             return None
 
-    # -----------------------------
-    #  Update Points & Insert History
-    # -----------------------------
+    # =============================
+    #  Update Points + History
+    # =============================
     @staticmethod
     def update_user_points(user_id, points, won, game_type):
+        """Updates user score and inserts history entry."""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
                     cursor = conn.cursor()
 
-                    # Validate user
                     cursor.execute(
-                        "SELECT is_active, is_withdrawn FROM users WHERE user_id = ?",
+                        """
+                        SELECT is_active, is_withdrawn
+                        FROM users
+                        WHERE user_id = ?
+                        """,
                         (user_id,),
                     )
                     r = cursor.fetchone()
+
                     if not r or r["is_active"] != 1 or r["is_withdrawn"] == 1:
-                        logger.warning(
-                            f"Attempted to update points for inactive/withdrawn user: {user_id}"
-                        )
+                        logger.warning(f"Point update denied for {user_id}")
                         return False
 
                     cursor.execute(
@@ -325,7 +346,7 @@ class Database:
                             updated_at = CURRENT_TIMESTAMP
                         WHERE user_id = ?
                         """,
-                        (points, 1 if won else 0, user_id),
+                        (points, int(won), user_id),
                     )
 
                     cursor.execute(
@@ -333,21 +354,22 @@ class Database:
                         INSERT INTO game_history (user_id, game_type, points, won)
                         VALUES (?, ?, ?, ?)
                         """,
-                        (user_id, game_type, points, won),
+                        (user_id, game_type, points, int(won)),
                     )
 
-                    logger.info(f"Updated points for user {user_id}: +{points}")
+                    logger.info(f"Points updated: {user_id} +{points}")
                     return True
 
-            except Exception as e:
-                logger.error(f"Error updating points: {e}")
+            except Exception:
+                logger.error("Error updating points", exc_info=True)
                 return False
 
-    # -----------------------------
+    # =============================
     #  Fetch Stats
-    # -----------------------------
+    # =============================
     @staticmethod
     def get_user_stats(user_id):
+        """Returns user's score statistics."""
         try:
             with Database.get_connection() as conn:
                 cur = conn.execute(
@@ -360,23 +382,23 @@ class Database:
                 )
                 r = cur.fetchone()
 
-                if r:
+                if not r:
                     return {
-                        "total_points": r["total_points"] or 0,
-                        "games_played": r["games_played"] or 0,
-                        "wins": r["wins"] or 0,
-                        "display_name": r["display_name"] or "User",
+                        "total_points": 0,
+                        "games_played": 0,
+                        "wins": 0,
+                        "display_name": "User",
                     }
 
                 return {
-                    "total_points": 0,
-                    "games_played": 0,
-                    "wins": 0,
-                    "display_name": "User",
+                    "total_points": r["total_points"] or 0,
+                    "games_played": r["games_played"] or 0,
+                    "wins": r["wins"] or 0,
+                    "display_name": r["display_name"],
                 }
 
-        except Exception as e:
-            logger.error(f"Error fetching stats: {e}")
+        except Exception:
+            logger.error("Error fetching stats", exc_info=True)
             return {
                 "total_points": 0,
                 "games_played": 0,
@@ -384,11 +406,12 @@ class Database:
                 "display_name": "User",
             }
 
-    # -----------------------------
+    # =============================
     #  Leaderboard
-    # -----------------------------
+    # =============================
     @staticmethod
     def get_leaderboard(limit=20):
+        """Returns a leaderboard sorted by points."""
         try:
             with Database.get_connection() as conn:
                 cur = conn.execute(
@@ -403,22 +426,23 @@ class Database:
                 )
                 return [dict(r) for r in cur.fetchall()]
 
-        except Exception as e:
-            logger.error(f"Error fetching leaderboard: {e}")
+        except Exception:
+            logger.error("Error fetching leaderboard", exc_info=True)
             return []
 
-    # -----------------------------
+    # =============================
     #  Get All Players
-    # -----------------------------
+    # =============================
     @staticmethod
     def get_all_players():
+        """Returns all players with active/withdrawn status."""
         try:
             cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
 
             with Database.get_connection() as conn:
                 cur = conn.execute(
                     """
-                    SELECT display_name, total_points, games_played, 
+                    SELECT display_name, total_points, games_played,
                            is_active, is_withdrawn, last_activity
                     FROM users
                     ORDER BY total_points DESC
@@ -427,12 +451,12 @@ class Database:
 
                 players = []
                 for r in cur.fetchall():
-                    last_activity = Database._parse_datetime(r["last_activity"])
+                    last = Database._parse_datetime(r["last_activity"])
                     active = (
                         r["is_active"] == 1
                         and r["is_withdrawn"] == 0
-                        and last_activity
-                        and last_activity >= cutoff_date
+                        and last
+                        and last >= cutoff_date
                     )
 
                     players.append(
@@ -447,6 +471,6 @@ class Database:
 
                 return players
 
-        except Exception as e:
-            logger.error(f"Error fetching all players: {e}")
+        except Exception:
+            logger.error("Error fetching players", exc_info=True)
             return []
