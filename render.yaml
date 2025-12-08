@@ -4,16 +4,22 @@ services:
     env: python
     region: oregon
 
+    runtime: python3
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
 
-    startCommand: gunicorn app:app \
-      --bind 0.0.0.0:$PORT \
-      --workers 3 \
-      --threads 2 \
-      --timeout 120 \
-      --log-level info
+    startCommand: |
+      gunicorn app:app \
+        --bind 0.0.0.0:$PORT \
+        --workers 3 \
+        --threads 4 \
+        --worker-class gthread \
+        --timeout 180 \
+        --graceful-timeout 30 \
+        --log-level info \
+        --access-logfile - \
+        --error-logfile -
 
     autoDeploy: true
 
@@ -31,3 +37,5 @@ services:
 
     healthCheckPath: /health
     healthCheckTimeout: 10
+    healthCheckInterval: 15
+    healthCheckAttempts: 3
