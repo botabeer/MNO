@@ -30,7 +30,6 @@ from ui_builder import UIBuilder
 from games.game_manager import GameManager
 from database import Database
 from error_tracker import ErrorTracker
-from quick_reply_manager import QuickReplyManager
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -144,12 +143,9 @@ def get_source_key(event):
     return getattr(src, 'group_id', None) or getattr(src, 'room_id', None) or getattr(src, 'user_id', None)
 
 @ErrorTracker.track_function("Reply Message")
-def reply_message(reply_token, messages, quick_reply_type="main"):
+def reply_message(reply_token, messages):
     if not isinstance(messages, list):
         messages = [messages]
-    
-    for msg in messages:
-        QuickReplyManager.add_quick_reply_to_message(msg, quick_reply_type)
     
     try:
         line_bot_api.reply_message(
@@ -159,12 +155,9 @@ def reply_message(reply_token, messages, quick_reply_type="main"):
         ErrorTracker.log_error(e, "Reply Message Failed")
 
 @ErrorTracker.track_function("Push Message")
-def push_message(to, messages, quick_reply_type="main"):
+def push_message(to, messages):
     if not isinstance(messages, list):
         messages = [messages]
-    
-    for msg in messages:
-        QuickReplyManager.add_quick_reply_to_message(msg, quick_reply_type)
     
     try:
         line_bot_api.push_message(
@@ -177,7 +170,7 @@ def send_next_question_async(target_group):
     try:
         next_q = game_manager.next_question(target_group)
         if next_q:
-            push_message(target_group, next_q, "game")
+            push_message(target_group, next_q)
     except Exception as e:
         ErrorTracker.log_error(e, "Send Next Question")
 
@@ -305,12 +298,11 @@ def handle_message(event):
             game = game_manager.get_game(group_key)
             if game:
                 game_type = game_manager.active_games.get(group_key, {}).get('type', '')
-                qr_type = "mafia" if game_type == "mafia" else "game"
                 
                 if game_type not in ['mafia', 'compatibility']:
                     try:
                         if not Database.is_user_registered(user_id):
-                            reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا للمشاركة في هذه اللعبة"), qr_type)
+                            reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا للمشاركة في هذه اللعبة"))
                             return
                     except Exception as e:
                         ErrorTracker.log_error(e, "Registration Check", user_id)
@@ -336,7 +328,7 @@ def handle_message(event):
                             except Exception as e:
                                 ErrorTracker.log_error(e, "Update Points", user_id)
                         if result.get('response'):
-                            reply_message(event.reply_token, result.get('response'), qr_type)
+                            reply_message(event.reply_token, result.get('response'))
                         if result.get('next_question') and not result.get('game_over'):
                             executor.submit(send_next_question_async, group_key)
                         if result.get('game_over'):
@@ -547,19 +539,17 @@ def handle_message(event):
         }
 
         if normalized_text in game_commands:
-            qr_type = "mafia" if normalized_text == "مافيا" else "game"
-            
             if normalized_text not in {"مافيا", "توافق"}:
                 try:
                     if not Database.is_user_registered(user_id):
-                        reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا لبدء الالعاب"), qr_type)
+                        reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا لبدء الالعاب"))
                         return
                 except Exception as e:
                     ErrorTracker.log_error(e, "Game Start Check", user_id)
             
             response = game_manager.start_game(game_commands[normalized_text], group_key)
             if response:
-                reply_message(event.reply_token, response, qr_type)
+                reply_message(event.reply_token, response)
             return
 
     except Exception as e:
