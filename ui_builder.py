@@ -1,4 +1,3 @@
-# ui_builder.py
 from constants import THEMES
 
 class UIBuilder:
@@ -178,7 +177,7 @@ class UIBuilder:
             })
             contents.append({
                 "type": "text",
-                "text": "اغنيه - لعبه - سلسله - اسرع - ضد - تكوين - سين - لوريت",
+                "text": "اغنيه - لعبه - سلسله - اسرع - ضد - تكوين - سين - حروف",
                 "size": "xs", "color": colors["text_light"], "wrap": True, "margin": "sm"
             })
             contents.append(UIBuilder.separator(theme=theme))
@@ -212,15 +211,7 @@ class UIBuilder:
         colors = UIBuilder.get_colors(theme)
         contents = [UIBuilder.header("لوحة الصدارة", theme=theme)]
         for i, p in enumerate(leaders[:10], 1):
-            medal = ""
-            if i == 1:
-                medal = "1. "
-            elif i == 2:
-                medal = "2. "
-            elif i == 3:
-                medal = "3. "
-            else:
-                medal = f"{i}. "
+            medal = f"{i}. "
             contents.append({
                 "type": "text",
                 "text": f"{medal}{p.get('display_name', 'User')} - {p.get('total_points', 0)} نقطة",
