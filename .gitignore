@@ -1,79 +1,36 @@
-# --------------------------
-# Python compiled / cache
-# --------------------------
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-
-# --------------------------
-# Virtual environments
-# --------------------------
 venv/
 env/
 ENV/
 .venv/
 .venv*/
-
-# --------------------------
-# Environment files
-# --------------------------
 .env
 .env.*
-!.env.example   # Keep template version
-
-# --------------------------
-# Database files
-# --------------------------
+!.env.example
 *.db
 *.sqlite
 *.sqlite3
-
-# --------------------------
-# Runtime JSON storage
-# --------------------------
 data/*.json
 data/*.tmp
 data/*.cache
-
-# --------------------------
-# Editor configs
-# --------------------------
 .vscode/
 .idea/
 *.swp
-
-# --------------------------
-# Logs
-# --------------------------
 *.log
 logs/
 *.bak
 *.backup
-
-# --------------------------
-# Tests & coverage
-# --------------------------
 .pytest_cache/
 .coverage
 coverage.xml
 htmlcov/
-
-# --------------------------
-# macOS / Windows files
-# --------------------------
 .DS_Store
 Thumbs.db
-
-# --------------------------
-# Docker-related
-# --------------------------
 docker-compose.override.yml
 *.pid
-
-# --------------------------
-# Project specific
-# --------------------------
 games/__pycache__/
 games/*.tmp
 temp/
