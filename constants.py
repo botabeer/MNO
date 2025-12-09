@@ -1,31 +1,37 @@
 # constants.py
 from datetime import timedelta
 
-# ================== Themes ================== #
+# ================== Themes - iOS Style ================== #
 THEMES = {
     "light": {
-        "primary": "#007AFF",
-        "success": "#34C759",
-        "warning": "#FF9500",
-        "danger": "#FF3B30",
-        "card_bg": "#F2F2F7",
+        # iOS Light Theme - Clean & Modern
+        "primary": "#007AFF",           # iOS Blue
+        "success": "#34C759",           # iOS Green
+        "warning": "#FF9500",           # iOS Orange
+        "danger": "#FF3B30",            # iOS Red
+        "card_bg": "#FFFFFF",           # Pure White
+        "secondary_bg": "#F2F2F7",     # Light Gray
         "white": "#FFFFFF",
         "text_dark": "#000000",
-        "text_light": "#8E8E93",
-        "border": "#C6C6C8",
-        "secondary_bg": "#E5E5EA"
+        "text_light": "#8E8E93",       # iOS Gray
+        "border": "#E5E5EA",           # Light Border
+        "glass_bg": "rgba(255, 255, 255, 0.7)",  # Glassmorphism
+        "shadow": "rgba(0, 0, 0, 0.1)"
     },
     "dark": {
-        "primary": "#0A84FF",
-        "success": "#30D158",
-        "warning": "#FF9F0A",
-        "danger": "#FF453A",
-        "card_bg": "#1C1C1E",
+        # iOS Dark Theme - Elegant & Eye-friendly
+        "primary": "#0A84FF",           # iOS Blue (Dark)
+        "success": "#30D158",           # iOS Green (Dark)
+        "warning": "#FF9F0A",           # iOS Orange (Dark)
+        "danger": "#FF453A",            # iOS Red (Dark)
+        "card_bg": "#1C1C1E",           # Dark Gray
+        "secondary_bg": "#2C2C2E",     # Lighter Dark Gray
         "white": "#FFFFFF",
         "text_dark": "#FFFFFF",
-        "text_light": "#8E8E93",
-        "border": "#38383A",
-        "secondary_bg": "#2C2C2E"
+        "text_light": "#98989D",       # iOS Gray (Dark)
+        "border": "#38383A",           # Dark Border
+        "glass_bg": "rgba(28, 28, 30, 0.7)",  # Glassmorphism Dark
+        "shadow": "rgba(0, 0, 0, 0.3)"
     }
 }
 
@@ -74,5 +80,5 @@ GAME_TYPES = {
     "human_animal": "انسان حيوان نبات بلاد",
     "compatibility": "نسبة التوافق",
     "mafia": "المافيا",
-    "loreet": "لو ريت"
+    "letter": "لعبة حروف"
 }
