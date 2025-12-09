@@ -1,24 +1,10 @@
 services:
   - type: web
-    name: mno-bot
+    name: mafia-bot
     env: python
     region: oregon
-    runtime: python3
-    buildCommand: |
-      pip install --upgrade pip
-      pip install -r requirements.txt
-    startCommand: |
-      gunicorn app:app \
-        --bind 0.0.0.0:$PORT \
-        --workers 3 \
-        --threads 4 \
-        --worker-class gthread \
-        --timeout 180 \
-        --graceful-timeout 30 \
-        --log-level info \
-        --access-logfile - \
-        --error-logfile -
-    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
@@ -26,11 +12,3 @@ services:
         sync: false
       - key: PYTHON_VERSION
         value: 3.11.7
-      - key: FLASK_ENV
-        value: production
-      - key: TZ
-        value: "Asia/Riyadh"
-    healthCheckPath: /health
-    healthCheckTimeout: 10
-    healthCheckInterval: 15
-    healthCheckAttempts: 3
