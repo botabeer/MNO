@@ -47,7 +47,7 @@ class FastTypingGame:
         self.start_time = datetime.now()
         
         return FlexSendMessage(
-            alt_text="الكتابه السريعه",
+            alt_text="الكتابة السريعة",
             contents={
                 "type": "bubble",
                 "body": {
@@ -55,13 +55,10 @@ class FastTypingGame:
                     "layout": "vertical",
                     "spacing": "md",
                     "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الكتابه السريعه", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الكتابة السريعة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                         {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
                         {"type": "separator", "margin": "md", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": word, "size": "lg", "color": COLORS['primary'], "weight": "bold", "align": "center", "wrap": True}, {"type": "text", "text": "اكتب النص باسرع وقت", "size": "sm", "color": COLORS['text_dark'], "margin": "md", "align": "center"}, {"type": "text", "text": f"لديك {self.time_limit} ثانيه", "size": "xs", "color": COLORS['text_light'], "margin": "xs", "align": "center"}], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "sm"}
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": word, "size": "lg", "color": COLORS['primary'], "weight": "bold", "align": "center", "wrap": True}, {"type": "text", "text": "اكتب النص باسرع وقت", "size": "sm", "color": COLORS['text_dark'], "margin": "md", "align": "center"}, {"type": "text", "text": f"لديك {self.time_limit} ثانية", "size": "xs", "color": COLORS['text_light'], "margin": "xs", "align": "center"}], "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
@@ -79,17 +76,6 @@ class FastTypingGame:
     def check_answer(self, text, user_id, display_name):
         if user_id in self.answered_users:
             return None
-
-        if text.lower() in ['لمح', 'تلميح']:
-            word = self.questions[self.current_question]
-            return {'response': TextSendMessage(text=f"يبدأ بحرف: {word[0]}\nعدد الحروف: {len(word)}"), 'points': 0, 'correct': False}
-
-        if text.lower() in ['جاوب', 'الجواب']:
-            self.answered_users.add(user_id)
-            word = self.questions[self.current_question]
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"الاجابة: {word}"), 'points': 0, 'correct': False, 'next_question': True}
-            return self._end_game()
 
         if self.start_time:
             elapsed = (datetime.now() - self.start_time).seconds
@@ -111,13 +97,13 @@ class FastTypingGame:
             self.answered_users.add(user_id)
 
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"اجابه صحيحه {display_name}\nالوقت {elapsed_time:.1f} ثانيه\n+{points} نقطه"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
+                return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\nالوقت {elapsed_time:.1f} ثانية\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
             return self._end_game()
         return None
 
     def _end_game(self):
         if not self.player_scores:
-            return {'response': TextSendMessage(text="انتهت اللعبه"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
+            return {'response': TextSendMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
         
         sorted_players = sorted(self.player_scores.items(), key=lambda x: (x[1]['score'], -x[1]['time']), reverse=True)
         winner = sorted_players[0][1]
@@ -126,10 +112,10 @@ class FastTypingGame:
         
         for i, p in enumerate(sorted_players[:5]):
             rank = f"{i+1}."
-            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": rank, "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطه", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
+            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": rank, "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
         
         winner_card = FlexSendMessage(
-            alt_text="نتائج اللعبه",
+            alt_text="نتائج اللعبة",
             contents={
                 "type": "bubble",
                 "body": {
@@ -137,12 +123,12 @@ class FastTypingGame:
                     "layout": "vertical",
                     "spacing": "md",
                     "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبه", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطه", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "button", "action": {"type": "message", "label": "إعادة اللعب", "text": "اسرع"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
+                        {"type": "button", "action": {"type": "message", "label": "اعادة اللعب", "text": "اسرع"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
