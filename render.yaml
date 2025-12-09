@@ -3,12 +3,10 @@ services:
     name: mno-bot
     env: python
     region: oregon
-
     runtime: python3
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
-
     startCommand: |
       gunicorn app:app \
         --bind 0.0.0.0:$PORT \
@@ -20,9 +18,7 @@ services:
         --log-level info \
         --access-logfile - \
         --error-logfile -
-
     autoDeploy: true
-
     envVars:
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
@@ -34,7 +30,6 @@ services:
         value: production
       - key: TZ
         value: "Asia/Riyadh"
-
     healthCheckPath: /health
     healthCheckTimeout: 10
     healthCheckInterval: 15
