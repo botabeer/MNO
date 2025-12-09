@@ -1,24 +1,21 @@
-# letters_words_game.py
+# games/letters_words_game.py
 from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 import random
-from constants import COLORS
-from games.game_helpers import (
-    normalize_text, create_game_header, create_progress_box,
-    create_separator, create_action_buttons, create_winner_card
-)
+from constants import THEMES
+from games.game_helpers import normalize_text, create_game_header, create_progress_box, create_separator, create_action_buttons, create_winner_card
+from database import Database
 
 class LettersWordsGame:
     def __init__(self, line_bot_api, total_questions=5, words_needed=3):
         self.line_bot_api = line_bot_api
-
         self.challenges = [
             {"letters": "ق ل م ع ر ك", "answers": ["قلم", "علم", "عمر", "رقم", "ملك", "كرم"]},
             {"letters": "ك ت ا ب ر ل", "answers": ["كتاب", "تراب", "بكر", "كبر", "بار", "كرت"]},
+            {"letters": "س م ك ن ر ة", "answers": ["سمك", "كرة", "نمر", "رسم", "كمن", "سكر"]},
+            {"letters": "ح د ي ق ة ر", "answers": ["حديقة", "قرد", "حرق", "دري", "قيد", "حير"]}
         ]
-
         self.total_questions = total_questions
         self.words_needed = words_needed
-
         self.questions = []
         self.current_question = 0
         self.player_scores = {}
@@ -27,12 +24,8 @@ class LettersWordsGame:
         self.hints_used = {}
         self.registered = set()
 
-    # --------------------------------------------------------------------
-
     def register_player(self, uid, name):
         self.registered.add(uid)
-
-    # --------------------------------------------------------------------
 
     def start_game(self):
         self.questions = random.sample(self.challenges, min(self.total_questions, len(self.challenges)))
@@ -42,9 +35,8 @@ class LettersWordsGame:
         self.hints_used.clear()
         return self._show_question()
 
-    # --------------------------------------------------------------------
-
-    def _show_question(self):
+    def _show_question(self, theme="light"):
+        colors = THEMES.get(theme, THEMES["light"])
         challenge = self.questions[self.current_question]
         letters = challenge['letters']
         self.valid_words = [normalize_text(w) for w in challenge['answers']]
@@ -56,9 +48,9 @@ class LettersWordsGame:
                 "layout": "vertical",
                 "spacing": "md",
                 "contents": [
-                    create_game_header("تكوين الكلمات"),
-                    create_progress_box(self.current_question + 1, self.total_questions),
-                    create_separator(),
+                    create_game_header("تكوين الكلمات", theme=theme),
+                    create_progress_box(self.current_question + 1, self.total_questions, theme=theme),
+                    create_separator(theme=theme),
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -67,49 +59,38 @@ class LettersWordsGame:
                                 "type": "text",
                                 "text": letters,
                                 "size": "xxl",
-                                "color": COLORS["primary"],
+                                "color": colors["primary"],
                                 "align": "center",
-                                "weight": "bold",
+                                "weight": "bold"
                             },
                             {
                                 "type": "text",
                                 "text": f"كون {self.words_needed} كلمات من هذه الحروف",
                                 "size": "sm",
-                                "color": COLORS["text_dark"],
+                                "color": colors["text_dark"],
                                 "wrap": True,
                                 "align": "center",
-                                "margin": "md",
-                            },
+                                "margin": "md"
+                            }
                         ],
-                        "margin": "lg",
+                        "margin": "lg"
                     },
-                    create_separator(),
-                    *create_action_buttons()
+                    create_separator(theme=theme),
+                    *create_action_buttons(theme=theme)
                 ],
-                "backgroundColor": COLORS["card_bg"],
-                "paddingAll": "18px",
+                "backgroundColor": colors["card_bg"],
+                "paddingAll": "18px"
             }
         }
-
-        return FlexMessage(
-            alt_text="تكوين الكلمات",
-            contents=FlexContainer.from_dict(body)
-        )
-
-    # --------------------------------------------------------------------
+        return FlexMessage(alt_text="تكوين الكلمات", contents=FlexContainer.from_dict(body))
 
     def next_question(self):
         self.current_question += 1
-
         if self.current_question < self.total_questions:
-            # إعادة تعيين الكلمات والتلميحات فقط
             self.found_words.clear()
             self.hints_used.clear()
             return self._show_question()
-
-        return None  # سيُنهي اللعبة لاحقاً
-
-    # --------------------------------------------------------------------
+        return None
 
     def check_answer(self, text, user_id, display_name):
         if user_id not in self.registered:
@@ -117,92 +98,46 @@ class LettersWordsGame:
 
         txt = text.strip()
         low = txt.lower()
+        theme = Database.get_user_theme(user_id)
 
-        # ------------------- التلميح -------------------
         if low in ['لمح', 'تلميح']:
             if user_id in self.hints_used:
-                return {
-                    "response": TextMessage(text="استخدمت التلميح بالفعل"),
-                    "points": 0,
-                    "correct": False
-                }
-
+                return {"response": TextMessage(text="استخدمت التلميح بالفعل"), "points": 0, "correct": False}
             self.hints_used[user_id] = True
             hint_word = self.questions[self.current_question]["answers"][0]
-            return {
-                "response": TextMessage(text=f"يبدأ بحرف: {hint_word[0]}\nعدد الحروف: {len(hint_word)}"),
-                "points": 0,
-                "correct": False
-            }
+            return {"response": TextMessage(text=f"يبدأ بحرف: {hint_word[0]}\nعدد الحروف: {len(hint_word)}"), "points": 0, "correct": False}
 
-        # ------------------- طلب الحل -------------------
         if low in ['جاوب', 'الحل', 'الجواب']:
             some = " - ".join(self.questions[self.current_question]["answers"][:5])
             if self.current_question + 1 < self.total_questions:
-                return {
-                    "response": TextMessage(text=f"بعض الكلمات الصحيحة:\n{some}"),
-                    "next_question": True,
-                    "correct": False,
-                    "points": 0
-                }
-            return self._end_game()
+                return {"response": TextMessage(text=f"بعض الكلمات الصحيحة:\n{some}"), "next_question": True, "correct": False, "points": 0}
+            return self._end_game(user_id)
 
-        # ------------------- التحقق من الكلمة -------------------
         normalized = normalize_text(txt)
 
-        # منع التكرار
         if user_id in self.found_words and normalized in self.found_words[user_id]:
-            return {
-                "response": TextMessage(text="هذه الكلمة سبق وأن أدخلتها"),
-                "correct": False,
-                "points": 0
-            }
+            return {"response": TextMessage(text="هذه الكلمة سبق وان ادخلتها"), "correct": False, "points": 0}
 
-        # كلمة خاطئة
         if normalized not in self.valid_words:
-            return {
-                "response": TextMessage(text="هذه الكلمة غير صحيحة"),
-                "correct": False,
-                "points": 0
-            }
+            return {"response": TextMessage(text="هذه الكلمة غير صحيحة"), "correct": False, "points": 0}
 
-        # كلمة صحيحة
         self.found_words.setdefault(user_id, []).append(normalized)
-
         self.player_scores.setdefault(user_id, {"name": display_name, "score": 0})
         self.player_scores[user_id]["score"] += 1
 
         count = len(self.found_words[user_id])
 
-        # أكمل المطلوب وانتقل للسؤال التالي
         if count >= self.words_needed:
             if self.current_question + 1 < self.total_questions:
-                return {
-                    "response": TextMessage(text=f"إجابة صحيحة {display_name}\n+1 نقطة"),
-                    "correct": True,
-                    "points": 1,
-                    "next_question": True
-                }
-            return self._end_game()
+                return {"response": TextMessage(text=f"اجابة صحيحة {display_name}\n+1 نقطة"), "correct": True, "points": 1, "next_question": True}
+            return self._end_game(user_id)
 
-        # لم يكمل بعد
-        return {
-            "response": TextMessage(
-                text=f"كلمة صحيحة\n+1 نقطة\nالكلمات المتبقية: {self.words_needed - count}"
-            ),
-            "correct": True,
-            "points": 1
-        }
+        return {"response": TextMessage(text=f"كلمة صحيحة\n+1 نقطة\nالكلمات المتبقية: {self.words_needed - count}"), "correct": True, "points": 1}
 
-    # --------------------------------------------------------------------
-
-    def _end_game(self):
+    def _end_game(self, user_id):
+        theme = Database.get_user_theme(user_id)
         if not self.player_scores:
-            return {
-                "response": TextMessage(text="انتهت اللعبة"),
-                "game_over": True,
-                "points": 0
-            }
+            return {"response": TextMessage(text="انتهت اللعبة"), "game_over": True, "points": 0}
 
         ranking = sorted(self.player_scores.items(), key=lambda x: x[1]["score"], reverse=True)
         winner = ranking[0][1]
@@ -210,9 +145,7 @@ class LettersWordsGame:
         return {
             "response": FlexMessage(
                 alt_text="نتائج اللعبة",
-                contents=FlexContainer.from_dict(
-                    create_winner_card(winner, ranking, "تكوين")
-                )
+                contents=FlexContainer.from_dict(create_winner_card(winner, ranking, "تكوين", theme=theme))
             ),
             "game_over": True,
             "points": winner["score"]
