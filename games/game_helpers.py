@@ -1,8 +1,9 @@
-# games/game_helpers.py
+# games/game_helpers.py - مصلح بدون استيرادات دائرية
 import re
 from constants import THEMES
 
 def normalize_text(text):
+    """تطبيع النص العربي"""
     if not text:
         return ""
     text = text.strip().lower()
@@ -13,6 +14,7 @@ def normalize_text(text):
     return text
 
 def create_game_header(title, subtitle=None, theme="light"):
+    """انشاء رأس اللعبة"""
     colors = THEMES.get(theme, THEMES["light"])
     contents = [{
         "type": "text",
@@ -42,6 +44,7 @@ def create_game_header(title, subtitle=None, theme="light"):
     }
 
 def create_progress_box(current, total, theme="light"):
+    """انشاء صندوق التقدم"""
     colors = THEMES.get(theme, THEMES["light"])
     return {
         "type": "box",
@@ -54,10 +57,12 @@ def create_progress_box(current, total, theme="light"):
     }
 
 def create_separator(margin="md", theme="light"):
+    """انشاء فاصل"""
     colors = THEMES.get(theme, THEMES["light"])
     return {"type": "separator", "margin": margin, "color": colors["border"]}
 
 def create_action_buttons(theme="light"):
+    """انشاء ازرار الاجراءات"""
     colors = THEMES.get(theme, THEMES["light"])
     return [
         {
@@ -83,6 +88,7 @@ def create_action_buttons(theme="light"):
     ]
 
 def create_winner_card(winner, all_players, game_name, theme="light"):
+    """انشاء بطاقة الفائز"""
     colors = THEMES.get(theme, THEMES["light"])
     contents = [
         {
@@ -165,6 +171,7 @@ def create_winner_card(winner, all_players, game_name, theme="light"):
     }
 
 def create_question_card(question_text, current, total, game_name, theme="light"):
+    """انشاء بطاقة السؤال"""
     colors = THEMES.get(theme, THEMES["light"])
     return {
         "type": "bubble",
@@ -194,4 +201,5 @@ def create_question_card(question_text, current, total, game_name, theme="light"
     }
 
 def create_hint_text(answer, theme="light"):
+    """انشاء نص التلميح"""
     return f"يبدا بحرف: {answer[0]}\nعدد الحروف: {len(answer)}"
