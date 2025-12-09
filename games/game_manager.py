@@ -1,139 +1,84 @@
-import random
-import os
-from linebot.v3.messaging import TextMessage
 from games.song_game import SongGame
-from games.chain_words_game import ChainWordsGame
 from games.opposite_game import OppositeGame
 from games.fast_typing_game import FastTypingGame
-from games.letters_words_game import LettersWordsGame
-from games.seen_jeem_game import SeenJeemGame
+from games.chain_words_game import ChainWordsGame
 from games.human_animal_plant_game import HumanAnimalPlantGame
+from games.letters_words_game import LettersWordsGame
+from games.category_letter_game import CategoryLetterGame
 from games.compatibility_game import CompatibilityGame
 from games.mafia_game import MafiaGame
-from games.letter_game import LetterGame
-from error_tracker import ErrorTracker
+import random
+import os
 
 class GameManager:
+    
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.active_games = {}
-        self._load_fun_content()
-
-    @ErrorTracker.track_function("Load Fun Content")
-    def _load_fun_content(self):
+        self.questions = self._load_file('games/questions.txt')
+        self.challenges = self._load_file('games/challenges.txt')
+        self.confessions = self._load_file('games/confessions.txt')
+        self.mentions = self._load_file('games/mentions.txt')
+    
+    def _load_file(self, filepath):
         try:
-            questions_path = os.path.join(os.path.dirname(__file__), 'questions.txt')
-            with open(questions_path, 'r', encoding='utf-8') as f:
-                self.questions = [line.strip() for line in f if line.strip()]
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    return [line.strip() for line in f if line.strip()]
         except Exception as e:
-            ErrorTracker.log_error(e, "Load Questions")
-            self.questions = ["سؤال ما اكثر موقف حسسك بمعنى الصداقة الحقيقي"]
-
-        try:
-            challenges_path = os.path.join(os.path.dirname(__file__), 'challenges.txt')
-            with open(challenges_path, 'r', encoding='utf-8') as f:
-                self.challenges = [line.strip() for line in f if line.strip()]
-        except Exception as e:
-            ErrorTracker.log_error(e, "Load Challenges")
-            self.challenges = ["تحدي اكتب اسم اخر شخص كلمته الان"]
-
-        try:
-            confessions_path = os.path.join(os.path.dirname(__file__), 'confessions.txt')
-            with open(confessions_path, 'r', encoding='utf-8') as f:
-                self.confessions = [line.strip() for line in f if line.strip()]
-        except Exception as e:
-            ErrorTracker.log_error(e, "Load Confessions")
-            self.confessions = ["اعترف كم مرة ارسلت رسالة بالخطأ وحذفتها بسرعة"]
-
-        try:
-            mentions_path = os.path.join(os.path.dirname(__file__), 'mentions.txt')
-            with open(mentions_path, 'r', encoding='utf-8') as f:
-                self.mentions = [line.strip() for line in f if line.strip()]
-        except Exception as e:
-            ErrorTracker.log_error(e, "Load Mentions")
-            self.mentions = ["منشن اكثر شخص عصبي"]
-
-    def get_random_question(self):
-        return random.choice(self.questions) if self.questions else "سؤال ما اكثر شيء تحبه"
-
-    def get_random_challenge(self):
-        return random.choice(self.challenges) if self.challenges else "تحدي اكتب اسم اخر شخص كلمته"
-
-    def get_random_confession(self):
-        return random.choice(self.confessions) if self.confessions else "اعترف بشيء صغير"
-
-    def get_random_mention(self):
-        return random.choice(self.mentions) if self.mentions else "منشن اكثر شخص مميز"
-
-    @ErrorTracker.track_function("Start Game")
+            print(f"خطا تحميل {filepath}: {e}")
+        return []
+    
     def start_game(self, game_type, group_id):
-        if group_id in self.active_games:
-            self.stop_game(group_id)
-
-        try:
-            game_instance = None
-            if game_type == "song":
-                game_instance = SongGame(self.line_bot_api)
-            elif game_type == "chain":
-                game_instance = ChainWordsGame(self.line_bot_api)
-            elif game_type == "opposite":
-                game_instance = OppositeGame(self.line_bot_api)
-            elif game_type == "fast_typing":
-                game_instance = FastTypingGame(self.line_bot_api)
-            elif game_type == "letters":
-                game_instance = LettersWordsGame(self.line_bot_api)
-            elif game_type == "seen_jeem":
-                game_instance = SeenJeemGame(self.line_bot_api)
-            elif game_type == "human_animal":
-                game_instance = HumanAnimalPlantGame(self.line_bot_api)
-            elif game_type == "compatibility":
-                game_instance = CompatibilityGame(self.line_bot_api)
-            elif game_type == "mafia":
-                game_instance = MafiaGame(self.line_bot_api)
-                game_instance.group_id = group_id
-            elif game_type == "letter":
-                game_instance = LetterGame(self.line_bot_api)
-            else:
-                return TextMessage(text="لعبة غير معروفة")
-
-            if game_instance:
-                self.active_games[group_id] = {'type': game_type, 'instance': game_instance}
-                return game_instance.start_game()
-        except Exception as e:
-            ErrorTracker.log_error(e, f"Start Game: {game_type}", extra_data={'group_id': group_id})
-            return TextMessage(text="حدث خطأ في بدء اللعبة")
-
+        game_classes = {
+            'song': SongGame,
+            'opposite': OppositeGame,
+            'fast_typing': FastTypingGame,
+            'chain': ChainWordsGame,
+            'human_animal': HumanAnimalPlantGame,
+            'letters': LettersWordsGame,
+            'category': CategoryLetterGame,
+            'compatibility': CompatibilityGame,
+            'mafia': MafiaGame
+        }
+        
+        if game_type in game_classes:
+            game = game_classes[game_type](self.line_bot_api)
+            self.active_games[group_id] = {'type': game_type, 'game': game}
+            return game.start_game()
+        return None
+    
     def get_game(self, group_id):
         if group_id in self.active_games:
-            return self.active_games[group_id]['instance']
+            return self.active_games[group_id]['game']
         return None
-
+    
+    def check_answer(self, group_id, answer, user_id, display_name):
+        game = self.get_game(group_id)
+        if game:
+            return game.check_answer(answer, user_id, display_name)
+        return None
+    
+    def next_question(self, group_id):
+        game = self.get_game(group_id)
+        if game:
+            return game.next_question()
+        return None
+    
     def stop_game(self, group_id):
         if group_id in self.active_games:
             del self.active_games[group_id]
             return True
         return False
-
-    @ErrorTracker.track_function("Check Answer")
-    def check_answer(self, group_id, answer, user_id, display_name):
-        game_data = self.active_games.get(group_id)
-        if not game_data:
-            return None
-        game_instance = game_data['instance']
-        try:
-            return game_instance.check_answer(answer, user_id, display_name)
-        except Exception as e:
-            ErrorTracker.log_error(e, "Check Answer", user_id, extra_data={'group_id': group_id})
-            return None
-
-    @ErrorTracker.track_function("Next Question")
-    def next_question(self, group_id):
-        game_data = self.active_games.get(group_id)
-        if not game_data:
-            return None
-        game_instance = game_data['instance']
-        try:
-            return game_instance.next_question()
-        except Exception as e:
-            ErrorTracker.log_error(e, "Next Question", extra_data={'group_id': group_id})
-            return None
+    
+    def get_random_question(self):
+        return random.choice(self.questions) if self.questions else "لا توجد اسئله متاحه"
+    
+    def get_random_challenge(self):
+        return random.choice(self.challenges) if self.challenges else "لا توجد تحديات متاحه"
+    
+    def get_random_confession(self):
+        return random.choice(self.confessions) if self.confessions else "لا توجد اعترافات متاحه"
+    
+    def get_random_mention(self):
+        return random.choice(self.mentions) if self.mentions else "لا توجد منشنات متاحه"
