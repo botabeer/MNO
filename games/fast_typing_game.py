@@ -1,30 +1,20 @@
-# games/fast_typing_game.py - Ultra Fast Mode
+# games/fast_typing_game.py
 from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 import random, time
-from constants import COLORS
-from games.game_helpers import (
-    normalize_text, create_game_header, create_progress_box,
-    create_separator, create_winner_card
-)
+from constants import THEMES
+from games.game_helpers import normalize_text, create_game_header, create_progress_box, create_separator, create_winner_card
+from database import Database
 
 class FastTypingGame:
-    """
-    Ultra Fast Typing Game
-    - بدون لمح / جاوب
-    - مؤقت لكل جولة
-    - أول إجابة صحيحة = فوز الجولة فوراً
-    - انتقال فوري للسؤال التالي
-    """
-
     PHRASES = [
         "اكتب هذه العبارة بسرعة",
         "السماء زرقاء والشمس ساطعة",
-        "التحدي يبدأ الآن",
-        "الوقت كالسيف إن لم تقطعه قطعك",
+        "التحدي يبدأ الان",
+        "الوقت كالسيف ان لم تقطعه قطعك",
         "الصديق وقت الضيق",
         "الحياة قصيرة فلا تضيعها",
         "العلم نور والجهل ظلام",
-        "اطلب العلم من المهد إلى اللحد",
+        "اطلب العلم من المهد الى اللحد",
         "درهم وقاية خير من قنطار علاج",
         "من جد وجد ومن سار على الدرب وصل"
     ]
@@ -49,32 +39,31 @@ class FastTypingGame:
         self.player_scores = {}
         return self._show_question()
 
-    def _show_question(self):
+    def _show_question(self, theme="light"):
+        colors = THEMES.get(theme, THEMES["light"])
         phrase = self.questions[self.current_question]
         self.question_start_time = time.time()
         self.question_answered = False
 
         contents = [
-            create_game_header("التايب السريع", "اكتب الجملة فوراً"),
-            create_progress_box(self.current_question+1, self.total_questions),
-            create_separator(),
-
+            create_game_header("التايب السريع", "اكتب الجملة فورا", theme=theme),
+            create_progress_box(self.current_question+1, self.total_questions, theme=theme),
+            create_separator(theme=theme),
             {
                 "type": "text",
                 "text": phrase,
                 "size": "lg",
                 "weight": "bold",
-                "color": COLORS['primary'],
+                "color": colors['primary'],
                 "align": "center",
                 "wrap": True,
                 "margin": "lg"
             },
-
             {
                 "type": "text",
-                "text": "المؤقت يعمل الآن… ⏱️",
+                "text": "المؤقت يعمل الان",
                 "size": "sm",
-                "color": COLORS['text_light'],
+                "color": colors['text_light'],
                 "align": "center",
                 "margin": "md"
             }
@@ -89,7 +78,7 @@ class FastTypingGame:
                     "layout": "vertical",
                     "spacing": "md",
                     "contents": contents,
-                    "backgroundColor": COLORS['card_bg'],
+                    "backgroundColor": colors['card_bg'],
                     "paddingAll": "18px"
                 }
             })
@@ -102,59 +91,35 @@ class FastTypingGame:
         return None
 
     def check_answer(self, answer, uid, name):
-        # فقط المسجلين
         if uid not in self.registered:
             return None
-
-        # تم الرد = تجاهل
         if self.question_answered:
             return None
 
         phrase = self.questions[self.current_question]
+        theme = Database.get_user_theme(uid)
 
-        # تطابق كامل
         if normalize_text(answer) == normalize_text(phrase):
             time_taken = time.time() - self.question_start_time
             self.question_answered = True
-
-            self.player_scores.setdefault(uid, {
-                "name": name,
-                "score": 0,
-                "time": 0
-            })
-
+            self.player_scores.setdefault(uid, {"name": name, "score": 0, "time": 0})
             self.player_scores[uid]["score"] += 1
             self.player_scores[uid]["time"] += time_taken
 
-            msg = f"🥇 أسرع إجابة!\n{name}\nالوقت: {time_taken:.1f} ثانية"
+            msg = f"اسرع اجابة\n{name}\nالوقت: {time_taken:.1f} ثانية"
 
             if self.current_question + 1 < self.total_questions:
-                return {
-                    "response": TextMessage(text=msg),
-                    "points": 1,
-                    "correct": True,
-                    "next_question": True
-                }
-
-            return self._end_game(msg)
-
+                return {"response": TextMessage(text=msg), "points": 1, "correct": True, "next_question": True}
+            return self._end_game(uid, msg)
         return None
 
-    def _end_game(self, final_msg=""):
+    def _end_game(self, uid, final_msg=""):
+        theme = Database.get_user_theme(uid)
         if not self.player_scores:
-            return {
-                "response": TextMessage(text="انتهت اللعبة بدون فائز"),
-                "game_over": True
-            }
+            return {"response": TextMessage(text="انتهت اللعبة بدون فائز"), "game_over": True}
 
-        sorted_players = sorted(
-            self.player_scores.items(),
-            key=lambda x: (-x[1]["score"], x[1]["time"])
-        )
-
+        sorted_players = sorted(self.player_scores.items(), key=lambda x: (-x[1]["score"], x[1]["time"]))
         winner = sorted_players[0][1]
-
-        # إضافة الوقت المتوسط لبطاقة الفوز
         avg = winner["time"] / winner["score"]
         winner_info = winner.copy()
         winner_info["name"] = f"{winner['name']} - متوسط: {avg:.1f}ث"
@@ -162,9 +127,7 @@ class FastTypingGame:
         return {
             "response": FlexMessage(
                 alt_text="نتائج اللعبة",
-                contents=FlexContainer.from_dict(
-                    create_winner_card(winner_info, sorted_players, "التايب السريع")
-                )
+                contents=FlexContainer.from_dict(create_winner_card(winner_info, sorted_players, "التايب السريع", theme=theme))
             ),
             "game_over": True,
             "won": True
