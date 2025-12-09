@@ -92,6 +92,7 @@ SONGS=[
 {'lyrics':'ياما حاولت الفراق وما قويت','singer':'عبدالمجيد عبدالله'}
 ]
 
+
 def normalize_text(text):
     if not text:
         return ""
@@ -112,14 +113,12 @@ class SongGame:
         self.total_questions = 5
         self.player_scores = {}
         self.answered_users = set()
-        self.hints_used = {}
 
     def start_game(self):
         self.questions = random.sample(self.songs, min(self.total_questions, len(self.songs)))
         self.current_question = 0
         self.player_scores = {}
         self.answered_users = set()
-        self.hints_used = {}
         return self._show_question()
 
     def _show_question(self):
@@ -135,13 +134,12 @@ class SongGame:
                     "layout": "vertical",
                     "spacing": "md",
                     "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "لعبة الأغنية", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "لعبة الاغنية", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                         {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
                         {"type": "separator", "margin": "md", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": song['lyrics'], "size": "lg", "color": COLORS['text_dark'], "wrap": True, "weight": "bold", "align": "center"}, {"type": "text", "text": "من المغني؟", "size": "md", "color": COLORS['primary'], "margin": "md", "align": "center"}], "margin": "lg", "spacing": "sm"},
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": song['lyrics'], "size": "lg", "color": COLORS['text_dark'], "wrap": True, "weight": "bold", "align": "center"}, {"type": "text", "text": "من المغني", "size": "md", "color": COLORS['primary'], "margin": "md", "align": "center"}], "margin": "lg", "spacing": "sm"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "sm"}
+                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
@@ -153,7 +151,6 @@ class SongGame:
         self.current_question += 1
         if self.current_question < self.total_questions:
             self.answered_users = set()
-            self.hints_used = {}
             return self._show_question()
         return None
 
@@ -164,15 +161,12 @@ class SongGame:
         song = self.questions[self.current_question]
 
         if answer in ['لمح', 'تلميح']:
-            if user_id not in self.hints_used:
-                self.hints_used[user_id] = True
-                return {'response': TextSendMessage(text=f"يبدأ بحرف: {song['singer'][0]}\nعدد الحروف: {len(song['singer'])}"), 'points': 0, 'correct': False}
-            return {'response': TextSendMessage(text="استخدمت التلميح مسبقاً"), 'points': 0, 'correct': False}
+            return {'response': TextSendMessage(text=f"يبدأ بحرف {song['singer'][0]}\nعدد الحروف {len(song['singer'])}"), 'points': 0, 'correct': False}
 
         if answer in ['جاوب', 'الجواب']:
             self.answered_users.add(user_id)
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"الإجابة: {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
+                return {'response': TextSendMessage(text=f"الاجابة {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
 
         if normalize_text(answer) == normalize_text(song['singer']):
@@ -182,7 +176,7 @@ class SongGame:
             self.answered_users.add(user_id)
 
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"إجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
+                return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name} +{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
             return self._end_game()
 
         return None
@@ -214,7 +208,7 @@ class SongGame:
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "button", "action": {"type": "message", "label": "إعادة اللعب", "text": "اغنيه"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
+                        {"type": "button", "action": {"type": "message", "label": "اعادة اللعب", "text": "اغنيه"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
