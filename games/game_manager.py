@@ -1,4 +1,3 @@
-# games/game_manager.py
 import random
 import os
 from linebot.v3.messaging import TextMessage
@@ -11,7 +10,8 @@ from games.seen_jeem_game import SeenJeemGame
 from games.human_animal_plant_game import HumanAnimalPlantGame
 from games.compatibility_game import CompatibilityGame
 from games.mafia_game import MafiaGame
-from games.loreet_game import LoreetGame
+from games.letter_game import LetterGame
+from error_tracker import ErrorTracker
 
 class GameManager:
     def __init__(self, line_bot_api):
@@ -19,33 +19,38 @@ class GameManager:
         self.active_games = {}
         self._load_fun_content()
 
+    @ErrorTracker.track_function("Load Fun Content")
     def _load_fun_content(self):
         try:
             questions_path = os.path.join(os.path.dirname(__file__), 'questions.txt')
             with open(questions_path, 'r', encoding='utf-8') as f:
                 self.questions = [line.strip() for line in f if line.strip()]
-        except:
+        except Exception as e:
+            ErrorTracker.log_error(e, "Load Questions")
             self.questions = ["سؤال ما اكثر موقف حسسك بمعنى الصداقة الحقيقي"]
 
         try:
             challenges_path = os.path.join(os.path.dirname(__file__), 'challenges.txt')
             with open(challenges_path, 'r', encoding='utf-8') as f:
                 self.challenges = [line.strip() for line in f if line.strip()]
-        except:
+        except Exception as e:
+            ErrorTracker.log_error(e, "Load Challenges")
             self.challenges = ["تحدي اكتب اسم اخر شخص كلمته الان"]
 
         try:
             confessions_path = os.path.join(os.path.dirname(__file__), 'confessions.txt')
             with open(confessions_path, 'r', encoding='utf-8') as f:
                 self.confessions = [line.strip() for line in f if line.strip()]
-        except:
+        except Exception as e:
+            ErrorTracker.log_error(e, "Load Confessions")
             self.confessions = ["اعترف كم مرة ارسلت رسالة بالخطأ وحذفتها بسرعة"]
 
         try:
             mentions_path = os.path.join(os.path.dirname(__file__), 'mentions.txt')
             with open(mentions_path, 'r', encoding='utf-8') as f:
                 self.mentions = [line.strip() for line in f if line.strip()]
-        except:
+        except Exception as e:
+            ErrorTracker.log_error(e, "Load Mentions")
             self.mentions = ["منشن اكثر شخص عصبي"]
 
     def get_random_question(self):
@@ -60,6 +65,7 @@ class GameManager:
     def get_random_mention(self):
         return random.choice(self.mentions) if self.mentions else "منشن اكثر شخص مميز"
 
+    @ErrorTracker.track_function("Start Game")
     def start_game(self, game_type, group_id):
         if group_id in self.active_games:
             self.stop_game(group_id)
@@ -85,8 +91,8 @@ class GameManager:
             elif game_type == "mafia":
                 game_instance = MafiaGame(self.line_bot_api)
                 game_instance.group_id = group_id
-            elif game_type == "loreet":
-                game_instance = LoreetGame(self.line_bot_api)
+            elif game_type == "letter":
+                game_instance = LetterGame(self.line_bot_api)
             else:
                 return TextMessage(text="لعبة غير معروفة")
 
@@ -94,7 +100,7 @@ class GameManager:
                 self.active_games[group_id] = {'type': game_type, 'instance': game_instance}
                 return game_instance.start_game()
         except Exception as e:
-            print(f"Error starting game {game_type}: {e}")
+            ErrorTracker.log_error(e, f"Start Game: {game_type}", extra_data={'group_id': group_id})
             return TextMessage(text="حدث خطأ في بدء اللعبة")
 
     def get_game(self, group_id):
@@ -108,6 +114,7 @@ class GameManager:
             return True
         return False
 
+    @ErrorTracker.track_function("Check Answer")
     def check_answer(self, group_id, answer, user_id, display_name):
         game_data = self.active_games.get(group_id)
         if not game_data:
@@ -116,9 +123,10 @@ class GameManager:
         try:
             return game_instance.check_answer(answer, user_id, display_name)
         except Exception as e:
-            print(f"Error checking answer: {e}")
+            ErrorTracker.log_error(e, "Check Answer", user_id, extra_data={'group_id': group_id})
             return None
 
+    @ErrorTracker.track_function("Next Question")
     def next_question(self, group_id):
         game_data = self.active_games.get(group_id)
         if not game_data:
@@ -127,5 +135,5 @@ class GameManager:
         try:
             return game_instance.next_question()
         except Exception as e:
-            print(f"Error getting next question: {e}")
+            ErrorTracker.log_error(e, "Next Question", extra_data={'group_id': group_id})
             return None
