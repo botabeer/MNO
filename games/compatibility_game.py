@@ -1,23 +1,16 @@
-# games/compatibility_game.py - Enhanced Compatibility Game
+# games/compatibility_game.py
 from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 import hashlib
-from constants import COLORS
-
+from constants import THEMES
+from database import Database
 
 class CompatibilityGame:
-    """
-    لعبة نسبة التوافق
-    - بدون تسجيل
-    - اكتب اسمين
-    - احسب نسبة التوافق
-    """
-
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.waiting_for_names = True
 
-    def start_game(self):
-        """بدء اللعبة"""
+    def start_game(self, theme="light"):
+        colors = THEMES.get(theme, THEMES["light"])
         return FlexMessage(
             alt_text="نسبة التوافق",
             contents=FlexContainer.from_dict({
@@ -35,10 +28,10 @@ class CompatibilityGame:
                                 "text": "نسبة التوافق",
                                 "size": "xl",
                                 "weight": "bold",
-                                "color": COLORS['white'],
+                                "color": colors['white'],
                                 "align": "center"
                             }],
-                            "backgroundColor": COLORS['primary'],
+                            "backgroundColor": colors['primary'],
                             "paddingAll": "16px",
                             "cornerRadius": "12px"
                         },
@@ -50,86 +43,49 @@ class CompatibilityGame:
                                     "type": "text",
                                     "text": "اكتب اسمين بهذا الشكل:",
                                     "size": "md",
-                                    "color": COLORS['text_dark'],
+                                    "color": colors['text_dark'],
                                     "align": "center"
                                 },
                                 {
                                     "type": "text",
                                     "text": "اسم و اسم",
                                     "size": "xl",
-                                    "color": COLORS['primary'],
+                                    "color": colors['primary'],
                                     "align": "center",
                                     "weight": "bold",
                                     "margin": "md"
                                 }
                             ],
                             "margin": "lg"
-                        },
-                        {
-                            "type": "separator",
-                            "margin": "lg",
-                            "color": COLORS['border']
-                        },
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "size": "xs",
-                                    "color": COLORS['text_light'],
-                                    "weight": "bold"
-                                },
-                                {
-                                    "type": "text",
-                                    "size": "xs",
-                                    "color": COLORS['text_light'],
-                                    "wrap": True,
-                                    "margin": "xs"
-                                }
-                            ],
-                            "margin": "md"
                         }
                     ],
-                    "backgroundColor": COLORS['card_bg'],
+                    "backgroundColor": colors['card_bg'],
                     "paddingAll": "20px"
                 }
             })
         )
 
-    def parse_names(self, text: str):
-        """استخراج الاسمين من النص"""
+    def parse_names(self, text):
         text = text.strip()
-        
-        # Try different separators
         if " و " in text:
             parts = text.split(" و ")
             if len(parts) >= 2:
                 return parts[0].strip(), " ".join(parts[1:]).strip()
-        
-        # Try without spaces
         text = text.replace(" و", " و ").replace("و ", " و ")
         if " و " in text:
             parts = text.split(" و ")
             if len(parts) >= 2:
                 return parts[0].strip(), " ".join(parts[1:]).strip()
-        
         return None, None
 
-    def calculate_compatibility(self, name1: str, name2: str) -> int:
-        """حساب نسبة التوافق"""
-        # Sort names for consistency
+    def calculate_compatibility(self, name1, name2):
         names = sorted([name1.lower().strip(), name2.lower().strip()])
         combined = "".join(names)
-        
-        # Use hash for pseudo-random but consistent result
         hash_value = int(hashlib.sha256(combined.encode()).hexdigest(), 16)
-        compatibility = 50 + (hash_value % 51)  # Between 50-100
-        
+        compatibility = 50 + (hash_value % 51)
         return compatibility
 
-    def get_compatibility_message(self, compatibility: int) -> str:
-        """رسالة التوافق"""
+    def get_compatibility_message(self, compatibility):
         if compatibility >= 90:
             return "توافق مثالي"
         elif compatibility >= 75:
@@ -139,21 +95,19 @@ class CompatibilityGame:
         else:
             return "توافق متوسط"
 
-    def get_compatibility_color(self, compatibility: int) -> str:
-        """لون التوافق"""
+    def get_compatibility_color(self, compatibility):
         if compatibility >= 90:
-            return "#E91E63"  # Pink
+            return "#E91E63"
         elif compatibility >= 75:
-            return "#9C27B0"  # Purple
+            return "#9C27B0"
         elif compatibility >= 60:
-            return "#3F51B5"  # Indigo
+            return "#3F51B5"
         else:
-            return COLORS['text_light']
+            return "#8E8E93"
 
-    def get_extra_text(self, compatibility: int) -> str:
-        """نص إضافي"""
+    def get_extra_text(self, compatibility):
         if compatibility >= 90:
-            return "علاقة رائعة ومميزة جداً"
+            return "علاقة رائعة ومميزة جدا"
         elif compatibility >= 75:
             return "علاقة قوية ومتينة"
         elif compatibility >= 60:
@@ -161,8 +115,7 @@ class CompatibilityGame:
         else:
             return "علاقة تحتاج لبعض الجهد"
 
-    def check_answer(self, answer: str, user_id: str, display_name: str):
-        """فحص الإجابة"""
+    def check_answer(self, answer, user_id, display_name):
         if not self.waiting_for_names:
             return None
 
@@ -170,22 +123,20 @@ class CompatibilityGame:
         
         if not name1 or not name2:
             return {
-                'response': TextMessage(
-                    text="يرجى كتابة اسمين بالشكل الصحيح:\n\nاسم و اسم\n\nمثال: الحوت و عبير"
-                ),
+                'response': TextMessage(text="يرجى كتابة اسمين بالشكل الصحيح:\n\naسم و اسم\n\nمثال: الحوت و عبير"),
                 'points': 0,
                 'correct': False
             }
 
-        # Calculate compatibility
         compatibility = self.calculate_compatibility(name1, name2)
         message = self.get_compatibility_message(compatibility)
         comp_color = self.get_compatibility_color(compatibility)
         extra_text = self.get_extra_text(compatibility)
+        theme = Database.get_user_theme(user_id)
+        colors = THEMES.get(theme, THEMES["light"])
 
         self.waiting_for_names = False
 
-        # Create result card
         result = FlexMessage(
             alt_text="نتيجة التوافق",
             contents=FlexContainer.from_dict({
@@ -203,10 +154,10 @@ class CompatibilityGame:
                                 "text": "نتيجة التوافق",
                                 "weight": "bold",
                                 "size": "xl",
-                                "color": COLORS['white'],
+                                "color": colors['white'],
                                 "align": "center"
                             }],
-                            "backgroundColor": COLORS['primary'],
+                            "backgroundColor": colors['primary'],
                             "paddingAll": "12px",
                             "cornerRadius": "8px"
                         },
@@ -216,15 +167,11 @@ class CompatibilityGame:
                             "size": "lg",
                             "weight": "bold",
                             "align": "center",
-                            "color": COLORS['text_dark'],
+                            "color": colors['text_dark'],
                             "margin": "lg",
                             "wrap": True
                         },
-                        {
-                            "type": "separator",
-                            "margin": "md",
-                            "color": COLORS['border']
-                        },
+                        {"type": "separator", "margin": "md", "color": colors['border']},
                         {
                             "type": "box",
                             "layout": "vertical",
@@ -251,40 +198,28 @@ class CompatibilityGame:
                                     "text": extra_text,
                                     "size": "sm",
                                     "align": "center",
-                                    "color": COLORS['text_light'],
+                                    "color": colors['text_light'],
                                     "wrap": True,
                                     "margin": "md"
                                 }
                             ],
                             "margin": "md"
                         },
-                        {
-                            "type": "separator",
-                            "margin": "md",
-                            "color": COLORS['border']
-                        },
+                        {"type": "separator", "margin": "md", "color": colors['border']},
                         {
                             "type": "box",
                             "layout": "horizontal",
                             "contents": [
                                 {
                                     "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "إعادة",
-                                        "text": "توافق"
-                                    },
+                                    "action": {"type": "message", "label": "اعادة", "text": "توافق"},
                                     "style": "primary",
-                                    "color": COLORS['primary'],
+                                    "color": colors['primary'],
                                     "height": "sm"
                                 },
                                 {
                                     "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "البداية",
-                                        "text": "بداية"
-                                    },
+                                    "action": {"type": "message", "label": "البداية", "text": "بداية"},
                                     "style": "secondary",
                                     "height": "sm"
                                 }
@@ -293,15 +228,10 @@ class CompatibilityGame:
                             "margin": "md"
                         }
                     ],
-                    "backgroundColor": COLORS['card_bg'],
+                    "backgroundColor": colors['card_bg'],
                     "paddingAll": "16px"
                 }
             })
         )
 
-        return {
-            'response': result,
-            'points': 0,
-            'correct': False,
-            'game_over': True
-        }
+        return {'response': result, 'points': 0, 'correct': False, 'game_over': True}
