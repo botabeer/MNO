@@ -29,6 +29,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from ui_builder import UIBuilder
 from games.game_manager import GameManager
 from database import Database
+from error_tracker import ErrorTracker
+from quick_reply_manager import QuickReplyManager
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -51,18 +53,15 @@ def ensure_env():
 
 app = Flask(__name__)
 
+@ErrorTracker.track_function("LINE API Initialization")
 def init_line_api():
     ensure_env()
-    try:
-        config = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
-        handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
-        api_client = ApiClient(config)
-        messaging_api = MessagingApi(api_client)
-        logger.info("LINE API initialized")
-        return handler, messaging_api
-    except Exception as exc:
-        logger.exception("Failed to initialize LINE API: %s", exc)
-        raise
+    config = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
+    handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
+    api_client = ApiClient(config)
+    messaging_api = MessagingApi(api_client)
+    logger.info("LINE API initialized")
+    return handler, messaging_api
 
 handler, line_bot_api = init_line_api()
 
@@ -70,7 +69,7 @@ try:
     Database.init()
     logger.info("Database initialized")
 except Exception as exc:
-    logger.exception("Database initialization failed: %s", exc)
+    ErrorTracker.log_error(exc, "Database Initialization")
     raise
 
 game_manager = GameManager(line_bot_api)
@@ -80,15 +79,15 @@ try:
     scheduler.add_job(Database.cleanup_inactive_users, 'interval', hours=24, id='cleanup_users')
     scheduler.start()
     logger.info("Scheduler started")
-except Exception:
-    logger.exception("Failed to start scheduler")
+except Exception as e:
+    ErrorTracker.log_error(e, "Scheduler Start")
 
 def _shutdown_scheduler(signum=None, frame=None):
     try:
         logger.info("Shutting down scheduler...")
         scheduler.shutdown(wait=False)
-    except Exception:
-        logger.exception("Error shutting down scheduler")
+    except Exception as e:
+        ErrorTracker.log_error(e, "Scheduler Shutdown")
 
 signal.signal(signal.SIGTERM, _shutdown_scheduler)
 signal.signal(signal.SIGINT, _shutdown_scheduler)
@@ -144,33 +143,43 @@ def get_source_key(event):
         return None
     return getattr(src, 'group_id', None) or getattr(src, 'room_id', None) or getattr(src, 'user_id', None)
 
-def reply_message(reply_token, messages):
+@ErrorTracker.track_function("Reply Message")
+def reply_message(reply_token, messages, quick_reply_type="main"):
     if not isinstance(messages, list):
         messages = [messages]
+    
+    for msg in messages:
+        QuickReplyManager.add_quick_reply_to_message(msg, quick_reply_type)
+    
     try:
         line_bot_api.reply_message(
             ReplyMessageRequest(reply_token=reply_token, messages=messages)
         )
-    except Exception:
-        logger.exception("Failed to reply message")
+    except Exception as e:
+        ErrorTracker.log_error(e, "Reply Message Failed")
 
-def push_message(to, messages):
+@ErrorTracker.track_function("Push Message")
+def push_message(to, messages, quick_reply_type="main"):
     if not isinstance(messages, list):
         messages = [messages]
+    
+    for msg in messages:
+        QuickReplyManager.add_quick_reply_to_message(msg, quick_reply_type)
+    
     try:
         line_bot_api.push_message(
             PushMessageRequest(to=to, messages=messages)
         )
-    except Exception:
-        logger.exception("Failed to push message to %s", to)
+    except Exception as e:
+        ErrorTracker.log_error(e, f"Push Message Failed to {to}")
 
 def send_next_question_async(target_group):
     try:
         next_q = game_manager.next_question(target_group)
         if next_q:
-            push_message(target_group, next_q)
-    except Exception:
-        logger.exception("Failed to send next question")
+            push_message(target_group, next_q, "game")
+    except Exception as e:
+        ErrorTracker.log_error(e, "Send Next Question")
 
 BOT_COMMANDS = {
     'بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة',
@@ -180,7 +189,7 @@ BOT_COMMANDS = {
     'اغنيه', 'لعبه', 'سلسله', 'اسرع', 'ضد', 'تكوين', 'سين', 'مافيا',
     'لمح', 'تلميح', 'جاوب', 'الجواب', 'الغاء', 'إلغاء', 'انضم مافيا',
     'بدء مافيا', 'شرح مافيا', 'إنهاء الليل', 'تصويت مافيا', 'إنهاء التصويت',
-    'حالة مافيا', 'لوريت', 'ثيم', 'تغيير الثيم'
+    'حالة مافيا', 'حروف', 'ثيم', 'تغيير الثيم'
 }
 
 def is_bot_command(text):
@@ -214,8 +223,8 @@ def callback():
     except InvalidSignatureError:
         logger.warning("Invalid signature on incoming request")
         abort(400)
-    except Exception:
-        logger.exception("Unhandled exception while handling webhook")
+    except Exception as e:
+        ErrorTracker.log_error(e, "Webhook Handler")
         abort(500)
     return 'OK'
 
@@ -223,7 +232,6 @@ def callback():
 def handle_message(event):
     try:
         if not getattr(event, 'message', None) or not getattr(event.message, 'text', None):
-            logger.debug("Message or text is empty; ignoring")
             return
 
         text = event.message.text.strip()
@@ -232,17 +240,15 @@ def handle_message(event):
 
         user_id = getattr(event.source, 'user_id', None)
         if not user_id:
-            logger.warning("Event without user_id; ignoring")
             return
 
         group_key = get_source_key(event)
 
         try:
             if Database.is_user_withdrawn(user_id) and not is_bot_command(text):
-                logger.debug("User %s is withdrawn; ignoring non-command message", user_id)
                 return
-        except Exception:
-            logger.exception("Failed to check withdrawn status for user %s", user_id)
+        except Exception as e:
+            ErrorTracker.log_error(e, "Check Withdrawn Status", user_id)
 
         if not check_rate_limit(user_id):
             logger.warning("Rate limit exceeded for user %s", user_id)
@@ -268,8 +274,8 @@ def handle_message(event):
                     contents=FlexContainer.from_dict(UIBuilder.registration_success_card(text, theme=theme))
                 )
                 reply_message(event.reply_token, flex)
-            except Exception:
-                logger.exception("Failed to register user %s", user_id)
+            except Exception as e:
+                ErrorTracker.log_error(e, "User Registration", user_id)
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء التسجيل"))
             return
 
@@ -290,8 +296,8 @@ def handle_message(event):
                     contents=FlexContainer.from_dict(UIBuilder.name_changed_card(text, theme=theme))
                 )
                 reply_message(event.reply_token, flex)
-            except Exception:
-                logger.exception("Failed to update name for user %s", user_id)
+            except Exception as e:
+                ErrorTracker.log_error(e, "Name Change", user_id)
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء تغيير الاسم"))
             return
 
@@ -299,52 +305,57 @@ def handle_message(event):
             game = game_manager.get_game(group_key)
             if game:
                 game_type = game_manager.active_games.get(group_key, {}).get('type', '')
+                qr_type = "mafia" if game_type == "mafia" else "game"
+                
                 if game_type not in ['mafia', 'compatibility']:
                     try:
                         if not Database.is_user_registered(user_id):
-                            reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا للمشاركة في هذه اللعبة"))
+                            reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا للمشاركة في هذه اللعبة"), qr_type)
                             return
-                    except Exception:
-                        logger.exception("Failed to check registration for user %s", user_id)
+                    except Exception as e:
+                        ErrorTracker.log_error(e, "Registration Check", user_id)
+                
                 try:
                     Database.update_last_activity(user_id)
-                except Exception:
-                    logger.exception("Failed to update last activity for user %s", user_id)
+                except Exception as e:
+                    ErrorTracker.log_error(e, "Update Activity", user_id)
+                
                 try:
                     stats = Database.get_user_stats(user_id) or {}
                     display_name = stats.get('display_name', 'مستخدم')
-                except Exception:
-                    logger.exception("Failed to get stats for user %s", user_id)
+                except Exception as e:
+                    ErrorTracker.log_error(e, "Get Stats", user_id)
                     display_name = 'مستخدم'
+                
                 try:
                     result = game_manager.check_answer(group_key, text, user_id, display_name)
                     if result:
                         if result.get('correct') and result.get('points', 0) > 0 and game_type not in ['mafia', 'compatibility']:
                             try:
                                 Database.update_user_points(user_id, result['points'], result.get('won', False), game_type)
-                            except Exception:
-                                logger.exception("Failed to update points for user %s", user_id)
+                            except Exception as e:
+                                ErrorTracker.log_error(e, "Update Points", user_id)
                         if result.get('response'):
-                            reply_message(event.reply_token, result.get('response'))
+                            reply_message(event.reply_token, result.get('response'), qr_type)
                         if result.get('next_question') and not result.get('game_over'):
                             executor.submit(send_next_question_async, group_key)
                         if result.get('game_over'):
                             game_manager.stop_game(group_key)
-                except Exception:
-                    logger.exception("Error processing game answer for user %s", user_id)
+                except Exception as e:
+                    ErrorTracker.log_error(e, "Game Answer Processing", user_id)
                 return
 
         try:
             if Database.is_user_registered(user_id):
                 Database.update_last_activity(user_id)
-        except Exception:
-            logger.exception("Failed to update last activity for user %s", user_id)
+        except Exception as e:
+            ErrorTracker.log_error(e, "Activity Update", user_id)
 
         try:
             stats = Database.get_user_stats(user_id) or {}
             display_name = stats.get('display_name', 'مستخدم')
-        except Exception:
-            logger.exception("Failed to get user stats for %s", user_id)
+        except Exception as e:
+            ErrorTracker.log_error(e, "Get Display Name", user_id)
             display_name = 'مستخدم'
 
         normalized_text = text.strip()
@@ -383,8 +394,8 @@ def handle_message(event):
                     contents=FlexContainer.from_dict(UIBuilder.theme_changed_card(new_theme, theme=new_theme))
                 )
                 reply_message(event.reply_token, flex)
-            except Exception:
-                logger.exception("Error changing theme for user %s", user_id)
+            except Exception as e:
+                ErrorTracker.log_error(e, "Theme Change", user_id)
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء تغيير الثيم"))
             return
 
@@ -412,8 +423,8 @@ def handle_message(event):
                             contents=FlexContainer.from_dict(UIBuilder.registration_card(theme=theme))
                         )
                         reply_message(event.reply_token, flex)
-            except Exception:
-                logger.exception("Error handling registration for user %s", user_id)
+            except Exception as e:
+                ErrorTracker.log_error(e, "Registration Handler", user_id)
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء معالجة التسجيل"))
             return
 
@@ -432,8 +443,8 @@ def handle_message(event):
                         contents=FlexContainer.from_dict(UIBuilder.change_name_card(display_name, theme=theme))
                     )
                     reply_message(event.reply_token, flex)
-            except Exception:
-                logger.exception("Error handling name change for user %s", user_id)
+            except Exception as e:
+                ErrorTracker.log_error(e, "Name Change Handler", user_id)
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء تغيير الاسم"))
             return
 
@@ -444,8 +455,8 @@ def handle_message(event):
                 else:
                     Database.withdraw_user(user_id)
                     reply_message(event.reply_token, TextMessage(text="تم الانسحاب لن يتم احتساب اجاباتك بعد الان"))
-            except Exception:
-                logger.exception("Error processing withdraw for user %s", user_id)
+            except Exception as e:
+                ErrorTracker.log_error(e, "Withdraw User", user_id)
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء الانسحاب"))
             return
 
@@ -460,8 +471,8 @@ def handle_message(event):
                     contents=FlexContainer.from_dict(UIBuilder.stats_card(display_name, stats, theme=theme))
                 )
                 reply_message(event.reply_token, flex)
-            except Exception:
-                logger.exception("Error fetching stats for user %s", user_id)
+            except Exception as e:
+                ErrorTracker.log_error(e, "Get Stats", user_id)
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء جلب الاحصائيات"))
             return
 
@@ -473,8 +484,8 @@ def handle_message(event):
                     contents=FlexContainer.from_dict(UIBuilder.leaderboard_card(leaders, theme=theme))
                 )
                 reply_message(event.reply_token, flex)
-            except Exception:
-                logger.exception("Error fetching leaderboard")
+            except Exception as e:
+                ErrorTracker.log_error(e, "Get Leaderboard")
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء جلب لوحة الصدارة"))
             return
 
@@ -486,8 +497,8 @@ def handle_message(event):
                     contents=FlexContainer.from_dict(UIBuilder.all_players_card(players, theme=theme))
                 )
                 reply_message(event.reply_token, flex)
-            except Exception:
-                logger.exception("Error fetching players")
+            except Exception as e:
+                ErrorTracker.log_error(e, "Get All Players")
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء جلب اللاعبين"))
             return
 
@@ -496,8 +507,8 @@ def handle_message(event):
                 stopped = game_manager.stop_game(group_key)
                 msg = TextMessage(text="تم ايقاف اللعبة" if stopped else "لا توجد لعبة نشطة")
                 reply_message(event.reply_token, msg)
-            except Exception:
-                logger.exception("Error stopping game for group %s", group_key)
+            except Exception as e:
+                ErrorTracker.log_error(e, "Stop Game", user_id)
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء محاولة ايقاف اللعبة"))
             return
 
@@ -532,24 +543,27 @@ def handle_message(event):
             "تكوين": "letters",
             "سين": "seen_jeem",
             "مافيا": "mafia",
-            "لوريت": "loreet"
+            "حروف": "letter"
         }
 
         if normalized_text in game_commands:
+            qr_type = "mafia" if normalized_text == "مافيا" else "game"
+            
             if normalized_text not in {"مافيا", "توافق"}:
                 try:
                     if not Database.is_user_registered(user_id):
-                        reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا لبدء الالعاب"))
+                        reply_message(event.reply_token, TextMessage(text="يجب التسجيل اولا لبدء الالعاب"), qr_type)
                         return
-                except Exception:
-                    logger.exception("Error checking registration before starting game for user %s", user_id)
+                except Exception as e:
+                    ErrorTracker.log_error(e, "Game Start Check", user_id)
+            
             response = game_manager.start_game(game_commands[normalized_text], group_key)
             if response:
-                reply_message(event.reply_token, response)
+                reply_message(event.reply_token, response, qr_type)
             return
 
-    except Exception:
-        logger.exception("Unhandled error in message handler")
+    except Exception as e:
+        ErrorTracker.log_error(e, "Message Handler", user_id=getattr(event.source, 'user_id', None))
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -566,6 +580,18 @@ def index():
         'version': '3.0',
         'status': 'running'
     }), 200
+
+@app.route('/errors', methods=['GET'])
+def view_errors():
+    """عرض آخر الاخطاء"""
+    try:
+        recent_errors = ErrorTracker.get_recent_errors(20)
+        return jsonify({
+            'errors': recent_errors,
+            'count': len(recent_errors)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 5000))
