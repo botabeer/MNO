@@ -248,18 +248,18 @@ def handle_message(event):
 
         if text == "انسحب":
             if unregister_user(group_id, user_id):
-                msg = TextSendMessage(text="تم الغاء تسجيلك", quick_reply=get_quick_reply())
+                msg = TextSendMessage(text="تم الغاء تسجيلك من هذه الجلسة فقط\n\nنقاطك محفوظة ويمكنك العودة في اي وقت", quick_reply=get_quick_reply())
             else:
                 msg = TextSendMessage(text="انت غير مسجل", quick_reply=get_quick_reply())
             line_bot_api.reply_message(event.reply_token, msg)
             return
 
         if text in ["نقاطي", "احصائياتي"]:
-            if not is_user_registered(group_id, user_id):
+            stats = Database.get_user_stats(user_id)
+            if not stats:
                 msg = TextSendMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
                 line_bot_api.reply_message(event.reply_token, msg)
                 return
-            stats = Database.get_user_stats(user_id)
             flex = FlexSendMessage(
                 alt_text="احصائياتك", 
                 contents=UIBuilder.stats_card(display_name, stats),
@@ -332,8 +332,6 @@ def handle_message(event):
 
         if text in game_commands:
             if not is_user_registered(group_id, user_id) and text != "مافيا":
-                msg = TextSendMessage(text="يجب التسجيل اولا", quick_reply=get_quick_reply())
-                line_bot_api.reply_message(event.reply_token, msg)
                 return
             
             response = game_manager.start_game(game_commands[text], group_id)
