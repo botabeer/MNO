@@ -237,19 +237,23 @@ def handle_message(event):
 
         group_key = get_source_key(event)
 
+        # التحقق من حالة الانسحاب
         try:
             if Database.is_user_withdrawn(user_id) and not is_bot_command(text):
                 return
         except Exception as e:
             ErrorTracker.log_error(e, "Check Withdrawn Status", user_id)
 
+        # التحقق من معدل الإرسال
         if not check_rate_limit(user_id):
             logger.warning("Rate limit exceeded for user %s", user_id)
             reply_message(event.reply_token, TextMessage(text="لقد تجاوزت الحد الاقصى للرسائل يرجى المحاولة لاحقا"))
             return
 
+        # الحصول على الثيم
         theme = Database.get_user_theme(user_id)
 
+        # معالجة التسجيل
         if user_id in waiting_for_registration:
             if text.lower() in {"انسحب", "إلغاء", "الغاء"}:
                 waiting_for_registration.discard(user_id)
@@ -272,6 +276,7 @@ def handle_message(event):
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء التسجيل"))
             return
 
+        # معالجة تغيير الاسم
         if user_id in waiting_for_name_change:
             if text.lower() in {"انسحب", "إلغاء", "الغاء"}:
                 waiting_for_name_change.discard(user_id)
@@ -294,11 +299,13 @@ def handle_message(event):
                 reply_message(event.reply_token, TextMessage(text="حدث خطأ اثناء تغيير الاسم"))
             return
 
+        # معالجة إجابات الألعاب
         if not is_bot_command(text):
             game = game_manager.get_game(group_key)
             if game:
                 game_type = game_manager.active_games.get(group_key, {}).get('type', '')
                 
+                # التحقق من التسجيل (إلا للألعاب التي لا تتطلب تسجيل)
                 if game_type not in ['mafia', 'compatibility']:
                     try:
                         if not Database.is_user_registered(user_id):
@@ -307,11 +314,13 @@ def handle_message(event):
                     except Exception as e:
                         ErrorTracker.log_error(e, "Registration Check", user_id)
                 
+                # تحديث آخر نشاط
                 try:
                     Database.update_last_activity(user_id)
                 except Exception as e:
                     ErrorTracker.log_error(e, "Update Activity", user_id)
                 
+                # الحصول على اسم العرض
                 try:
                     stats = Database.get_user_stats(user_id) or {}
                     display_name = stats.get('display_name', 'مستخدم')
@@ -319,30 +328,40 @@ def handle_message(event):
                     ErrorTracker.log_error(e, "Get Stats", user_id)
                     display_name = 'مستخدم'
                 
+                # معالجة الإجابة
                 try:
                     result = game_manager.check_answer(group_key, text, user_id, display_name)
                     if result:
+                        # تحديث النقاط (إلا للألعاب التي لا تتطلب تسجيل)
                         if result.get('correct') and result.get('points', 0) > 0 and game_type not in ['mafia', 'compatibility']:
                             try:
                                 Database.update_user_points(user_id, result['points'], result.get('won', False), game_type)
                             except Exception as e:
                                 ErrorTracker.log_error(e, "Update Points", user_id)
+                        
+                        # إرسال الرد
                         if result.get('response'):
                             reply_message(event.reply_token, result.get('response'))
+                        
+                        # إرسال السؤال التالي
                         if result.get('next_question') and not result.get('game_over'):
                             executor.submit(send_next_question_async, group_key)
+                        
+                        # إنهاء اللعبة
                         if result.get('game_over'):
                             game_manager.stop_game(group_key)
                 except Exception as e:
                     ErrorTracker.log_error(e, "Game Answer Processing", user_id)
                 return
 
+        # تحديث آخر نشاط للمستخدمين المسجلين
         try:
             if Database.is_user_registered(user_id):
                 Database.update_last_activity(user_id)
         except Exception as e:
             ErrorTracker.log_error(e, "Activity Update", user_id)
 
+        # الحصول على اسم العرض
         try:
             stats = Database.get_user_stats(user_id) or {}
             display_name = stats.get('display_name', 'مستخدم')
@@ -352,6 +371,7 @@ def handle_message(event):
 
         normalized_text = text.strip()
 
+        # أوامر البوت
         if normalized_text.lower() in {"بدايه", "start", "ابدا", "بداية"}:
             flex = FlexMessage(
                 alt_text="مرحبا",
@@ -526,6 +546,7 @@ def handle_message(event):
                 reply_message(event.reply_token, response)
             return
 
+        # أوامر الألعاب
         game_commands = {
             "اغنيه": "song",
             "لعبه": "human_animal",
@@ -539,6 +560,7 @@ def handle_message(event):
         }
 
         if normalized_text in game_commands:
+            # التحقق من التسجيل (إلا للألعاب التي لا تتطلب تسجيل)
             if normalized_text not in {"مافيا", "توافق"}:
                 try:
                     if not Database.is_user_registered(user_id):
