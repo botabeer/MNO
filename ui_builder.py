@@ -6,16 +6,18 @@ class UIBuilder:
         if is_registered:
             registration_status = f"مسجل {display_name}"
             status_color = COLORS['success']
+            registration_text = "تغيير الاسم"
         else:
             registration_status = "غير مسجل"
             status_color = COLORS['warning']
+            registration_text = "تسجيل"
 
         registration_buttons = {
             "type": "box",
             "layout": "horizontal",
             "spacing": "xs",
             "contents": [
-                {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": registration_text, "text": "تسجيل" if not is_registered else "تغيير"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "flex": 1},
                 {"type": "button", "action": {"type": "message", "label": "انسحب", "text": "انسحب"}, "style": "secondary", "height": "sm", "flex": 1}
             ]
         }
@@ -53,10 +55,10 @@ class UIBuilder:
                 "spacing": "md",
                 "contents": [
                     {"type": "box", "layout": "vertical", "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px", "contents": [{"type": "text", "text": "بوت الحوت", "size": "lg", "weight": "bold", "color": COLORS['white'], "align": "center"}, {"type": "text", "text": "قائمة الالعاب", "size": "sm", "color": COLORS['white'], "align": "center"}]},
-                    {"type": "text", "text": "استمتع باللعب", "align": "center", "color": COLORS['success']},
+                    {"type": "text", "text": "استمتع باللعب", "align": "center", "color": COLORS['success'], "weight": "bold"},
                     {"type": "box", "layout": "vertical", "spacing": "xs", "contents": [{"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "اغنيه", "text": "اغنيه"}, "flex": 1, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "ضد", "text": "ضد"}, "flex": 1, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "تكوين", "text": "تكوين"}, "flex": 1, "style": "secondary", "height": "sm"}], "spacing": "xs"}, {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "سلسله", "text": "سلسله"}, "flex": 1, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "اسرع", "text": "اسرع"}, "flex": 1, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "لعبه", "text": "لعبه"}, "flex": 1, "style": "secondary", "height": "sm"}], "spacing": "xs"}, {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "فئة", "text": "فئه"}, "flex": 1, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "مافيا", "text": "مافيا"}, "style": "primary", "color": COLORS['primary'], "flex": 1, "height": "sm"}], "spacing": "xs"}]},
                     {"type": "separator", "margin": "md"},
-                    {"type": "text", "text": "العاب ترفيهية بدون تسجيل", "align": "center", "color": COLORS['warning']},
+                    {"type": "text", "text": "العاب ترفيهية بدون تسجيل", "align": "center", "color": COLORS['warning'], "weight": "bold"},
                     {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "سؤال", "text": "سؤال"}, "flex": 1, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "منشن", "text": "منشن"}, "flex": 1, "style": "secondary", "height": "sm"}], "spacing": "xs"},
                     {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "اعتراف", "text": "اعتراف"}, "flex": 1, "style": "secondary", "height": "sm"}, {"type": "button", "action": {"type": "message", "label": "تحدي", "text": "تحدي"}, "flex": 1, "style": "secondary", "height": "sm"}], "spacing": "xs"},
                     {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "توافق", "text": "توافق"}, "flex": 1, "style": "secondary", "height": "sm"}], "spacing": "xs"},
@@ -80,7 +82,9 @@ class UIBuilder:
                 "spacing": "md",
                 "contents": [
                     {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "دليل الاوامر", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الاساسية", "size": "md", "color": COLORS['primary'], "weight": "bold"}, {"type": "text", "text": "بداية تسجيل انسحب نقاطي الصدارة", "size": "sm", "color": COLORS['text_light'], "margin": "sm", "wrap": True}], "margin": "lg"},
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الاساسية", "size": "md", "color": COLORS['primary'], "weight": "bold"}, {"type": "text", "text": "بداية تسجيل تغيير انسحب نقاطي الصدارة العاب", "size": "sm", "color": COLORS['text_light'], "margin": "sm", "wrap": True}], "margin": "lg"},
+                    {"type": "separator", "margin": "md", "color": COLORS['border']},
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "التسجيل وتغيير الاسم", "size": "md", "color": COLORS['success'], "weight": "bold"}, {"type": "text", "text": "اكتب تسجيل او تغيير\nثم ادخل الاسم الذي تريده\nيمكنك استخدام حرف واحد او ارقام او رموز\nالحد الادنى حرف واحد\nالحد الاقصى 50 حرف\n\nمثال أ او علي او X او 123 او @محمد", "size": "xs", "color": COLORS['text_light'], "margin": "sm", "wrap": True}], "margin": "md"},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "بدون تسجيل", "size": "md", "color": COLORS['primary'], "weight": "bold"}, {"type": "text", "text": "سؤال تحدي اعتراف منشن توافق مافيا", "size": "sm", "color": COLORS['text_light'], "margin": "sm", "wrap": True}], "margin": "md"},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
@@ -88,7 +92,7 @@ class UIBuilder:
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "اثناء اللعب", "size": "md", "color": COLORS['primary'], "weight": "bold"}, {"type": "text", "text": "لمح جاوب ايقاف", "size": "sm", "color": COLORS['text_light'], "margin": "sm"}], "margin": "md"},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
-                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النقاط", "size": "md", "color": COLORS['success'], "weight": "bold"}, {"type": "text", "text": "اجابة صحيحة 1 نقطة تلميح او جاوب 0 نقطة", "size": "xs", "color": COLORS['text_light'], "margin": "sm", "wrap": True}], "margin": "md"},
+                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النقاط", "size": "md", "color": COLORS['success'], "weight": "bold"}, {"type": "text", "text": "اجابة صحيحة 1 نقطة\nتلميح او جاوب 0 نقطة", "size": "xs", "color": COLORS['text_light'], "margin": "sm", "wrap": True}], "margin": "md"},
                     {"type": "separator", "margin": "md", "color": COLORS['border']},
                     {"type": "button", "action": {"type": "message", "label": "العودة للبداية", "text": "بداية"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "md"},
                     {"type": "separator", "margin": "lg", "color": COLORS['border']},
