@@ -11,7 +11,6 @@ import random
 import os
 
 class GameManager:
-    
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.active_games = {}
