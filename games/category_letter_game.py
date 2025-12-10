@@ -15,7 +15,7 @@ def normalize_text(text):
 class CategoryLetterGame:
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
-                self.challenges = [
+        self.challenges = [
             {"category": "المطبخ", "letter": "ق", "answers": ["قدر", "قلايه", "قهوه", "قنينه", "قباقيب"]},
             {"category": "حيوان", "letter": "ب", "answers": ["بطه", "بقره", "ببغاء", "بومه", "بعير"]},
             {"category": "فاكهه", "letter": "ت", "answers": ["تفاح", "توت", "تمر", "تين", "ترنج"]},
