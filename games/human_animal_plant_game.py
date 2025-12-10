@@ -27,7 +27,7 @@ class HumanAnimalPlantGame:
         progress = f"{self.current_question + 1}/{self.total_questions}"
         
         return FlexSendMessage(
-            alt_text="إنسان حيوان نبات بلاد",
+            alt_text="انسان حيوان نبات بلاد",
             contents={
                 "type": "bubble",
                 "body": {
@@ -35,13 +35,12 @@ class HumanAnimalPlantGame:
                     "layout": "vertical",
                     "spacing": "md",
                     "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "إنسان حيوان نبات بلاد", "weight": "bold", "size": "lg", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انسان حيوان نبات بلاد", "weight": "bold", "size": "lg", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                         {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
                         {"type": "separator", "margin": "md", "color": COLORS['border']},
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": letter, "size": "5xl", "color": COLORS['primary'], "weight": "bold", "align": "center"}, {"type": "text", "text": "اكتب 4 كلمات تبدأ بهذا الحرف", "size": "sm", "color": COLORS['text_dark'], "margin": "md", "wrap": True, "align": "center"}, {"type": "text", "text": "كل كلمة في سطر منفصل", "size": "xs", "color": COLORS['text_light'], "margin": "xs", "align": "center"}], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "sm"}
+                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
@@ -64,12 +63,12 @@ class HumanAnimalPlantGame:
         letter = self.questions[self.current_question]
 
         if text.lower() in ['لمح', 'تلميح']:
-            return {'response': TextSendMessage(text=f"يبدأ بحرف: {letter}\nمثال: إنسان، حيوان، نبات، بلاد"), 'points': 0, 'correct': False}
+            return {'response': TextSendMessage(text=f"يبدأ بحرف {letter}\nمثال انسان حيوان نبات بلاد"), 'points': 0, 'correct': False}
 
         if text.lower() in ['جاوب', 'الجواب']:
             self.answered_users[user_id] = True
             if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"اكتب 4 كلمات تبدأ بحرف: {letter}"), 'points': 0, 'correct': False, 'next_question': True}
+                return {'response': TextSendMessage(text=f"اكتب 4 كلمات تبدأ بحرف {letter}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
 
         lines = text.split('\n')
@@ -78,13 +77,13 @@ class HumanAnimalPlantGame:
             if len(words) >= 4:
                 valid_count = sum(1 for word in words[:4] if word and word[0] == letter)
                 if valid_count >= 1:
-                    points = valid_count * 3
+                    points = valid_count
                     self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0})
                     self.player_scores[user_id]['score'] += points
                     self.answered_users[user_id] = True
 
                     if self.current_question + 1 < self.total_questions:
-                        return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\nالكلمات الصحيحة: {valid_count}/4\n+{points} نقطة"), 'points': points, 'correct': True, 'won': valid_count == 4, 'next_question': True}
+                        return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\nالكلمات الصحيحة {valid_count} من 4\n+{points} نقطة"), 'points': points, 'correct': True, 'won': valid_count == 4, 'next_question': True}
                     return self._end_game()
         return None
 
@@ -115,7 +114,7 @@ class HumanAnimalPlantGame:
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "button", "action": {"type": "message", "label": "إعادة اللعب", "text": "لعبه"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
+                        {"type": "button", "action": {"type": "message", "label": "اعادة اللعب", "text": "لعبه"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
