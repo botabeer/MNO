@@ -344,6 +344,17 @@ class MafiaGame:
             target_name = text.replace("اقتل ", "").strip()
             for uid, p in self.players.items():
                 if p["name"] == target_name and p["alive"] and uid != user_id:
+                    self.night_actions["mafia_target"] = uid
+                    return {"response": TextSendMessage(text=f"تم الاختيار {target_name} سيتم قتله عند انهاء الليل")}
+            return {"response": TextSendMessage(text="لا يوجد لاعب بهذا الاسم")}
+        if text.startswith("افحص "):
+            if user_id not in self.players or self.players[user_id]["role"] != "detective":
+                return {"response": TextSendMessage(text="انت لست المحقق")}
+            if self.phase != "night":
+                return {"response": TextSendMessage(text="ليس وقت الليل")}
+            target_name = text.replace("افحص ", "").strip()
+            for uid, p in self.players.items():
+                if p["name"] == target_name and p["alive"] and uid != user_id:
                     role = p["role"]
                     result_text = "مافيا" if role == "mafia" else "بريء"
                     return {"response": TextSendMessage(text=f"نتيجة الفحص {target_name} هو {result_text}")}
@@ -364,15 +375,6 @@ class MafiaGame:
                         return {"response": TextSendMessage(text=f"تم الاختيار {target_text} سيتم حمايته الليلة")}
                 return {"response": TextSendMessage(text="لا يوجد لاعب بهذا الاسم")}
         return None
-items():
-                if p["name"] == target_name and p["alive"] and uid != user_id:
-                    self.night_actions["mafia_target"] = uid
-                    return {"response": TextSendMessage(text=f"تم الاختيار {target_name} سيتم قتله عند انهاء الليل")}
-            return {"response": TextSendMessage(text="لا يوجد لاعب بهذا الاسم")}
-        if text.startswith("افحص "):
-            if user_id not in self.players or self.players[user_id]["role"] != "detective":
-                return {"response": TextSendMessage(text="انت لست المحقق")}
-            if self.phase != "night":
-                return {"response": TextSendMessage(text="ليس وقت الليل")}
-            target_name = text.replace("افحص ", "").strip()
-            for uid, p in self.players.
+    
+    def next_question(self):
+        return None
