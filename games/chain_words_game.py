@@ -52,10 +52,9 @@ class ChainWordsGame:
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "سلسلة الكلمات", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
                         {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
                         {"type": "separator", "margin": "md", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": f"الكلمة: {self.current_word}", "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center"}, {"type": "text", "text": f"اكتب كلمة تبدأ بحرف: {last_letter}", "size": "md", "color": COLORS['text_dark'], "wrap": True, "margin": "md", "align": "center"}], "margin": "lg"},
+                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": f"الكلمة {self.current_word}", "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center"}, {"type": "text", "text": f"اكتب كلمة تبدأ بحرف {last_letter}", "size": "md", "color": COLORS['text_dark'], "wrap": True, "margin": "md", "align": "center"}], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "sm"}
+                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
@@ -77,12 +76,12 @@ class ChainWordsGame:
         last_letter = self.current_word[-1]
         
         if answer.lower() in ['لمح', 'تلميح']:
-            return {'response': TextSendMessage(text=f"يبدأ بحرف: {last_letter}\nمثال: كلمة تبدأ بهذا الحرف"), 'points': 0, 'correct': False}
+            return {'response': TextSendMessage(text=f"يبدأ بحرف {last_letter}\nمثال كلمة تبدأ بهذا الحرف"), 'points': 0, 'correct': False}
 
         if answer.lower() in ['جاوب', 'الجواب']:
             self.answered_users.add(user_id)
             if self.round_count + 1 < self.max_rounds:
-                return {'response': TextSendMessage(text=f"يمكنك كتابة أي كلمة تبدأ بحرف: {last_letter}"), 'points': 0, 'correct': False, 'next_question': True}
+                return {'response': TextSendMessage(text=f"يمكنك كتابة اي كلمة تبدأ بحرف {last_letter}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
 
         normalized_last = 'ه' if last_letter in ['ة', 'ه'] else last_letter
@@ -104,10 +103,10 @@ class ChainWordsGame:
             self.answered_users.add(user_id)
 
             if self.round_count < self.max_rounds:
-                return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
+                return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name} +{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
             return self._end_game()
         
-        return {'response': TextSendMessage(text=f"يجب أن تبدأ الكلمة بحرف: {last_letter}"), 'points': 0, 'correct': False}
+        return {'response': TextSendMessage(text=f"يجب ان تبدأ الكلمة بحرف {last_letter}"), 'points': 0, 'correct': False}
 
     def _end_game(self):
         if not self.player_scores:
@@ -136,7 +135,7 @@ class ChainWordsGame:
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
                         {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
                         {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "button", "action": {"type": "message", "label": "إعادة اللعب", "text": "سلسله"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
+                        {"type": "button", "action": {"type": "message", "label": "اعادة اللعب", "text": "سلسله"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
                     ],
                     "backgroundColor": COLORS['card_bg'],
                     "paddingAll": "20px"
