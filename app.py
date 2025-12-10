@@ -36,6 +36,7 @@ atexit.register(lambda: scheduler.shutdown())
 
 group_registered_users = {}
 withdrawn_users = {}
+waiting_for_name = {}  # قاموس لتتبع المستخدمين الذين ينتظرون إدخال الاسم
 
 def is_user_registered(group_id, user_id):
     return group_id in group_registered_users and user_id in group_registered_users[group_id]
@@ -67,6 +68,13 @@ def get_user_display_name(group_id, user_id):
         return stats['display_name']
     return None
 
+def is_valid_name(name):
+    """التحقق من صحة الاسم - يقبل أي نص من حرف واحد أو أكثر"""
+    if not name or len(name.strip()) == 0:
+        return False
+    # يسمح بأي محتوى طالما ليس فارغاً
+    return len(name.strip()) >= 1 and len(name.strip()) <= 50
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
@@ -90,6 +98,18 @@ def handle_message(event):
         
         Database.update_last_activity(user_id)
         
+        # التحقق من حالة انتظار الاسم
+        if user_id in waiting_for_name:
+            if is_valid_name(text):
+                display_name = text.strip()
+                register_user(group_id, user_id, display_name)
+                del waiting_for_name[user_id]
+                msg = TextSendMessage(text=f"تم التسجيل بنجاح\nاسمك {display_name}\nيمكنك الان اللعب وجمع النقاط")
+            else:
+                msg = TextSendMessage(text="الاسم غير صالح\nيرجى ادخال اسم صحيح حرف واحد على الاقل حد اقصى 50 حرف")
+            line_bot_api.reply_message(event.reply_token, msg)
+            return
+        
         if is_user_withdrawn(group_id, user_id):
             return
 
@@ -110,12 +130,12 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
-        if text == "تسجيل":
+        if text == "تسجيل" or text == "تغيير":
+            waiting_for_name[user_id] = True
             if is_user_registered(group_id, user_id):
-                msg = TextSendMessage(text=f"انت مسجل بالفعل باسم {display_name}")
+                msg = TextSendMessage(text=f"انت مسجل حاليا باسم {display_name}\n\nادخل الاسم الجديد\nيمكنك استخدام حرف واحد او ارقام او رموز\nالحد الادنى حرف واحد\nالحد الاقصى 50 حرف")
             else:
-                register_user(group_id, user_id, display_name)
-                msg = TextSendMessage(text=f"تم التسجيل بنجاح\nاسمك {display_name}\nيمكنك الان اللعب وجمع النقاط")
+                msg = TextSendMessage(text="التسجيل\n\nادخل الاسم الذي تريده\nيمكنك استخدام حرف واحد او ارقام او رموز\nالحد الادنى حرف واحد\nالحد الاقصى 50 حرف\n\nمثال أ او علي او X او 123 او @محمد")
             line_bot_api.reply_message(event.reply_token, msg)
             return
 
@@ -130,7 +150,7 @@ def handle_message(event):
         if text in ["نقاطي", "احصائياتي"]:
             stats = Database.get_user_stats(user_id)
             if not stats:
-                msg = TextSendMessage(text="يجب التسجيل اولا")
+                msg = TextSendMessage(text="يجب التسجيل اولا\nاكتب تسجيل")
                 line_bot_api.reply_message(event.reply_token, msg)
                 return
             flex = FlexSendMessage(alt_text="احصائياتك", contents=UIBuilder.stats_card(display_name, stats))
