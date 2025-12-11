@@ -1,82 +1,124 @@
 """
-ثوابت التطبيق
+ثوابت التطبيق المُحسّنة
 """
 
-# نظام الألوان
+# الألوان - نظام موحد
 COLORS = {
     'primary': '#6B9BD1',
-    'primary_dark': '#4A7BA7',
-    'background': '#F5F7FA',
-    'background_light': '#FFFFFF',
-    'card_bg': '#FFFFFF',
-    'text': '#2C3E50',
-    'white': '#FFFFFF',
-    'text_secondary': '#7F8C8D',
-    'text_light': '#95A5A6',
-    'text_dark': '#2C3E50',
     'success': '#52C5B6',
     'warning': '#F39C6B',
     'error': '#E17B7B',
+    'white': '#FFFFFF',
+    'text_dark': '#2C3E50',
+    'text_light': '#95A5A6',
     'border': '#E8ECEF',
-    'progress_bg': '#E8ECEF',
-    'progress_fill': '#6B9BD1',
-    'glow': '#6B9BD1',
-    'shadow': 'rgba(107, 155, 209, 0.15)'
+    'card_bg': '#FFFFFF'
 }
 
 # نظام النقاط
 POINTS = {
-    'correct_answer': 1,
-    'hint_used': 0,
+    'correct': 1,
+    'hint': 0,
     'show_answer': 0
 }
 
-# عدد الأسئلة لكل لعبة
-QUESTIONS_PER_GAME = 5
-
-# إعدادات لعبة المافيا
-MAFIA_CONFIG = {
-    'min_players': 4,
-    'max_players': 20,
-    'roles': {
-        'mafia': 1,
-        'detective': 1,
-        'doctor': 1,
-        'citizen': 'remaining'
-    },
-    'phases': ['registration', 'night', 'day', 'voting', 'ended'],
-    'night_duration': 60,
-    'day_duration': 120,
-    'voting_duration': 60
-}
-
-# عدد أيام عدم النشاط قبل الحذف
-INACTIVITY_DAYS = 30
-
-# حدود التطبيق
-LIMITS = {
-    'max_name_length': 50,
+# إعدادات الألعاب
+GAME_SETTINGS = {
+    'questions_per_game': 5,
+    'time_limit_seconds': 30,
     'min_name_length': 1,
-    'max_leaderboard_entries': 20,
-    'max_game_history': 100
+    'max_name_length': 50
 }
 
-# الأوامر المتاحة
+# إعدادات قاعدة البيانات
+DB_SETTINGS = {
+    'name': 'game_scores.db',
+    'inactivity_days': 30,
+    'max_leaderboard': 20
+}
+
+# أوامر البوت
 COMMANDS = {
-    'basic': ['بدايه', 'start', 'ابدا', 'بداية', 'مساعده', 'help', 'مساعدة', 'العاب'],
-    'account': ['تسجيل', 'تغيير', 'انسحب', 'نقاطي', 'احصائياتي'],
-    'leaderboard': ['الصداره', 'المتصدرين', 'الصدارة'],
-    'game_control': ['ايقاف', 'stop', 'إيقاف'],
-    'no_registration': ['سؤال', 'سوال', 'تحدي', 'اعتراف', 'منشن', 'توافق'],
-    'games': ['اغنيه', 'لعبه', 'سلسله', 'اسرع', 'ضد', 'تكوين', 'فئه', 'مافيا']
+    'start': ['بدايه', 'start', 'بداية'],
+    'help': ['مساعده', 'help'],
+    'games': ['العاب', 'ألعاب'],
+    'register': ['تسجيل'],
+    'change_name': ['تغيير'],
+    'withdraw': ['انسحب'],
+    'stats': ['نقاطي', 'احصائياتي'],
+    'leaderboard': ['الصداره', 'الصدارة'],
+    'stop': ['ايقاف', 'stop', 'إيقاف'],
+    
+    # الألعاب
+    'song': ['اغنيه'],
+    'opposite': ['ضد'],
+    'chain': ['سلسله'],
+    'fast': ['اسرع'],
+    'human_animal': ['لعبه'],
+    'letters': ['تكوين'],
+    'category': ['فئه'],
+    'compatibility': ['توافق'],
+    'mafia': ['مافيا'],
+    
+    # ألعاب بدون تسجيل
+    'question': ['سؤال', 'سوال'],
+    'challenge': ['تحدي'],
+    'confession': ['اعتراف'],
+    'mention': ['منشن'],
+    
+    # أثناء اللعبة
+    'hint': ['لمح', 'تلميح'],
+    'answer': ['جاوب', 'الجواب', 'الحل']
 }
 
-# رسائل النظام
-MESSAGES = {
-    'welcome': 'مرحباً بك في بوت الألعاب',
-    'registration_required': 'يجب التسجيل أولاً للعب هذه اللعبة\nاكتب: تسجيل',
-    'invalid_name': 'الاسم غير صالح\nيرجى إدخال اسم صحيح (1-50 حرف)',
-    'game_stopped': 'تم إيقاف اللعبة',
-    'no_active_game': 'لا توجد لعبة نشطة',
-    'error': 'حدث خطأ، الرجاء المحاولة مرة أخرى'
+# محتوى الألعاب
+GAME_DATA = {
+    'songs': [
+        {'lyrics': 'رجعت لي أيام الماضي معاك', 'answer': 'أم كلثوم'},
+        {'lyrics': 'جلست والخوف بعينيها تتأمل فنجاني', 'answer': 'عبد الحليم حافظ'},
+        {'lyrics': 'تملي معاك ولو حتى بعيد عني', 'answer': 'عمرو دياب'},
+        {'lyrics': 'يا بنات يا بنات', 'answer': 'نانسي عجرم'},
+        {'lyrics': 'قولي أحبك كي تزيد وسامتي', 'answer': 'كاظم الساهر'},
+        {'lyrics': 'أنا لحبيبي وحبيبي إلي', 'answer': 'فيروز'},
+        {'lyrics': 'حبيبي يا كل الحياة اوعدني تبقى معايا', 'answer': 'تامر حسني'},
+        {'lyrics': 'قلبي بيسألني عنك دخلك طمني وينك', 'answer': 'وائل كفوري'},
+        {'lyrics': 'كيف أبيّن لك شعوري دون ما أحكي', 'answer': 'عايض'},
+        {'lyrics': 'اسخر لك غلا وتشوفني مقصر', 'answer': 'عايض'},
+    ],
+    
+    'opposites': [
+        {'word': 'كبير', 'answer': 'صغير'},
+        {'word': 'طويل', 'answer': 'قصير'},
+        {'word': 'سريع', 'answer': 'بطيء'},
+        {'word': 'ساخن', 'answer': 'بارد'},
+        {'word': 'نظيف', 'answer': 'وسخ'},
+        {'word': 'قوي', 'answer': 'ضعيف'},
+        {'word': 'سهل', 'answer': 'صعب'},
+        {'word': 'جميل', 'answer': 'قبيح'},
+        {'word': 'غني', 'answer': 'فقير'},
+        {'word': 'فوق', 'answer': 'تحت'},
+    ],
+    
+    'chain_words': [
+        'قلم', 'كتاب', 'مدرسة', 'باب', 'نافذة', 
+        'طاولة', 'كرسي', 'حديقة', 'شجرة', 'زهرة'
+    ],
+    
+    'fast_typing': [
+        'سبحان الله', 'الحمد لله', 'لا اله الا الله', 
+        'الله اكبر', 'استغفر الله', 'لا حول ولا قوه الا بالله'
+    ],
+    
+    'letters': ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر'],
+    
+    'categories': [
+        {'category': 'المطبخ', 'letter': 'ق', 'answers': ['قدر', 'قلايه', 'قهوه']},
+        {'category': 'حيوان', 'letter': 'ب', 'answers': ['بطه', 'بقره', 'ببغاء']},
+        {'category': 'فاكهه', 'letter': 'ت', 'answers': ['تفاح', 'توت', 'تمر']},
+    ],
+    
+    'letter_words': [
+        {'letters': 'ق ل م ع ر ك', 'answers': ['قلم', 'علم', 'عمر', 'رقم', 'ملك']},
+        {'letters': 'ك ت ا ب ر ل', 'answers': ['كتاب', 'باب', 'كتب', 'تراب']},
+    ]
 }
