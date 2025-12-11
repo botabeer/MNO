@@ -15,6 +15,22 @@ COLORS = {
     'card_bg': '#FFFFFF'
 }
 
+# Themes للألعاب
+THEMES = {
+    'light': COLORS,
+    'dark': {
+        'primary': '#6B9BD1',
+        'success': '#52C5B6',
+        'warning': '#F39C6B',
+        'error': '#E17B7B',
+        'white': '#FFFFFF',
+        'text_dark': '#FFFFFF',
+        'text_light': '#B0B0B0',
+        'border': '#333333',
+        'card_bg': '#1E1E1E'
+    }
+}
+
 # نظام النقاط
 POINTS = {
     'correct': 1,
@@ -36,6 +52,15 @@ DB_SETTINGS = {
     'inactivity_days': 30,
     'max_leaderboard': 20
 }
+
+# إعدادات لعبة المافيا
+MAFIA_CONFIG = {
+    'min_players': 4,
+    'max_players': 15
+}
+
+# عدد أيام عدم النشاط قبل الحذف
+INACTIVITY_DAYS = 30
 
 # أوامر البوت
 COMMANDS = {
