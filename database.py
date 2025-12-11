@@ -47,6 +47,7 @@ class Database:
                         total_points INTEGER DEFAULT 0,
                         games_played INTEGER DEFAULT 0,
                         wins INTEGER DEFAULT 0,
+                        theme TEXT DEFAULT 'light',
                         last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -82,6 +83,34 @@ class Database:
         except Exception as e:
             logger.error(f"Database initialization error: {e}")
             raise
+    
+    @staticmethod
+    def get_user_theme(user_id):
+        """الحصول على ثيم المستخدم (light أو dark)"""
+        try:
+            with Database.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT theme FROM users WHERE user_id = ?', (user_id,))
+                row = cursor.fetchone()
+                return row[0] if row else 'light'
+        except Exception as e:
+            logger.error(f"Error getting theme for {user_id}: {e}")
+            return 'light'
+    
+    @staticmethod
+    def set_user_theme(user_id, theme):
+        """تعيين ثيم المستخدم"""
+        try:
+            with Database.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users SET theme = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                ''', (theme, user_id))
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error setting theme for {user_id}: {e}")
+            return False
     
     @staticmethod
     def register_or_update_user(user_id, display_name):
