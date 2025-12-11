@@ -1,3 +1,9 @@
+"""
+لعبة - Bot Mesh v20.1 FINAL
+Created by: Abeer Aldosari © 2025
+✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | بدون وقت
+"""
+
 from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional

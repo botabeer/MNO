@@ -1,125 +1,122 @@
-"""
-مدير الألعاب - يدير جميع الألعاب المتاحة
-"""
-import random
-from pathlib import Path
-from linebot.models import TextSendMessage
+import logging
+from typing import Dict, Optional
+from linebot.v3.messaging import TextMessage
+from config import Config
+from ui_builder import UIBuilder
+
+logger = logging.getLogger(__name__)
 
 class GameManager:
-    """مدير الألعاب الموحد"""
-    
-    def __init__(self, line_bot_api):
-        self.line_bot_api = line_bot_api
+    def __init__(self, db):
+        self.db = db
+        self.ui = UIBuilder()
         self.active_games = {}
-        
-        # تحميل محتوى الألعاب البسيطة
-        self.questions = self._load_text_file('games/questions.txt')
-        self.challenges = self._load_text_file('games/challenges.txt')
-        self.confessions = self._load_text_file('games/confessions.txt')
-        self.mentions = self._load_text_file('games/mentions.txt')
+        self.game_sessions = {}
+        self.games = self._load_games()
     
-    def _load_text_file(self, filename):
-        """تحميل ملف نصي"""
+    def _load_games(self):
+        games = {}
         try:
-            file_path = Path(filename)
-            if file_path.exists():
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    return [line.strip() for line in f if line.strip()]
-            return []
+            from games.iq_game import IqGame
+            from games.roulette_game import RouletteGame
+            from games.word_color_game import WordColorGame
+            from games.scramble_word_game import ScrambleWordGame
+            from games.fast_typing_game import FastTypingGame
+            from games.opposite_game import OppositeGame
+            from games.letters_words_game import LettersWordsGame
+            from games.song_game import SongGame
+            from games.human_animal_plant_game import HumanAnimalPlantGame
+            from games.chain_words_game import ChainWordsGame
+            from games.guess_game import GuessGame
+            from games.compatibility_game import CompatibilitySystem
+            from games.math_game import MathGame
+            
+            games = {
+                "ذكاء": IqGame,
+                "روليت": RouletteGame,
+                "لون": WordColorGame,
+                "ترتيب": ScrambleWordGame,
+                "اسرع": FastTypingGame,
+                "ضد": OppositeGame,
+                "تكوين": LettersWordsGame,
+                "اغنيه": SongGame,
+                "لعبة": HumanAnimalPlantGame,
+                "سلسلة": ChainWordsGame,
+                "خمن": GuessGame,
+                "توافق": CompatibilitySystem,
+                "رياضيات": MathGame
+            }
+            logger.info(f"Loaded {len(games)} games")
         except Exception as e:
-            print(f"Error loading {filename}: {e}")
-            return []
+            logger.error(f"Game loading error: {e}")
+        return games
     
-    def start_game(self, game_type, group_id):
-        """بدء لعبة جديدة"""
-        from games.song_game import SongGame
-        from games.opposite_game import OppositeGame
-        from games.compatibility_game import CompatibilityGame
-        from games.fast_typing_game import FastTypingGame
-        from games.chain_words_game import ChainWordsGame
-        from games.human_animal_plant_game import HumanAnimalPlantGame
-        from games.letters_words_game import LettersWordsGame
-        from games.category_letter_game import CategoryLetterGame
-        from games.mafia_game import MafiaGame
-        
-        # إنشاء اللعبة المناسبة
-        game_classes = {
-            'song': SongGame,
-            'opposite': OppositeGame,
-            'compatibility': CompatibilityGame,
-            'fast_typing': FastTypingGame,
-            'chain': ChainWordsGame,
-            'human_animal': HumanAnimalPlantGame,
-            'letters': LettersWordsGame,
-            'category': CategoryLetterGame,
-            'mafia': MafiaGame
-        }
-        
-        game_class = game_classes.get(game_type)
-        if not game_class:
-            return None
-        
-        # إنشاء وبدء اللعبة
-        game = game_class(self.line_bot_api)
-        self.active_games[group_id] = {
-            'type': game_type,
-            'instance': game
-        }
-        
-        return game.start_game()
+    def get_active_count(self) -> int:
+        return len(self.active_games)
     
-    def get_game(self, group_id):
-        """الحصول على اللعبة النشطة"""
-        game_data = self.active_games.get(group_id)
-        if game_data:
-            return game_data['instance']
+    def get_total_games(self) -> int:
+        return len(self.games)
+    
+    def stop_game(self, context_id: str) -> Optional[str]:
+        if context_id in self.active_games:
+            game = self.active_games[context_id]
+            game_name = game.game_name
+            del self.active_games[context_id]
+            self.game_sessions.pop(context_id, None)
+            return game_name
         return None
     
-    def check_answer(self, group_id, text, user_id, display_name):
-        """فحص الإجابة في اللعبة النشطة"""
-        game = self.get_game(group_id)
-        if not game:
-            return None
+    def process_message(self, context_id: str, user_id: str, username: str,
+                       text: str, is_registered: bool, theme: str, source_type: str) -> Optional[Dict]:
+        normalized = Config.normalize(text)
         
-        return game.check_answer(text, user_id, display_name)
-    
-    def next_question(self, group_id):
-        """الانتقال للسؤال التالي"""
-        game = self.get_game(group_id)
-        if not game:
-            return None
+        if normalized in self.games:
+            game_config = Config.get_game_config(normalized)
+            
+            if not game_config.get('no_registration') and not is_registered:
+                return {'messages': [TextMessage(text="يجب التسجيل اولا")], 'points': 0}
+            
+            if game_config.get('group_only') and source_type not in ["group", "room"]:
+                return {'messages': [TextMessage(text="للمجموعات فقط")], 'points': 0}
+            
+            GameClass = self.games[normalized]
+            game = GameClass(None)
+            
+            if hasattr(game, 'set_theme'):
+                game.set_theme(theme)
+            if hasattr(game, 'set_database'):
+                game.set_database(self.db)
+            
+            self.active_games[context_id] = game
+            
+            if not game_config.get('no_registration'):
+                session_id = self.db.create_session(user_id, normalized)
+                self.game_sessions[context_id] = {'session_id': session_id, 'user_id': user_id}
+            
+            question = game.start_game()
+            return {'messages': [question], 'points': 0}
         
-        return game.next_question()
-    
-    def stop_game(self, group_id):
-        """إيقاف اللعبة"""
-        if group_id in self.active_games:
-            del self.active_games[group_id]
-            return True
-        return False
-    
-    # الألعاب البسيطة بدون تسجيل
-    
-    def get_random_question(self):
-        """الحصول على سؤال عشوائي"""
-        if not self.questions:
-            return "لا توجد أسئلة متاحة حالياً"
-        return random.choice(self.questions)
-    
-    def get_random_challenge(self):
-        """الحصول على تحدي عشوائي"""
-        if not self.challenges:
-            return "لا توجد تحديات متاحة حالياً"
-        return random.choice(self.challenges)
-    
-    def get_random_confession(self):
-        """الحصول على اعتراف عشوائي"""
-        if not self.confessions:
-            return "لا توجد اعترافات متاحة حالياً"
-        return random.choice(self.confessions)
-    
-    def get_random_mention(self):
-        """الحصول على منشن عشوائي"""
-        if not self.mentions:
-            return "لا توجد منشنات متاحة حالياً"
-        return random.choice(self.mentions)
+        if context_id in self.active_games:
+            game = self.active_games[context_id]
+            result = game.check_answer(text, user_id, username)
+            
+            if result:
+                points = result.get('points', 0)
+                messages = []
+                
+                if result.get('message'):
+                    messages.append(TextMessage(text=result['message']))
+                
+                if result.get('game_over'):
+                    if context_id in self.game_sessions:
+                        session = self.game_sessions[context_id]
+                        self.db.complete_session(session['session_id'], points)
+                        del self.game_sessions[context_id]
+                    del self.active_games[context_id]
+                    if points > 0 and is_registered:
+                        self.db.record_game_stat(user_id, game.game_name, points, True)
+                elif result.get('response'):
+                    messages.append(result['response'])
+                
+                return {'messages': messages, 'points': points}
+        return None

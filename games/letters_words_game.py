@@ -1,157 +1,133 @@
-from linebot.models import TextSendMessage, FlexSendMessage
+"""
+لعبة تكوين - Bot Mesh v20.1 FINAL
+Created by: Abeer Aldosari © 2025
+✅ نقطة واحدة لكل كلمة | ثيمات | سؤال سابق | أزرار | بدون وقت
+"""
+
+from games.base_game import BaseGame
 import random
-import re
-from constants import COLORS
+from typing import Dict, Any, Optional
 
-def normalize_text(text):
-    if not text:
-        return ""
-    text = text.strip().lower()
-    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '').replace('ة', 'ه').replace('ى', 'ي')
-    text = re.sub(r'[\u064B-\u065F]', '', text)
-    text = re.sub(r'\s+', '', text)
-    return text
 
-class LettersWordsGame:
+class LettersWordsGame(BaseGame):
+    """لعبة تكوين"""
+
     def __init__(self, line_bot_api):
-        self.line_bot_api = line_bot_api
-        self.challenges = [
-            {"letters": "ق ل م ع ر ك", "answers": ["قلم", "علم", "عمر", "رقم", "ملك", "قرم", "عرق", "كرم", "لقم", "عقر"]},
-            {"letters": "ك ت ا ب ر ل", "answers": ["كتاب", "باب", "كتب", "تراب", "بكر", "كبر", "بار", "كرت", "تبر", "ركب"]},
-            {"letters": "م د ر س ه ل", "answers": ["مدرسه", "سهل", "درس", "سهم", "مدر", "رمل", "مهر", "هرم", "سرد", "مهد"]},
-            {"letters": "ش ج ر ف ق ه", "answers": ["شجر", "فجر", "قهر", "شرف", "فرش", "جرف", "شقه", "رشق", "فرق", "جهر"]},
-            {"letters": "ح د ي ق ه ل", "answers": ["حديقه", "قديح", "حقل", "دقيق", "حيل", "قلد", "لحد", "ديل", "حدل", "قيد"]},
-            {"letters": "ب ي ت ك ر م", "answers": ["بيت", "كريم", "كبر", "ترك", "ريم", "كتم", "بكر", "يكتب", "تمر", "بكي"]},
-            {"letters": "ن و ر س م ا", "answers": ["نور", "سمر", "مان", "سور", "نار", "رمس", "مرس", "روس", "سمن", "نوم"]},
-            {"letters": "ف ل ج ر ب ح", "answers": ["فجر", "جرح", "حرب", "حفل", "فلج", "برج", "رحب", "جفل", "فرح", "لحب"]},
-            {"letters": "س ل ا م و ن", "answers": ["سلام", "سلم", "مان", "سما", "لوم", "ماس", "سول", "نام", "نسل", "ملس"]},
-            {"letters": "ع ل ي ا ن ب", "answers": ["علي", "عليا", "بني", "ليان", "بان", "بعل", "نيل", "عني", "نبي", "علن"]}
+        super().__init__(line_bot_api, questions_count=5)
+        self.game_name = "تكوين"
+        self.supports_hint = True
+        self.supports_reveal = True
+
+        self.letter_sets = [
+            {"letters": ["ق","ل","م","ع","ر","ب"], "words": ["قلم","عمل","علم","قلب","رقم","عقل","قبل","بقر","قرب","عرب"]},
+            {"letters": ["س","ا","ر","ة","ي","م"], "words": ["سيارة","سير","مسار","سارية","رأس","أسر","يسار","مارس","سام","رمي"]},
+            {"letters": ["ك","ت","ا","ب","م","ل"], "words": ["كتاب","كتب","مكتب","ملك","بكم","كلم","تلك","كمل"]},
+            {"letters": ["د","ر","س","ة","م","ا"], "words": ["مدرسة","درس","مدرس","سدر","رسم","سرد","مسد","رمد","سمر"]},
+            {"letters": ["ح","د","ي","ق","ة","ر"], "words": ["حديقة","حديد","قرد","دقيق","حرق","قدر","رحيق","حقد"]},
+            {"letters": ["ب","ح","ر","ي","ة","س"], "words": ["بحيرة","بحر","سير","حرب","سحر","بحري","سبر","حبر"]},
+            {"letters": ["ش","ج","ر","ة","م","ن"], "words": ["شجرة","شجر","نجم","رجم","شرج","نمر","جمر","نشر"]},
+            {"letters": ["غ","ا","ب","ة","ر","ي"], "words": ["غابة","غراب","غرب","بغي","بير","ريب","بري"]},
+            {"letters": ["ن","خ","ل","ة","ي","م"], "words": ["نخلة","نخل","خلي","نمل","خيل","نيل","خمل"]},
+            {"letters": ["أ","س","د","ر","ن","ي"], "words": ["أسد","سرد","درس","سند","نرد","أسر","دنس","سير"]},
+            {"letters": ["ف","ي","ل","ط","ر","ن"], "words": ["فيل","طير","طفل","نفط","رفل","طرف","فرن","طين"]},
+            {"letters": ["ق","ط","ة","ر","ب","ي"], "words": ["قطة","قطر","بقر","طرب","رقبة","قرب","طيب","قبر"]},
+            {"letters": ["ح","م","ا","م","ة","ل"], "words": ["حمامة","حمام","محل","حمل","ملح","حلم","أمل"]},
+            {"letters": ["غ","ز","ا","ل","ر","ي"], "words": ["غزال","غزل","زرع","زال","لغز","رزق","زير"]},
+            {"letters": ["ت","م","ر","ي","ن","س"], "words": ["تمر","تمرين","ترس","سمر","نمر","رتم","نير"]},
+            {"letters": ["ل","ب","ن","ح","ة","ي"], "words": ["لبن","حلب","نبل","نحل","لحن","بني","حين"]},
+            {"letters": ["خ","ب","ز","ر","ن","م"], "words": ["خبز","خزن","برز","زمن","نزر","زرن","خمر"]},
+            {"letters": ["ع","س","ل","ج","ر","ن"], "words": ["عسل","جرس","عجل","رجل","سجل","عجن","سرج"]},
+            {"letters": ["م","ا","ء","ي","ر","ن"], "words": ["ماء","مرء","نار","راء","أمر","مير","رين"]},
+            {"letters": ["ب","ي","ت","ك","م","ن"], "words": ["بيت","كتب","نبت","بنت","نكت","كمن","بكم"]}
         ]
-        self.questions = []
-        self.current_question = 0
-        self.total_questions = 5
-        self.player_scores = {}
-        self.found_words = {}
-        self.valid_words = []
-        self.words_needed = 3
-        self.first_correct_answer = False
+
+        random.shuffle(self.letter_sets)
+        self.current_set = None
+        self.found_words = set()
+        self.required_words = 3
 
     def start_game(self):
-        self.questions = random.sample(self.challenges, self.total_questions)
         self.current_question = 0
-        self.player_scores = {}
-        self.found_words = {}
-        self.first_correct_answer = False
-        return self._show_question()
+        self.game_active = True
+        self.previous_question = None
+        self.previous_answer = None
+        self.answered_users.clear()
+        self.found_words.clear()
+        return self.get_question()
 
-    def _show_question(self):
-        challenge = self.questions[self.current_question]
-        letters = challenge['letters']
-        progress = f"{self.current_question + 1}/{self.total_questions}"
-        self.valid_words = [normalize_text(word) for word in challenge['answers']]
-        self.first_correct_answer = False
-        
-        return FlexSendMessage(
-            alt_text="تكوين الكلمات",
-            contents={
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "تكوين الكلمات", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
-                        {"type": "separator", "margin": "md", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": letters, "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center"}, {"type": "text", "text": f"كون {self.words_needed} كلمات من هذه الحروف", "size": "sm", "color": COLORS['text_dark'], "margin": "md", "wrap": True, "align": "center"}], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"}
-                    ],
-                    "backgroundColor": COLORS['card_bg'],
-                    "paddingAll": "20px"
-                }
-            }
+    def get_question(self):
+        q_data = self.letter_sets[self.current_question % len(self.letter_sets)]
+        self.current_set = q_data
+        self.current_answer = q_data["words"]
+        self.found_words.clear()
+
+        letters_display = " ".join(q_data["letters"])
+
+        return self.build_question_flex(
+            question_text=f"كون كلمات من\n{letters_display}",
+            additional_info=f"مطلوب {self.required_words} كلمات"
         )
 
-    def next_question(self):
-        self.current_question += 1
-        if self.current_question < self.total_questions:
-            self.found_words = {}
-            self.first_correct_answer = False
-            return self._show_question()
-        return None
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        if not self.game_active:
+            return None
 
-    def check_answer(self, text, user_id, display_name):
-        text = text.strip()
+        if self.team_mode and user_id not in self.joined_users:
+            return None
 
-        if text.lower() in ['لمح', 'تلميح']:
-            sample_word = self.questions[self.current_question]['answers'][0]
-            return {'response': TextSendMessage(text=f"يبدا بحرف {sample_word[0]}\nعدد الحروف {len(sample_word)}"), 'points': 0, 'correct': False}
+        normalized = self.normalize_text(user_answer)
 
-        if text.lower() in ['جاوب', 'الحل']:
-            some_words = ' - '.join(self.questions[self.current_question]['answers'][:5])
-            self.first_correct_answer = True
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"بعض الكلمات الصحيحة\n{some_words}"), 'points': 0, 'correct': False, 'next_question': True}
-            return self._end_game()
+        if self.can_use_hint() and normalized == "لمح":
+            remaining = [w for w in self.current_answer if self.normalize_text(w) not in self.found_words]
+            if remaining:
+                word = remaining[0]
+                hint = f"تبدأ بـ {word[0]}\nعدد الحروف {len(word)}"
+            else:
+                hint = "لا توجد تلميحات"
+            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
 
-        word_normalized = normalize_text(text)
+        if self.can_reveal_answer() and normalized == "جاوب":
+            words = " ".join(self.current_answer[:5])
+            msg = f"كلمات ممكنة {words}"
+            self.current_question += 1
+            self.answered_users.clear()
+            self.found_words.clear()
 
-        if user_id in self.found_words and word_normalized in self.found_words[user_id]:
-            return {'response': TextSendMessage(text="هذه الكلمة سبق وان ادخلتها"), 'points': 0, 'correct': False}
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"{msg}\n\n{result.get('message', '')}"
+                return result
 
-        is_valid = word_normalized in self.valid_words
-        if not is_valid:
-            return {'response': TextSendMessage(text="هذه الكلمة غير صحيحة"), 'points': 0, 'correct': False}
+            return {"message": msg, "response": self.get_question(), "points": 0}
 
-        self.found_words.setdefault(user_id, [])
-        self.found_words[user_id].append(word_normalized)
-        self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0})
+        if self.team_mode and normalized in ["لمح", "جاوب"]:
+            return None
 
+        valid_words = [self.normalize_text(w) for w in self.current_answer]
+
+        if normalized not in valid_words or normalized in self.found_words:
+            return None
+
+        self.found_words.add(normalized)
         points = 1
-        self.player_scores[user_id]['score'] += points
-        words_count = len(self.found_words[user_id])
 
-        if words_count >= self.words_needed:
-            self.first_correct_answer = True
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name} +{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
-            return self._end_game()
+        if self.team_mode:
+            team = self.get_user_team(user_id) or self.assign_to_team(user_id)
+            self.add_team_score(team, points)
+        else:
+            self.add_score(user_id, display_name, points)
 
-        return {'response': TextSendMessage(text=f"كلمة صحيحة +{points} نقطة\nالكلمات المتبقية {self.words_needed - words_count}"), 'points': points, 'correct': True}
+        if len(self.found_words) >= self.required_words:
+            self.current_question += 1
+            self.answered_users.clear()
+            self.found_words.clear()
 
-    def _end_game(self):
-        if not self.player_scores:
-            return {'response': TextSendMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
-        
-        sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
-        winner = sorted_players[0][1]
-        
-        players_contents = []
-        
-        for i, p in enumerate(sorted_players[:5]):
-            rank = f"{i+1}."
-            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": rank, "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
-        
-        winner_card = FlexSendMessage(
-            alt_text="نتائج اللعبة",
-            contents={
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "button", "action": {"type": "message", "label": "اعادة اللعب", "text": "تكوين"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
-                    ],
-                    "backgroundColor": COLORS['card_bg'],
-                    "paddingAll": "20px"
-                }
-            }
-        )
-        return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["points"] = points
+                return result
+
+            return {"message": f"تم +{points}", "response": self.get_question(), "points": points}
+
+        remaining = self.required_words - len(self.found_words)
+        return {"message": f"صحيح تبقى {remaining}\n+{points}", "response": self._create_text_message(f"صحيح تبقى {remaining}\n+{points}"), "points": points}

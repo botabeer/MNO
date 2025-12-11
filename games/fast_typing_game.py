@@ -1,147 +1,123 @@
-from linebot.models import TextSendMessage, FlexSendMessage
+"""
+لعبة أسرع - Bot Mesh v20.1 FINAL
+Created by: Abeer Aldosari © 2025
+✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | مع وقت 20 ثانية
+"""
+
+from games.base_game import BaseGame
 import random
-import re
-from datetime import datetime
-from constants import COLORS
+import time
+from typing import Dict, Any, Optional
 
-def normalize_text(text):
-    if not text:
-        return ""
-    text = text.strip().lower()
-    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
-    text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
-    text = text.replace('ة', 'ه').replace('ى', 'ي')
-    text = re.sub(r'[\u064B-\u065F]', '', text)
-    text = re.sub(r'\s+', '', text)
-    return text
 
-class FastTypingGame:
+class FastTypingGame(BaseGame):
+    """لعبة أسرع - الوحيدة مع وقت"""
+
     def __init__(self, line_bot_api):
-        self.line_bot_api = line_bot_api
-        self.words = [
-            "سبحان الله", "الحمد لله", "لا اله الا الله", "الله اكبر", "استغفر الله",
-            "لا حول ولا قوه الا بالله", "يارب", "توكلت على الله",
-            "الله يرحمه", "العلم نور", "بارك الله فيك", "جزاك الله خيرا",
-            "الله يحفظك", "ما شاء الله", "اللهم صل على محمد", "رب اغفر لي", "اللهم ارحمنا",
-            "اللهم اجرني", "اللهم اهدني", "اللهم ارزقني", "اللهم عافني", "اللهم اصلح حالي"
+        super().__init__(line_bot_api, questions_count=5)
+        self.game_name = "أسرع"
+        self.supports_hint = False
+        self.supports_reveal = False
+
+        self.round_time = 20
+        self.round_start_time = None
+
+        self.phrases = [
+            "سبحان الله", "الحمد لله", "الله أكبر", "لا إله إلا الله",
+            "رب اغفر لي", "توكل على الله", "الصبر مفتاح الفرج", "من جد وجد",
+            "العلم نور", "راحة القلب في الذكر", "اللهم اهدنا", "كن محسنا",
+            "الدال على الخير كفاعله", "رب زدني علما", "اتق الله", "خير الأمور أوسطها",
+            "اللهم اشف مرضانا", "التواضع رفعة", "الصدق منجاة", "الصمت حكمة",
+            "اللهم ارزقني رضاك", "النية الصالحة بركة", "استغفر الله العظيم", "من صبر ظفر",
+            "العمل عبادة", "القناعة كنز", "اللهم يسر أموري", "الرحمة قوة",
+            "لا تحقرن من المعروف شيئا", "الصلاة نور", "الدعاء سلاح المؤمن", "العفو عند المقدرة",
+            "ذكر الله حياة القلوب", "العدل أساس الملك", "الأمانة شرف", "اللهم بارك لنا",
+            "اغتنم وقتك", "خير الناس أنفعهم", "اللهم ثبت قلبي", "الصبر جميل",
+            "اللسان مرآة العقل", "احفظ الله يحفظك", "الخير في العطاء", "اللهم توفنا مسلمين",
+            "السكينة في الطاعة", "اجعل نيتك لله", "الحق أحق أن يتبع", "اللهم حسن الخاتمة",
+            "التوبة بداية جديدة", "لا حول ولا قوة إلا بالله"
         ]
-        self.questions = []
-        self.current_question = 0
-        self.total_questions = 5
-        self.player_scores = {}
-        self.start_time = None
-        self.time_limit = 30
-        self.answered_users = set()
-        self.first_correct_answer = False
+
+        random.shuffle(self.phrases)
+        self.used_phrases = []
 
     def start_game(self):
-        self.questions = random.sample(self.words, min(self.total_questions, len(self.words)))
         self.current_question = 0
-        self.player_scores = {}
-        self.answered_users = set()
-        self.first_correct_answer = False
-        self.start_time = datetime.now()
-        return self._show_question()
+        self.game_active = True
+        self.previous_question = None
+        self.previous_answer = None
+        self.answered_users.clear()
+        self.used_phrases.clear()
+        return self.get_question()
 
-    def _show_question(self):
-        word = self.questions[self.current_question]
-        progress = f"{self.current_question + 1}/{self.total_questions}"
-        self.start_time = datetime.now()
-        self.first_correct_answer = False
-        
-        return FlexSendMessage(
-            alt_text="الكتابة السريعة",
-            contents={
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الكتابة السريعة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
-                        {"type": "separator", "margin": "md", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": word, "size": "lg", "color": COLORS['primary'], "weight": "bold", "align": "center", "wrap": True}, {"type": "text", "text": "اكتب النص باسرع وقت", "size": "sm", "color": COLORS['text_dark'], "margin": "md", "align": "center"}, {"type": "text", "text": f"لديك {self.time_limit} ثانية", "size": "xs", "color": COLORS['text_light'], "margin": "xs", "align": "center"}], "margin": "lg"}
-                    ],
-                    "backgroundColor": COLORS['card_bg'],
-                    "paddingAll": "20px"
-                }
-            }
+    def get_question(self):
+        available = [p for p in self.phrases if p not in self.used_phrases]
+        if not available:
+            self.used_phrases.clear()
+            available = self.phrases.copy()
+
+        phrase = random.choice(available)
+        self.used_phrases.append(phrase)
+        self.current_answer = phrase
+        self.round_start_time = time.time()
+
+        return self.build_question_flex(
+            question_text=phrase,
+            additional_info=f"الوقت {self.round_time} ثانية\nاكتب النص بالضبط"
         )
 
-    def next_question(self):
-        self.current_question += 1
-        if self.current_question < self.total_questions:
-            self.answered_users = set()
-            self.first_correct_answer = False
-            return self._show_question()
-        return None
+    def _time_expired(self) -> bool:
+        if not self.round_start_time:
+            return False
+        return (time.time() - self.round_start_time) > self.round_time
 
-    def check_answer(self, text, user_id, display_name):
-        if self.first_correct_answer:
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        if not self.game_active:
             return None
-            
+
+        if self._time_expired():
+            self.previous_question = self.current_answer
+            self.previous_answer = self.current_answer
+            self.current_question += 1
+            self.answered_users.clear()
+
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"انتهى الوقت\n\n{result.get('message', '')}"
+                return result
+
+            return {"message": "انتهى الوقت", "response": self.get_question(), "points": 0}
+
         if user_id in self.answered_users:
             return None
 
-        if self.start_time:
-            elapsed = (datetime.now() - self.start_time).seconds
-            if elapsed > self.time_limit:
-                self.first_correct_answer = True
-                if self.current_question + 1 < self.total_questions:
-                    return {'response': TextSendMessage(text="انتهى الوقت"), 'points': 0, 'correct': False, 'next_question': True}
-                return self._end_game()
+        if self.team_mode and user_id not in self.joined_users:
+            return None
 
-        text_normalized = normalize_text(text)
-        word_normalized = normalize_text(self.questions[self.current_question])
+        text = user_answer.strip()
+        time_taken = time.time() - self.round_start_time
 
-        if text_normalized == word_normalized:
-            elapsed_time = (datetime.now() - self.start_time).total_seconds()
-            points = 1
-            
-            self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0, 'time': 0})
-            self.player_scores[user_id]['score'] += points
-            self.player_scores[user_id]['time'] += elapsed_time
+        if text == self.current_answer:
             self.answered_users.add(user_id)
-            self.first_correct_answer = True
+            total_points = 1
 
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\nالوقت {elapsed_time:.1f} ثانية\n+{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
-            return self._end_game()
+            if self.team_mode:
+                team = self.get_user_team(user_id) or self.assign_to_team(user_id)
+                self.add_team_score(team, total_points)
+            else:
+                self.add_score(user_id, display_name, total_points)
+
+            self.previous_question = self.current_answer
+            self.previous_answer = self.current_answer
+            self.current_question += 1
+            self.answered_users.clear()
+
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["points"] = total_points
+                return result
+
+            msg = f"صحيح\nالوقت {time_taken:.1f}s\n+{total_points}"
+            return {"message": msg, "response": self.get_question(), "points": total_points}
+
         return None
-
-    def _end_game(self):
-        if not self.player_scores:
-            return {'response': TextSendMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
-        
-        sorted_players = sorted(self.player_scores.items(), key=lambda x: (x[1]['score'], -x[1]['time']), reverse=True)
-        winner = sorted_players[0][1]
-        
-        players_contents = []
-        
-        for i, p in enumerate(sorted_players[:5]):
-            rank = f"{i+1}."
-            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": rank, "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
-        
-        winner_card = FlexSendMessage(
-            alt_text="نتائج اللعبة",
-            contents={
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "button", "action": {"type": "message", "label": "اعادة اللعب", "text": "اسرع"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
-                    ],
-                    "backgroundColor": COLORS['card_bg'],
-                    "paddingAll": "20px"
-                }
-            }
-        )
-        return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
