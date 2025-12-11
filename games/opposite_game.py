@@ -34,17 +34,20 @@ class OppositeGame:
         self.total_questions = 5
         self.player_scores = {}
         self.answered_users = set()
+        self.first_correct_answer = False
 
     def start_game(self):
         self.questions = random.sample(self.all_words, self.total_questions)
         self.current_question = 0
         self.player_scores = {}
         self.answered_users = set()
+        self.first_correct_answer = False
         return self._show_question()
 
     def _show_question(self):
         word = self.questions[self.current_question]
         progress = f"{self.current_question + 1}/{self.total_questions}"
+        self.first_correct_answer = False
         
         return FlexSendMessage(
             alt_text="لعبة الاضداد",
@@ -72,12 +75,17 @@ class OppositeGame:
         self.current_question += 1
         if self.current_question < self.total_questions:
             self.answered_users = set()
+            self.first_correct_answer = False
             return self._show_question()
         return None
 
     def check_answer(self, answer, user_id, display_name):
+        if self.first_correct_answer:
+            return None
+            
         if user_id in self.answered_users:
             return None
+
         word = self.questions[self.current_question]
 
         if answer.lower() in ['لمح', 'تلميح']:
@@ -85,6 +93,7 @@ class OppositeGame:
 
         if answer.lower() in ['جاوب', 'الجواب']:
             self.answered_users.add(user_id)
+            self.first_correct_answer = True
             if self.current_question + 1 < self.total_questions:
                 return {'response': TextSendMessage(text=f"الاجابة {word['opposite']}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
@@ -94,6 +103,7 @@ class OppositeGame:
             self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0})
             self.player_scores[user_id]['score'] += points
             self.answered_users.add(user_id)
+            self.first_correct_answer = True
 
             if self.current_question + 1 < self.total_questions:
                 return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name} +{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
