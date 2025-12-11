@@ -14,17 +14,20 @@ class HumanAnimalPlantGame:
         self.total_questions = 5
         self.player_scores = {}
         self.answered_users = {}
+        self.first_correct_answer = False
 
     def start_game(self):
         self.questions = random.sample(self.letters, min(self.total_questions, len(self.letters)))
         self.current_question = 0
         self.player_scores = {}
         self.answered_users = {}
+        self.first_correct_answer = False
         return self._show_question()
 
     def _show_question(self):
         letter = self.questions[self.current_question]
         progress = f"{self.current_question + 1}/{self.total_questions}"
+        self.first_correct_answer = False
         
         return FlexSendMessage(
             alt_text="انسان حيوان نبات بلاد",
@@ -52,10 +55,14 @@ class HumanAnimalPlantGame:
         self.current_question += 1
         if self.current_question < self.total_questions:
             self.answered_users = {}
+            self.first_correct_answer = False
             return self._show_question()
         return None
 
     def check_answer(self, text, user_id, display_name):
+        if self.first_correct_answer:
+            return None
+            
         if user_id in self.answered_users:
             return None
         
@@ -67,6 +74,7 @@ class HumanAnimalPlantGame:
 
         if text.lower() in ['جاوب', 'الجواب']:
             self.answered_users[user_id] = True
+            self.first_correct_answer = True
             if self.current_question + 1 < self.total_questions:
                 return {'response': TextSendMessage(text=f"اكتب 4 كلمات تبدأ بحرف {letter}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
@@ -81,6 +89,7 @@ class HumanAnimalPlantGame:
                     self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0})
                     self.player_scores[user_id]['score'] += points
                     self.answered_users[user_id] = True
+                    self.first_correct_answer = True
 
                     if self.current_question + 1 < self.total_questions:
                         return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name}\nالكلمات الصحيحة {valid_count} من 4\n+{points} نقطة"), 'points': points, 'correct': True, 'won': valid_count == 4, 'next_question': True}
