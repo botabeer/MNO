@@ -4,42 +4,59 @@ from threading import Lock
 from datetime import datetime, timedelta
 from constants import INACTIVITY_DAYS
 from contextlib import contextmanager
+from queue import Queue
 
 logger = logging.getLogger(__name__)
 
-class Database:
-    """إدارة قاعدة البيانات SQLite"""
+class DatabaseConnectionPool:
+    def __init__(self, db_name, pool_size=10):
+        self.db_name = db_name
+        self.pool_size = pool_size
+        self.pool = Queue(maxsize=pool_size)
+        self._initialize_pool()
     
-    DB_NAME = 'game_scores.db'
+    def _initialize_pool(self):
+        for _ in range(self.pool_size):
+            conn = sqlite3.connect(
+                self.db_name,
+                check_same_thread=False,
+                timeout=10.0
+            )
+            conn.row_factory = sqlite3.Row
+            self.pool.put(conn)
+    
+    @contextmanager
+    def get_connection(self):
+        conn = self.pool.get()
+        try:
+            yield conn
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise
+        finally:
+            self.pool.put(conn)
+
+db_pool = DatabaseConnectionPool('game_scores.db', pool_size=10)
+
+class Database:
     _lock = Lock()
+    _leaderboard_cache = None
+    _leaderboard_cache_time = 0
+    CACHE_TTL = 300
     
     @staticmethod
     @contextmanager
     def get_connection():
-        """Context manager للاتصال بقاعدة البيانات"""
-        conn = None
-        try:
-            conn = sqlite3.connect(Database.DB_NAME)
-            conn.row_factory = sqlite3.Row
+        with db_pool.get_connection() as conn:
             yield conn
-            conn.commit()
-        except Exception as e:
-            if conn:
-                conn.rollback()
-            logger.error(f"Database connection error: {e}")
-            raise
-        finally:
-            if conn:
-                conn.close()
     
     @staticmethod
     def init():
-        """تهيئة قاعدة البيانات وإنشاء الجداول"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # جدول المستخدمين
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (
                         user_id TEXT PRIMARY KEY,
@@ -54,7 +71,6 @@ class Database:
                     )
                 ''')
                 
-                # جدول سجل الألعاب
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS game_history (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,16 +83,23 @@ class Database:
                     )
                 ''')
                 
-                # إنشاء فهرس للأداء
                 cursor.execute('''
-                    CREATE INDEX IF NOT EXISTS idx_user_last_activity
-                    ON users(last_activity)
+                    CREATE INDEX IF NOT EXISTS idx_users_points_games
+                    ON users(total_points DESC, games_played DESC)
                 ''')
                 
                 cursor.execute('''
-                    CREATE INDEX IF NOT EXISTS idx_game_history_user
-                    ON game_history(user_id, played_at)
+                    CREATE INDEX IF NOT EXISTS idx_game_history_composite
+                    ON game_history(user_id, played_at DESC, game_type)
                 ''')
+                
+                cursor.execute('''
+                    CREATE INDEX IF NOT EXISTS idx_users_active
+                    ON users(last_activity DESC)
+                    WHERE games_played > 0
+                ''')
+                
+                cursor.execute('ANALYZE')
                 
                 logger.info("Database initialized successfully")
         
@@ -86,7 +109,6 @@ class Database:
     
     @staticmethod
     def get_user_theme(user_id):
-        """الحصول على ثيم المستخدم (light أو dark)"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -99,7 +121,6 @@ class Database:
     
     @staticmethod
     def set_user_theme(user_id, theme):
-        """تعيين ثيم المستخدم"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -114,7 +135,6 @@ class Database:
     
     @staticmethod
     def register_or_update_user(user_id, display_name):
-        """تسجيل مستخدم جديد أو تحديث الاسم"""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
@@ -138,7 +158,6 @@ class Database:
     
     @staticmethod
     def update_last_activity(user_id):
-        """تحديث آخر نشاط للمستخدم"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -157,7 +176,6 @@ class Database:
     
     @staticmethod
     def cleanup_inactive_users():
-        """حذف المستخدمين غير النشطين"""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
@@ -165,7 +183,6 @@ class Database:
                     
                     cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
                     
-                    # حذف سجل الألعاب أولاً
                     cursor.execute('''
                         DELETE FROM game_history
                         WHERE user_id IN (
@@ -174,7 +191,6 @@ class Database:
                         )
                     ''', (cutoff_date.strftime('%Y-%m-%d %H:%M:%S'),))
                     
-                    # حذف المستخدمين
                     cursor.execute('''
                         DELETE FROM users
                         WHERE last_activity < ?
@@ -184,6 +200,7 @@ class Database:
                     
                     if deleted_count > 0:
                         logger.info(f"Cleaned up {deleted_count} inactive users")
+                        Database._leaderboard_cache = None
                     
                     return deleted_count
             
@@ -193,7 +210,6 @@ class Database:
     
     @staticmethod
     def is_user_registered(user_id):
-        """التحقق من تسجيل المستخدم"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -210,13 +226,11 @@ class Database:
     
     @staticmethod
     def update_user_points(user_id, points, won, game_type):
-        """تحديث نقاط المستخدم"""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
                     cursor = conn.cursor()
                     
-                    # تحديث إحصائيات المستخدم
                     cursor.execute('''
                         UPDATE users
                         SET total_points = total_points + ?,
@@ -227,11 +241,12 @@ class Database:
                         WHERE user_id = ?
                     ''', (points, 1 if won else 0, user_id))
                     
-                    # إضافة سجل اللعبة
                     cursor.execute('''
                         INSERT INTO game_history (user_id, game_type, points, won)
                         VALUES (?, ?, ?, ?)
                     ''', (user_id, game_type, points, won))
+                    
+                    Database._leaderboard_cache = None
                     
                     logger.info(f"Updated points for {user_id}: +{points}")
                     return True
@@ -242,7 +257,6 @@ class Database:
     
     @staticmethod
     def get_user_stats(user_id):
-        """الحصول على إحصائيات المستخدم"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -270,8 +284,15 @@ class Database:
             return None
     
     @staticmethod
-    def get_leaderboard(limit=20):
-        """الحصول على لوحة الصدارة"""
+    def get_leaderboard(limit=20, force_refresh=False):
+        from time import time
+        now = time()
+        
+        if (not force_refresh and 
+            Database._leaderboard_cache and 
+            now - Database._leaderboard_cache_time < Database.CACHE_TTL):
+            return Database._leaderboard_cache[:limit]
+        
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -286,7 +307,7 @@ class Database:
                 
                 results = cursor.fetchall()
                 
-                return [
+                leaders = [
                     {
                         'display_name': row[0],
                         'total_points': row[1],
@@ -295,6 +316,11 @@ class Database:
                     }
                     for row in results
                 ]
+                
+                Database._leaderboard_cache = leaders
+                Database._leaderboard_cache_time = now
+                
+                return leaders
         
         except Exception as e:
             logger.error(f"Error getting leaderboard: {e}")
@@ -302,7 +328,6 @@ class Database:
     
     @staticmethod
     def get_user_game_history(user_id, limit=10):
-        """الحصول على سجل ألعاب المستخدم"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -329,41 +354,4 @@ class Database:
         
         except Exception as e:
             logger.error(f"Error getting game history for {user_id}: {e}")
-            return []
-    
-    @staticmethod
-    def get_all_players():
-        """الحصول على جميع اللاعبين"""
-        try:
-            with Database.get_connection() as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute('''
-                    SELECT display_name, total_points, games_played, last_activity
-                    FROM users
-                    ORDER BY total_points DESC
-                ''')
-                
-                results = cursor.fetchall()
-                cutoff_date = datetime.now() - timedelta(days=INACTIVITY_DAYS)
-                
-                players = []
-                for row in results:
-                    try:
-                        last_activity = datetime.strptime(row[3], '%Y-%m-%d %H:%M:%S')
-                        active = last_activity >= cutoff_date
-                    except:
-                        active = False
-                    
-                    players.append({
-                        'display_name': row[0],
-                        'total_points': row[1],
-                        'games_played': row[2],
-                        'active': active
-                    })
-                
-                return players
-        
-        except Exception as e:
-            logger.error(f"Error getting all players: {e}")
             return []
