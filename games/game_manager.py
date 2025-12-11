@@ -1,236 +1,125 @@
 """
-محرك الألعاب الموحد - يدير جميع الألعاب
+مدير الألعاب - يدير جميع الألعاب المتاحة
 """
 import random
-from linebot.models import TextSendMessage, FlexSendMessage
-from utils import normalize_text, FlexBuilder
-from constants import GAME_DATA, GAME_SETTINGS, POINTS
+from pathlib import Path
+from linebot.models import TextSendMessage
 
-class BaseGame:
-    """كلاس أساسي موحد لجميع الألعاب"""
+class GameManager:
+    """مدير الألعاب الموحد"""
     
-    def __init__(self, game_type):
-        self.game_type = game_type
-        self.questions = []
-        self.current_question = 0
-        self.total_questions = GAME_SETTINGS['questions_per_game']
-        self.player_scores = {}
-        self.answered_users = set()
-        self.first_correct_answer = False
+    def __init__(self, line_bot_api):
+        self.line_bot_api = line_bot_api
+        self.active_games = {}
         
-        # بيانات اللعبة
-        self.game_config = self._get_game_config()
+        # تحميل محتوى الألعاب البسيطة
+        self.questions = self._load_text_file('games/questions.txt')
+        self.challenges = self._load_text_file('games/challenges.txt')
+        self.confessions = self._load_text_file('games/confessions.txt')
+        self.mentions = self._load_text_file('games/mentions.txt')
     
-    def _get_game_config(self):
-        """الحصول على إعدادات اللعبة"""
-        configs = {
-            'song': {
-                'name': 'لعبة الأغنية',
-                'restart': 'اغنيه',
-                'data': GAME_DATA['songs'],
-                'question_format': lambda q: f"{q['lyrics']}\n\nمن المغني؟"
-            },
-            'opposite': {
-                'name': 'لعبة الأضداد',
-                'restart': 'ضد',
-                'data': GAME_DATA['opposites'],
-                'question_format': lambda q: f"ما هو عكس: {q['word']}"
-            },
-            'chain': {
-                'name': 'سلسلة الكلمات',
-                'restart': 'سلسله',
-                'data': GAME_DATA['chain_words'],
-                'question_format': lambda q: f"الكلمة: {q}\n\nاكتب كلمة تبدأ بحرف {q[-1]}"
-            },
-            'fast': {
-                'name': 'الكتابة السريعة',
-                'restart': 'اسرع',
-                'data': GAME_DATA['fast_typing'],
-                'question_format': lambda q: f"{q}\n\nاكتب النص بأسرع وقت"
-            },
-            'letters': {
-                'name': 'تكوين الكلمات',
-                'restart': 'تكوين',
-                'data': GAME_DATA['letter_words'],
-                'question_format': lambda q: f"{q['letters']}\n\nكون كلمات من هذه الحروف"
-            },
-            'category': {
-                'name': 'فئة وحرف',
-                'restart': 'فئه',
-                'data': GAME_DATA['categories'],
-                'question_format': lambda q: f"الفئة: {q['category']}\nالحرف: {q['letter']}"
-            }
+    def _load_text_file(self, filename):
+        """تحميل ملف نصي"""
+        try:
+            file_path = Path(filename)
+            if file_path.exists():
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return [line.strip() for line in f if line.strip()]
+            return []
+        except Exception as e:
+            print(f"Error loading {filename}: {e}")
+            return []
+    
+    def start_game(self, game_type, group_id):
+        """بدء لعبة جديدة"""
+        from games.song_game import SongGame
+        from games.opposite_game import OppositeGame
+        from games.compatibility_game import CompatibilityGame
+        from games.fast_typing_game import FastTypingGame
+        from games.chain_words_game import ChainWordsGame
+        from games.human_animal_plant_game import HumanAnimalPlantGame
+        from games.letters_words_game import LettersWordsGame
+        from games.category_letter_game import CategoryLetterGame
+        from games.mafia_game import MafiaGame
+        
+        # إنشاء اللعبة المناسبة
+        game_classes = {
+            'song': SongGame,
+            'opposite': OppositeGame,
+            'compatibility': CompatibilityGame,
+            'fast_typing': FastTypingGame,
+            'chain': ChainWordsGame,
+            'human_animal': HumanAnimalPlantGame,
+            'letters': LettersWordsGame,
+            'category': CategoryLetterGame,
+            'mafia': MafiaGame
         }
-        return configs.get(self.game_type, configs['song'])
-    
-    def start_game(self):
-        """بدء اللعبة"""
-        self.questions = random.sample(
-            self.game_config['data'], 
-            min(self.total_questions, len(self.game_config['data']))
-        )
-        self.current_question = 0
-        self.player_scores = {}
-        self.answered_users = set()
-        self.first_correct_answer = False
         
-        return self._show_question()
-    
-    def _show_question(self):
-        """عرض السؤال"""
-        if self.current_question >= len(self.questions):
+        game_class = game_classes.get(game_type)
+        if not game_class:
             return None
         
-        question = self.questions[self.current_question]
-        question_text = self.game_config['question_format'](question)
+        # إنشاء وبدء اللعبة
+        game = game_class(self.line_bot_api)
+        self.active_games[group_id] = {
+            'type': game_type,
+            'instance': game
+        }
         
-        self.first_correct_answer = False
-        
-        return FlexSendMessage(
-            alt_text=self.game_config['name'],
-            contents=FlexBuilder.create_question_card(
-                self.game_config['name'],
-                question_text,
-                self.current_question + 1,
-                self.total_questions
-            )
-        )
+        return game.start_game()
     
-    def next_question(self):
+    def get_game(self, group_id):
+        """الحصول على اللعبة النشطة"""
+        game_data = self.active_games.get(group_id)
+        if game_data:
+            return game_data['instance']
+        return None
+    
+    def check_answer(self, group_id, text, user_id, display_name):
+        """فحص الإجابة في اللعبة النشطة"""
+        game = self.get_game(group_id)
+        if not game:
+            return None
+        
+        return game.check_answer(text, user_id, display_name)
+    
+    def next_question(self, group_id):
         """الانتقال للسؤال التالي"""
-        self.current_question += 1
-        
-        if self.current_question < self.total_questions:
-            self.answered_users = set()
-            self.first_correct_answer = False
-            return self._show_question()
-        
-        return None
-    
-    def check_answer(self, text, user_id, display_name):
-        """فحص الإجابة"""
-        # تجاهل إذا كان هناك إجابة صحيحة
-        if self.first_correct_answer:
+        game = self.get_game(group_id)
+        if not game:
             return None
         
-        # تجاهل إذا كان المستخدم أجاب
-        if user_id in self.answered_users:
-            return None
-        
-        if self.current_question >= len(self.questions):
-            return None
-        
-        question = self.questions[self.current_question]
-        text_lower = text.strip().lower()
-        
-        # التلميح
-        if text_lower in ['لمح', 'تلميح']:
-            return self._handle_hint(question)
-        
-        # عرض الإجابة
-        if text_lower in ['جاوب', 'الجواب', 'الحل']:
-            return self._handle_show_answer(user_id, question)
-        
-        # التحقق من الإجابة
-        return self._validate_answer(text, user_id, display_name, question)
+        return game.next_question()
     
-    def _handle_hint(self, question):
-        """معالجة التلميح"""
-        answer = self._get_answer(question)
-        hint_text = f"يبدأ بحرف: {answer[0]}\nعدد الحروف: {len(answer)}"
-        
-        return {
-            'response': TextSendMessage(text=hint_text),
-            'points': POINTS['hint'],
-            'correct': False
-        }
+    def stop_game(self, group_id):
+        """إيقاف اللعبة"""
+        if group_id in self.active_games:
+            del self.active_games[group_id]
+            return True
+        return False
     
-    def _handle_show_answer(self, user_id, question):
-        """عرض الإجابة"""
-        self.answered_users.add(user_id)
-        self.first_correct_answer = True
-        answer = self._get_answer(question)
-        
-        if self.current_question + 1 < self.total_questions:
-            return {
-                'response': TextSendMessage(text=f"الإجابة: {answer}"),
-                'points': POINTS['show_answer'],
-                'correct': False,
-                'next_question': True
-            }
-        
-        return self._end_game()
+    # الألعاب البسيطة بدون تسجيل
     
-    def _validate_answer(self, text, user_id, display_name, question):
-        """التحقق من صحة الإجابة"""
-        normalized_answer = normalize_text(text)
-        correct_answer = normalize_text(self._get_answer(question))
-        
-        if normalized_answer == correct_answer:
-            return self._handle_correct_answer(user_id, display_name)
-        
-        return None
+    def get_random_question(self):
+        """الحصول على سؤال عشوائي"""
+        if not self.questions:
+            return "لا توجد أسئلة متاحة حالياً"
+        return random.choice(self.questions)
     
-    def _get_answer(self, question):
-        """الحصول على الإجابة الصحيحة"""
-        if isinstance(question, dict):
-            return question.get('answer', question.get('singer', ''))
-        return question
+    def get_random_challenge(self):
+        """الحصول على تحدي عشوائي"""
+        if not self.challenges:
+            return "لا توجد تحديات متاحة حالياً"
+        return random.choice(self.challenges)
     
-    def _handle_correct_answer(self, user_id, display_name):
-        """معالجة الإجابة الصحيحة"""
-        if user_id not in self.player_scores:
-            self.player_scores[user_id] = {'name': display_name, 'score': 0}
-        
-        points = POINTS['correct']
-        self.player_scores[user_id]['score'] += points
-        self.answered_users.add(user_id)
-        self.first_correct_answer = True
-        
-        if self.current_question + 1 < self.total_questions:
-            return {
-                'response': TextSendMessage(
-                    text=f"إجابة صحيحة {display_name}\n+{points} نقطة"
-                ),
-                'points': points,
-                'correct': True,
-                'won': True,
-                'next_question': True
-            }
-        
-        return self._end_game()
+    def get_random_confession(self):
+        """الحصول على اعتراف عشوائي"""
+        if not self.confessions:
+            return "لا توجد اعترافات متاحة حالياً"
+        return random.choice(self.confessions)
     
-    def _end_game(self):
-        """إنهاء اللعبة"""
-        if not self.player_scores:
-            return {
-                'response': TextSendMessage(text="انتهت اللعبة"),
-                'points': 0,
-                'correct': False,
-                'won': False,
-                'game_over': True
-            }
-        
-        sorted_players = sorted(
-            self.player_scores.items(),
-            key=lambda x: x[1]['score'],
-            reverse=True
-        )
-        
-        winner = sorted_players[0][1]
-        
-        return {
-            'response': FlexSendMessage(
-                alt_text="نتائج اللعبة",
-                contents=FlexBuilder.create_winner_card(
-                    self.game_config['name'],
-                    winner,
-                    sorted_players,
-                    self.game_config['restart']
-                )
-            ),
-            'points': winner['score'],
-            'correct': True,
-            'won': True,
-            'game_over': True
-        }
+    def get_random_mention(self):
+        """الحصول على منشن عشوائي"""
+        if not self.mentions:
+            return "لا توجد منشنات متاحة حالياً"
+        return random.choice(self.mentions)
