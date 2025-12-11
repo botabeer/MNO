@@ -27,6 +27,7 @@ class ChainWordsGame:
         self.max_rounds = 5
         self.player_scores = {}
         self.answered_users = set()
+        self.first_correct_answer = False
 
     def start_game(self):
         self.current_word = random.choice(self.start_words)
@@ -34,11 +35,13 @@ class ChainWordsGame:
         self.round_count = 0
         self.player_scores = {}
         self.answered_users = set()
+        self.first_correct_answer = False
         return self._show_question()
 
     def _show_question(self):
         last_letter = self.current_word[-1]
         progress = f"{self.round_count + 1}/{self.max_rounds}"
+        self.first_correct_answer = False
         
         return FlexSendMessage(
             alt_text="سلسلة الكلمات",
@@ -65,10 +68,14 @@ class ChainWordsGame:
     def next_question(self):
         if self.round_count < self.max_rounds:
             self.answered_users = set()
+            self.first_correct_answer = False
             return self._show_question()
         return None
 
     def check_answer(self, answer, user_id, display_name):
+        if self.first_correct_answer:
+            return None
+            
         if user_id in self.answered_users:
             return None
         
@@ -80,6 +87,7 @@ class ChainWordsGame:
 
         if answer.lower() in ['جاوب', 'الجواب']:
             self.answered_users.add(user_id)
+            self.first_correct_answer = True
             if self.round_count + 1 < self.max_rounds:
                 return {'response': TextSendMessage(text=f"يمكنك كتابة اي كلمة تبدأ بحرف {last_letter}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
@@ -101,6 +109,7 @@ class ChainWordsGame:
             self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0})
             self.player_scores[user_id]['score'] += points
             self.answered_users.add(user_id)
+            self.first_correct_answer = True
 
             if self.round_count < self.max_rounds:
                 return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name} +{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
