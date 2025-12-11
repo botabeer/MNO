@@ -133,9 +133,9 @@ def handle_message(event):
         if text == "تسجيل" or text == "تغيير":
             waiting_for_name[user_id] = True
             if is_user_registered(group_id, user_id):
-                msg = TextSendMessage(text=f"انت مسجل حاليا باسم {display_name}\n\nادخل الاسم الجديد\nيمكنك استخدام حرف واحد او ارقام او رموز\nالحد الادنى حرف واحد\nالحد الاقصى 50 حرف")
+                msg = TextSendMessage(text=f"انت مسجل حاليا باسم {display_name}\nادخل الاسم الجديد")
             else:
-                msg = TextSendMessage(text="التسجيل\n\nادخل الاسم الذي تريده\nيمكنك استخدام حرف واحد او ارقام او رموز\nالحد الادنى حرف واحد\nالحد الاقصى 50 حرف\n\nمثال أ او علي او X او 123 او @محمد")
+                msg = TextSendMessage(text="التسجيل\n\nادخل الاسم الذي تريده استخدام حرف واحد او ارقام")
             line_bot_api.reply_message(event.reply_token, msg)
             return
 
