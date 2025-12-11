@@ -1,7 +1,7 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage, QuickReply, QuickReplyButton, MessageAction
 from apscheduler.schedulers.background import BackgroundScheduler
 from ui_builder import UIBuilder
 from games.game_manager import GameManager
@@ -36,7 +36,7 @@ atexit.register(lambda: scheduler.shutdown())
 
 group_registered_users = {}
 withdrawn_users = {}
-waiting_for_name = {}  # قاموس لتتبع المستخدمين الذين ينتظرون إدخال الاسم
+waiting_for_name = {}
 
 def is_user_registered(group_id, user_id):
     return group_id in group_registered_users and user_id in group_registered_users[group_id]
@@ -69,11 +69,41 @@ def get_user_display_name(group_id, user_id):
     return None
 
 def is_valid_name(name):
-    """التحقق من صحة الاسم - يقبل أي نص من حرف واحد أو أكثر"""
     if not name or len(name.strip()) == 0:
         return False
-    # يسمح بأي محتوى طالما ليس فارغاً
     return len(name.strip()) >= 1 and len(name.strip()) <= 50
+
+def create_main_quick_reply():
+    return QuickReply(items=[
+        QuickReplyButton(action=MessageAction(label="العاب", text="العاب")),
+        QuickReplyButton(action=MessageAction(label="نقاطي", text="نقاطي")),
+        QuickReplyButton(action=MessageAction(label="الصدارة", text="الصدارة")),
+        QuickReplyButton(action=MessageAction(label="مساعدة", text="مساعدة"))
+    ])
+
+def create_games_quick_reply():
+    return QuickReply(items=[
+        QuickReplyButton(action=MessageAction(label="اغنيه", text="اغنيه")),
+        QuickReplyButton(action=MessageAction(label="ضد", text="ضد")),
+        QuickReplyButton(action=MessageAction(label="سلسله", text="سلسله")),
+        QuickReplyButton(action=MessageAction(label="اسرع", text="اسرع")),
+        QuickReplyButton(action=MessageAction(label="لعبه", text="لعبه")),
+        QuickReplyButton(action=MessageAction(label="تكوين", text="تكوين")),
+        QuickReplyButton(action=MessageAction(label="فئه", text="فئه")),
+        QuickReplyButton(action=MessageAction(label="مافيا", text="مافيا")),
+        QuickReplyButton(action=MessageAction(label="سؤال", text="سؤال")),
+        QuickReplyButton(action=MessageAction(label="تحدي", text="تحدي")),
+        QuickReplyButton(action=MessageAction(label="اعتراف", text="اعتراف")),
+        QuickReplyButton(action=MessageAction(label="توافق", text="توافق")),
+        QuickReplyButton(action=MessageAction(label="بداية", text="بداية"))
+    ])
+
+def create_game_action_quick_reply():
+    return QuickReply(items=[
+        QuickReplyButton(action=MessageAction(label="لمح", text="لمح")),
+        QuickReplyButton(action=MessageAction(label="جاوب", text="جاوب")),
+        QuickReplyButton(action=MessageAction(label="ايقاف", text="ايقاف"))
+    ])
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -98,13 +128,15 @@ def handle_message(event):
         
         Database.update_last_activity(user_id)
         
-        # التحقق من حالة انتظار الاسم
         if user_id in waiting_for_name:
             if is_valid_name(text):
                 display_name = text.strip()
                 register_user(group_id, user_id, display_name)
                 del waiting_for_name[user_id]
-                msg = TextSendMessage(text=f"تم التسجيل بنجاح\nاسمك {display_name}\nيمكنك الان اللعب وجمع النقاط")
+                msg = TextSendMessage(
+                    text=f"تم التسجيل بنجاح\nاسمك {display_name}\nيمكنك الان اللعب وجمع النقاط",
+                    quick_reply=create_main_quick_reply()
+                )
             else:
                 msg = TextSendMessage(text="الاسم غير صالح\nيرجى ادخال اسم صحيح حرف واحد على الاقل حد اقصى 50 حرف")
             line_bot_api.reply_message(event.reply_token, msg)
@@ -116,17 +148,29 @@ def handle_message(event):
         display_name = get_user_display_name(group_id, user_id) or "مستخدم"
 
         if text.lower() in ["بدايه", "start", "ابدا", "بداية"]:
-            flex = FlexSendMessage(alt_text="مرحبا", contents=UIBuilder.welcome_card(display_name, is_user_registered(group_id, user_id)))
+            flex = FlexSendMessage(
+                alt_text="مرحبا", 
+                contents=UIBuilder.welcome_card(display_name, is_user_registered(group_id, user_id)),
+                quick_reply=create_main_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
         if text.lower() in ["مساعده", "help", "مساعدة"]:
-            flex = FlexSendMessage(alt_text="المساعده", contents=UIBuilder.help_card())
+            flex = FlexSendMessage(
+                alt_text="المساعده", 
+                contents=UIBuilder.help_card(),
+                quick_reply=create_main_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
         if text == "ألعاب" or text == "العاب":
-            flex = FlexSendMessage(alt_text="قائمة الالعاب", contents=UIBuilder.games_menu_card(is_user_registered(group_id, user_id)))
+            flex = FlexSendMessage(
+                alt_text="قائمة الالعاب", 
+                contents=UIBuilder.games_menu_card(is_user_registered(group_id, user_id)),
+                quick_reply=create_games_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
@@ -141,7 +185,10 @@ def handle_message(event):
 
         if text == "انسحب":
             if withdraw_user(group_id, user_id):
-                msg = TextSendMessage(text="تم انسحابك من هذه الجلسة\nنقاطك محفوظة ويمكنك العودة في اي وقت بالضغط على تسجيل")
+                msg = TextSendMessage(
+                    text="تم انسحابك من هذه الجلسة\nنقاطك محفوظة ويمكنك العودة في اي وقت بالضغط على تسجيل",
+                    quick_reply=create_main_quick_reply()
+                )
             else:
                 msg = TextSendMessage(text="انت غير مسجل")
             line_bot_api.reply_message(event.reply_token, msg)
@@ -153,44 +200,69 @@ def handle_message(event):
                 msg = TextSendMessage(text="يجب التسجيل اولا\nاكتب تسجيل")
                 line_bot_api.reply_message(event.reply_token, msg)
                 return
-            flex = FlexSendMessage(alt_text="احصائياتك", contents=UIBuilder.stats_card(display_name, stats))
+            flex = FlexSendMessage(
+                alt_text="احصائياتك", 
+                contents=UIBuilder.stats_card(display_name, stats),
+                quick_reply=create_main_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
         if text in ["الصداره", "المتصدرين", "الصدارة"]:
             leaders = Database.get_leaderboard(20)
-            flex = FlexSendMessage(alt_text="لوحه الصداره", contents=UIBuilder.leaderboard_card(leaders))
+            flex = FlexSendMessage(
+                alt_text="لوحه الصداره", 
+                contents=UIBuilder.leaderboard_card(leaders),
+                quick_reply=create_main_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
         if text in ["ايقاف", "stop", "إيقاف"]:
             stopped = game_manager.stop_game(group_id)
-            msg = TextSendMessage(text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه")
+            msg = TextSendMessage(
+                text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه",
+                quick_reply=create_games_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, msg)
             return
 
         if text in ["سؤال", "سوال"]:
-            msg = TextSendMessage(text=game_manager.get_random_question())
+            msg = TextSendMessage(
+                text=game_manager.get_random_question(),
+                quick_reply=create_games_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, msg)
             return
         
         if text == "تحدي":
-            msg = TextSendMessage(text=game_manager.get_random_challenge())
+            msg = TextSendMessage(
+                text=game_manager.get_random_challenge(),
+                quick_reply=create_games_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, msg)
             return
         
         if text == "اعتراف":
-            msg = TextSendMessage(text=game_manager.get_random_confession())
+            msg = TextSendMessage(
+                text=game_manager.get_random_confession(),
+                quick_reply=create_games_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, msg)
             return
         
         if text.startswith("منشن"):
-            msg = TextSendMessage(text=game_manager.get_random_mention())
+            msg = TextSendMessage(
+                text=game_manager.get_random_mention(),
+                quick_reply=create_games_quick_reply()
+            )
             line_bot_api.reply_message(event.reply_token, msg)
             return
         
         if text == "توافق":
             response = game_manager.start_game("compatibility", group_id)
+            if isinstance(response, FlexSendMessage):
+                response.quick_reply = create_game_action_quick_reply()
             line_bot_api.reply_message(event.reply_token, response)
             return
 
@@ -208,6 +280,8 @@ def handle_message(event):
             
             response = game_manager.start_game(game_commands[text], group_id)
             if response:
+                if isinstance(response, FlexSendMessage):
+                    response.quick_reply = create_game_action_quick_reply()
                 line_bot_api.reply_message(event.reply_token, response)
             return
 
@@ -228,7 +302,15 @@ def handle_message(event):
 
                 response = result.get('response')
                 if response:
+                    if isinstance(response, TextSendMessage):
+                        response.quick_reply = create_game_action_quick_reply()
+                    elif isinstance(response, FlexSendMessage):
+                        response.quick_reply = create_game_action_quick_reply()
+                    
                     if isinstance(response, list):
+                        for r in response:
+                            if isinstance(r, (TextSendMessage, FlexSendMessage)):
+                                r.quick_reply = create_game_action_quick_reply()
                         line_bot_api.reply_message(event.reply_token, response)
                     else:
                         line_bot_api.reply_message(event.reply_token, response)
@@ -238,6 +320,8 @@ def handle_message(event):
                     if next_q:
                         try:
                             time.sleep(1)
+                            if isinstance(next_q, (TextSendMessage, FlexSendMessage)):
+                                next_q.quick_reply = create_game_action_quick_reply()
                             line_bot_api.push_message(group_id, next_q)
                         except Exception as e:
                             logger.error(f"خطأ في ارسال السؤال التالي {e}")
