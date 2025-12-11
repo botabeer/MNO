@@ -63,35 +63,8 @@ SONGS=[
 {'lyrics':'عظيم إحساسي والشوق فيني','singer':'راشد الماجد'},
 {'lyrics':'خذ راحتك ماعاد تفرق معي','singer':'راشد الماجد'},
 {'lyrics':'قال الوداع ومقصده يجرح القلب','singer':'راشد الماجد'},
-{'lyrics':'اللي لقى احبابه نسى اصحابه','singer':'راشد الماجد'},
-{'lyrics':'واسع خيالك اكتبه أنا بكذبك معجبه','singer':'شمة حمدان'},
-{'lyrics':'ما دريت إني أحبك ما دريت','singer':'شمة حمدان'},
-{'lyrics':'حبيته بيني وبين نفسي','singer':'شيرين'},
-{'lyrics':'كلها غيرانة بتحقد','singer':'شيرين'},
-{'lyrics':'مشاعر تشاور تودع تسافر','singer':'شيرين'},
-{'lyrics':'أنا مش بتاعت الكلام ده','singer':'شيرين'},
-{'lyrics':'مقادير يا قلبي العنا مقادير','singer':'طلال مداح'},
-{'lyrics':'ظلمتني والله قوي يجازيك','singer':'طلال مداح'},
-{'lyrics':'فزيت من نومي أناديلك','singer':'ذكرى'},
-{'lyrics':'ابد على حطة يدك','singer':'ذكرى'},
-{'lyrics':'أنا لولا الغلا والمحبة','singer':'فؤاد عبدالواحد'},
-{'lyrics':'كلمة ولو جبر خاطر','singer':'عبادي الجوهر'},
-{'lyrics':'أحبك لو تكون حاضر','singer':'عبادي الجوهر'},
-{'lyrics':'إلحق عيني إلحق','singer':'وليد الشامي'},
-{'lyrics':'يردون قلت لازم يردون','singer':'وليد الشامي'},
-{'lyrics':'ولهان أنا ولهان','singer':'وليد الشامي'},
-{'lyrics':'اقولها كبر عن الدنيا حبيبي','singer':'وليد الشامي'},
-{'lyrics':'أنا استاهل وداع أفضل وداع','singer':'نوال الكويتية'},
-{'lyrics':'لقيت روحي بعد ما لقيتك','singer':'نوال الكويتية'},
-{'lyrics':'غريبة الناس غريبة الدنيا','singer':'وائل جسار'},
-{'lyrics':'اعذريني يوم زفافك','singer':'وائل جسار'},
-{'lyrics':'ماعاد يمديني ولا عاد يمديك','singer':'عبدالمجيد عبدالله'},
-{'lyrics':'يا بعدهم كلهم يا سراجي بينهم','singer':'عبدالمجيد عبدالله'},
-{'lyrics':'حتى الكره احساس','singer':'عبدالمجيد عبدالله'},
-{'lyrics':'استكثرك وقتي علي','singer':'عبدالمجيد عبدالله'},
-{'lyrics':'ياما حاولت الفراق وما قويت','singer':'عبدالمجيد عبدالله'}
+{'lyrics':'اللي لقى احبابه نسى اصحابه','singer':'راشد الماجد'}
 ]
-
 
 def normalize_text(text):
     if not text:
@@ -113,17 +86,20 @@ class SongGame:
         self.total_questions = 5
         self.player_scores = {}
         self.answered_users = set()
+        self.first_correct_answer = False  # تتبع أول إجابة صحيحة
 
     def start_game(self):
         self.questions = random.sample(self.songs, min(self.total_questions, len(self.songs)))
         self.current_question = 0
         self.player_scores = {}
         self.answered_users = set()
+        self.first_correct_answer = False
         return self._show_question()
 
     def _show_question(self):
         song = self.questions[self.current_question]
         progress = f"{self.current_question + 1}/{self.total_questions}"
+        self.first_correct_answer = False  # إعادة تعيين لكل سؤال جديد
         
         return FlexSendMessage(
             alt_text="لعبه الاغنيه",
@@ -151,10 +127,15 @@ class SongGame:
         self.current_question += 1
         if self.current_question < self.total_questions:
             self.answered_users = set()
+            self.first_correct_answer = False
             return self._show_question()
         return None
 
     def check_answer(self, answer, user_id, display_name):
+        # إذا كانت هناك إجابة صحيحة بالفعل، تجاهل الإجابات الأخرى
+        if self.first_correct_answer:
+            return None
+            
         if user_id in self.answered_users:
             return None
 
@@ -165,6 +146,7 @@ class SongGame:
 
         if answer in ['جاوب', 'الجواب']:
             self.answered_users.add(user_id)
+            self.first_correct_answer = True
             if self.current_question + 1 < self.total_questions:
                 return {'response': TextSendMessage(text=f"الاجابة {song['singer']}"), 'points': 0, 'correct': False, 'next_question': True}
             return self._end_game()
@@ -174,6 +156,7 @@ class SongGame:
             self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0})
             self.player_scores[user_id]['score'] += points
             self.answered_users.add(user_id)
+            self.first_correct_answer = True  # أول إجابة صحيحة
 
             if self.current_question + 1 < self.total_questions:
                 return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name} +{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
