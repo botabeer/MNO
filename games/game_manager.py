@@ -9,27 +9,25 @@ from games.compatibility_game import CompatibilityGame
 from games.mafia_game import MafiaGame
 import random
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GameManager:
+    """مدير الألعاب - يدير جميع الألعاب النشطة"""
+    
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.active_games = {}
+        
+        # تحميل الملفات النصية
         self.questions = self._load_file('games/questions.txt')
         self.challenges = self._load_file('games/challenges.txt')
         self.confessions = self._load_file('games/confessions.txt')
         self.mentions = self._load_file('games/mentions.txt')
-    
-    def _load_file(self, filepath):
-        try:
-            if os.path.exists(filepath):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    return [line.strip() for line in f if line.strip()]
-        except Exception as e:
-            print(f"خطا تحميل {filepath}: {e}")
-        return []
-    
-    def start_game(self, game_type, group_id):
-        game_classes = {
+        
+        # قائمة الألعاب المتاحة
+        self.game_classes = {
             'song': SongGame,
             'opposite': OppositeGame,
             'fast_typing': FastTypingGame,
@@ -41,43 +39,120 @@ class GameManager:
             'mafia': MafiaGame
         }
         
-        if game_type in game_classes:
-            game = game_classes[game_type](self.line_bot_api)
-            self.active_games[group_id] = {'type': game_type, 'game': game}
+        logger.info("GameManager initialized")
+    
+    def _load_file(self, filepath):
+        """تحميل ملف نصي"""
+        try:
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    lines = [line.strip() for line in f if line.strip()]
+                    logger.info(f"Loaded {len(lines)} lines from {filepath}")
+                    return lines
+        except Exception as e:
+            logger.error(f"Error loading file {filepath}: {e}")
+        
+        return []
+    
+    def start_game(self, game_type, group_id):
+        """بدء لعبة جديدة"""
+        if game_type not in self.game_classes:
+            logger.warning(f"Unknown game type: {game_type}")
+            return None
+        
+        try:
+            # إنشاء اللعبة
+            game_class = self.game_classes[game_type]
+            game = game_class(self.line_bot_api)
+            
+            # حفظ اللعبة
+            self.active_games[group_id] = {
+                'type': game_type,
+                'game': game
+            }
+            
+            logger.info(f"Started game {game_type} for group {group_id}")
+            
+            # بدء اللعبة
             return game.start_game()
-        return None
+        
+        except Exception as e:
+            logger.error(f"Error starting game {game_type}: {e}")
+            return None
     
     def get_game(self, group_id):
+        """الحصول على اللعبة النشطة"""
         if group_id in self.active_games:
             return self.active_games[group_id]['game']
         return None
     
     def check_answer(self, group_id, answer, user_id, display_name):
+        """التحقق من الإجابة"""
         game = self.get_game(group_id)
-        if game:
+        if not game:
+            return None
+        
+        try:
             return game.check_answer(answer, user_id, display_name)
-        return None
+        except Exception as e:
+            logger.error(f"Error checking answer for group {group_id}: {e}")
+            return None
     
     def next_question(self, group_id):
+        """الانتقال للسؤال التالي"""
         game = self.get_game(group_id)
-        if game:
+        if not game:
+            return None
+        
+        try:
             return game.next_question()
-        return None
+        except Exception as e:
+            logger.error(f"Error getting next question for group {group_id}: {e}")
+            return None
     
     def stop_game(self, group_id):
+        """إيقاف اللعبة"""
         if group_id in self.active_games:
+            game_type = self.active_games[group_id]['type']
             del self.active_games[group_id]
+            logger.info(f"Stopped game {game_type} for group {group_id}")
             return True
         return False
     
     def get_random_question(self):
-        return random.choice(self.questions) if self.questions else "لا توجد اسئله متاحه"
+        """الحصول على سؤال عشوائي"""
+        if not self.questions:
+            return "لا توجد أسئلة متاحة حالياً"
+        return random.choice(self.questions)
     
     def get_random_challenge(self):
-        return random.choice(self.challenges) if self.challenges else "لا توجد تحديات متاحه"
+        """الحصول على تحدي عشوائي"""
+        if not self.challenges:
+            return "لا توجد تحديات متاحة حالياً"
+        return random.choice(self.challenges)
     
     def get_random_confession(self):
-        return random.choice(self.confessions) if self.confessions else "لا توجد اعترافات متاحه"
+        """الحصول على اعتراف عشوائي"""
+        if not self.confessions:
+            return "لا توجد اعترافات متاحة حالياً"
+        return random.choice(self.confessions)
     
     def get_random_mention(self):
-        return random.choice(self.mentions) if self.mentions else "لا توجد منشنات متاحه"
+        """الحصول على منشن عشوائي"""
+        if not self.mentions:
+            return "لا توجد منشنات متاحة حالياً"
+        return random.choice(self.mentions)
+    
+    def get_active_games_count(self):
+        """عدد الألعاب النشطة"""
+        return len(self.active_games)
+    
+    def get_active_games_info(self):
+        """معلومات الألعاب النشطة"""
+        return {
+            group_id: {
+                'type': info['type'],
+                'current_question': info['game'].current_question if hasattr(info['game'], 'current_question') else None
+            }
+            for group_id, info in self.active_games.items()
+        }
