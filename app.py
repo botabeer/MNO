@@ -1,15 +1,16 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage, QuickReply, QuickReplyButton, MessageAction
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 from ui_builder import UIBuilder
 from games.game_manager import GameManager
 from database import Database
+from rate_limiter import RateLimiter
+from session_manager import SessionManager
 import os
 import logging
-import re
 import atexit
 
 logging.basicConfig(
@@ -24,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# التحقق من المتغيرات المطلوبة
 required_env_vars = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
 for var in required_env_vars:
     if not os.getenv(var):
@@ -34,11 +34,11 @@ for var in required_env_vars:
 line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
-# تهيئة قاعدة البيانات
 Database.init()
 game_manager = GameManager(line_bot_api)
+rate_limiter = RateLimiter()
+session_manager = SessionManager()
 
-# جدولة المهام الدورية
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     func=Database.cleanup_inactive_users,
@@ -50,64 +50,9 @@ scheduler.add_job(
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
-# حالات المستخدمين
-group_registered_users = {}
-withdrawn_users = {}
-waiting_for_name = {}
-
-def is_user_registered(group_id, user_id):
-    """التحقق من تسجيل المستخدم"""
-    return group_id in group_registered_users and user_id in group_registered_users[group_id]
-
-def is_user_withdrawn(group_id, user_id):
-    """التحقق من انسحاب المستخدم"""
-    return group_id in withdrawn_users and user_id in withdrawn_users[group_id]
-
-def register_user(group_id, user_id, display_name):
-    """تسجيل مستخدم جديد"""
-    if group_id not in group_registered_users:
-        group_registered_users[group_id] = {}
-    group_registered_users[group_id][user_id] = display_name
-    
-    if group_id in withdrawn_users and user_id in withdrawn_users[group_id]:
-        del withdrawn_users[group_id][user_id]
-    
-    Database.register_or_update_user(user_id, display_name)
-    logger.info(f"User registered: {user_id} as {display_name}")
-
-def withdraw_user(group_id, user_id):
-    """انسحاب المستخدم من الجلسة"""
-    if group_id in group_registered_users and user_id in group_registered_users[group_id]:
-        del group_registered_users[group_id][user_id]
-    
-    if group_id not in withdrawn_users:
-        withdrawn_users[group_id] = {}
-    withdrawn_users[group_id][user_id] = True
-    
-    logger.info(f"User withdrawn: {user_id}")
-    return True
-
-def get_user_display_name(group_id, user_id):
-    """الحصول على اسم المستخدم"""
-    if is_user_registered(group_id, user_id):
-        return group_registered_users[group_id][user_id]
-    
-    stats = Database.get_user_stats(user_id)
-    if stats and stats.get('display_name'):
-        return stats['display_name']
-    
-    return None
-
-def is_valid_name(name):
-    """التحقق من صحة الاسم"""
-    if not name or len(name.strip()) == 0:
-        return False
-    name = name.strip()
-    return 1 <= len(name) <= 50
-
-def create_main_quick_reply():
-    """Quick Reply الرئيسي"""
-    return QuickReply(items=[
+def add_quick_reply(message):
+    from linebot.models import QuickReply, QuickReplyButton, MessageAction
+    quick_reply = QuickReply(items=[
         QuickReplyButton(action=MessageAction(label="العاب", text="العاب")),
         QuickReplyButton(action=MessageAction(label="اغنيه", text="اغنيه")),
         QuickReplyButton(action=MessageAction(label="ضد", text="ضد")),
@@ -122,15 +67,11 @@ def create_main_quick_reply():
         QuickReplyButton(action=MessageAction(label="منشن", text="منشن")),
         QuickReplyButton(action=MessageAction(label="توافق", text="توافق"))
     ])
-
-def add_quick_reply(message):
-    """إضافة Quick Reply لأي رسالة"""
     if isinstance(message, (TextSendMessage, FlexSendMessage)):
-        message.quick_reply = create_main_quick_reply()
+        message.quick_reply = quick_reply
     return message
 
 def send_next_question_delayed(group_id, delay=1):
-    """إرسال السؤال التالي بشكل مؤجل"""
     def send_question():
         next_q = game_manager.next_question(group_id)
         if next_q:
@@ -149,7 +90,6 @@ def send_next_question_delayed(group_id, delay=1):
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    """معالجة Webhook من LINE"""
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     
@@ -166,34 +106,35 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    """معالجة الرسائل النصية"""
     try:
         text = event.message.text.strip()
         user_id = event.source.user_id
         group_id = getattr(event.source, 'group_id', None) or user_id
         
+        if not rate_limiter.is_allowed(user_id):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="لقد تجاوزت الحد المسموح من الرسائل، حاول لاحقاً")
+            )
+            return
+        
         Database.update_last_activity(user_id)
         
-        # معالجة إدخال الاسم
-        if user_id in waiting_for_name:
+        if session_manager.is_waiting_for_name(user_id):
             handle_name_input(event, text, user_id, group_id)
             return
         
-        # تجاهل المستخدمين المنسحبين
-        if is_user_withdrawn(group_id, user_id):
+        if session_manager.is_user_withdrawn(group_id, user_id):
             return
         
-        display_name = get_user_display_name(group_id, user_id) or "مستخدم"
+        display_name = session_manager.get_user_display_name(group_id, user_id) or "مستخدم"
         
-        # معالجة الأوامر الأساسية
         if handle_basic_commands(event, text, user_id, group_id, display_name):
             return
         
-        # معالجة الأوامر الخاصة بالألعاب
         if handle_game_commands(event, text, user_id, group_id, display_name):
             return
         
-        # معالجة إجابات اللعبة
         handle_game_answers(event, text, user_id, group_id, display_name)
     
     except Exception as e:
@@ -207,11 +148,12 @@ def handle_message(event):
             pass
 
 def handle_name_input(event, text, user_id, group_id):
-    """معالجة إدخال الاسم"""
+    from utils import is_valid_name
+    
     if is_valid_name(text):
         display_name = text.strip()
-        register_user(group_id, user_id, display_name)
-        del waiting_for_name[user_id]
+        session_manager.register_user(group_id, user_id, display_name)
+        session_manager.set_waiting_for_name(user_id, False)
         
         msg = add_quick_reply(TextSendMessage(
             text=f"تم التسجيل بنجاح\nاسمك: {display_name}\nيمكنك الآن اللعب وجمع النقاط"
@@ -224,19 +166,16 @@ def handle_name_input(event, text, user_id, group_id):
     line_bot_api.reply_message(event.reply_token, msg)
 
 def handle_basic_commands(event, text, user_id, group_id, display_name):
-    """معالجة الأوامر الأساسية"""
     text_lower = text.lower()
     
-    # أمر البداية
     if text_lower in ["بدايه", "start", "ابدا", "بداية"]:
         flex = FlexSendMessage(
             alt_text="مرحبا",
-            contents=UIBuilder.welcome_card(display_name, is_user_registered(group_id, user_id))
+            contents=UIBuilder.welcome_card(display_name, session_manager.is_user_registered(group_id, user_id))
         )
         line_bot_api.reply_message(event.reply_token, add_quick_reply(flex))
         return True
     
-    # أمر المساعدة
     if text_lower in ["مساعده", "help", "مساعدة"]:
         flex = FlexSendMessage(
             alt_text="المساعدة",
@@ -245,20 +184,18 @@ def handle_basic_commands(event, text, user_id, group_id, display_name):
         line_bot_api.reply_message(event.reply_token, add_quick_reply(flex))
         return True
     
-    # قائمة الألعاب
     if text in ["ألعاب", "العاب"]:
         flex = FlexSendMessage(
             alt_text="قائمة الالعاب",
-            contents=UIBuilder.games_menu_card(is_user_registered(group_id, user_id))
+            contents=UIBuilder.games_menu_card(session_manager.is_user_registered(group_id, user_id))
         )
         line_bot_api.reply_message(event.reply_token, add_quick_reply(flex))
         return True
     
-    # التسجيل والتغيير
     if text in ["تسجيل", "تغيير"]:
-        waiting_for_name[user_id] = True
+        session_manager.set_waiting_for_name(user_id, True)
         
-        if is_user_registered(group_id, user_id):
+        if session_manager.is_user_registered(group_id, user_id):
             msg_text = f"أنت مسجل حالياً باسم: {display_name}\nأدخل الاسم الجديد"
         else:
             msg_text = "التسجيل\nأدخل الاسم الذي تريد استخدامه"
@@ -267,9 +204,8 @@ def handle_basic_commands(event, text, user_id, group_id, display_name):
         line_bot_api.reply_message(event.reply_token, msg)
         return True
     
-    # الانسحاب
     if text == "انسحب":
-        if withdraw_user(group_id, user_id):
+        if session_manager.withdraw_user(group_id, user_id):
             msg_text = "تم انسحابك من هذه الجلسة\nنقاطك محفوظة ويمكنك العودة في أي وقت"
         else:
             msg_text = "أنت غير مسجل"
@@ -278,7 +214,6 @@ def handle_basic_commands(event, text, user_id, group_id, display_name):
         line_bot_api.reply_message(event.reply_token, msg)
         return True
     
-    # الإحصائيات
     if text in ["نقاطي", "احصائياتي"]:
         stats = Database.get_user_stats(user_id)
         if not stats:
@@ -295,7 +230,6 @@ def handle_basic_commands(event, text, user_id, group_id, display_name):
         line_bot_api.reply_message(event.reply_token, add_quick_reply(flex))
         return True
     
-    # لوحة الصدارة
     if text in ["الصداره", "المتصدرين", "الصدارة"]:
         leaders = Database.get_leaderboard(20)
         flex = FlexSendMessage(
@@ -305,7 +239,6 @@ def handle_basic_commands(event, text, user_id, group_id, display_name):
         line_bot_api.reply_message(event.reply_token, add_quick_reply(flex))
         return True
     
-    # إيقاف اللعبة
     if text_lower in ["ايقاف", "stop", "إيقاف"]:
         stopped = game_manager.stop_game(group_id)
         msg_text = "تم إيقاف اللعبة" if stopped else "لا توجد لعبة نشطة"
@@ -316,8 +249,6 @@ def handle_basic_commands(event, text, user_id, group_id, display_name):
     return False
 
 def handle_game_commands(event, text, user_id, group_id, display_name):
-    """معالجة أوامر الألعاب"""
-    # الألعاب التي لا تحتاج تسجيل
     if text in ["سؤال", "سوال"]:
         msg = add_quick_reply(TextSendMessage(
             text=game_manager.get_random_question()
@@ -351,7 +282,6 @@ def handle_game_commands(event, text, user_id, group_id, display_name):
         line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
         return True
     
-    # الألعاب التي تحتاج تسجيل
     game_commands = {
         "اغنيه": "song",
         "لعبه": "human_animal",
@@ -364,8 +294,7 @@ def handle_game_commands(event, text, user_id, group_id, display_name):
     }
     
     if text in game_commands:
-        # التحقق من التسجيل (ما عدا المافيا والتوافق)
-        if not is_user_registered(group_id, user_id) and text not in ["مافيا", "توافق"]:
+        if not session_manager.is_user_registered(group_id, user_id) and text not in ["مافيا", "توافق"]:
             msg = add_quick_reply(TextSendMessage(
                 text="يجب التسجيل أولاً للعب هذه اللعبة\nاكتب: تسجيل"
             ))
@@ -380,19 +309,17 @@ def handle_game_commands(event, text, user_id, group_id, display_name):
     return False
 
 def handle_game_answers(event, text, user_id, group_id, display_name):
-    """معالجة إجابات الألعاب"""
     game = game_manager.get_game(group_id)
     if not game:
         return
     
-    if not is_user_registered(group_id, user_id):
+    if not session_manager.is_user_registered(group_id, user_id):
         return
     
     result = game_manager.check_answer(group_id, text, user_id, display_name)
     if not result:
         return
     
-    # تحديث النقاط إذا كانت الإجابة صحيحة
     if result.get('correct') and result.get('points', 0) > 0:
         Database.update_user_points(
             user_id,
@@ -401,7 +328,6 @@ def handle_game_answers(event, text, user_id, group_id, display_name):
             game_manager.active_games.get(group_id, {}).get('type', 'unknown')
         )
     
-    # إرسال الرد
     response = result.get('response')
     if response:
         if isinstance(response, list):
@@ -411,17 +337,14 @@ def handle_game_answers(event, text, user_id, group_id, display_name):
         else:
             line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
     
-    # إرسال السؤال التالي إذا لزم الأمر
     if result.get('correct') and result.get('next_question') and not result.get('game_over'):
         send_next_question_delayed(group_id, delay=1)
     
-    # إنهاء اللعبة إذا انتهت
     if result.get('game_over'):
         game_manager.stop_game(group_id)
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """فحص صحة الخدمة"""
     return {
         'status': 'healthy',
         'service': 'line-bot',
