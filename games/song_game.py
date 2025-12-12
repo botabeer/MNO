@@ -1,23 +1,14 @@
-"""
-لعبة أغنيه - Bot Mesh v20.1 FINAL
-Created by: Abeer Aldosari © 2025
-✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | بدون وقت
-"""
-
 from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional
 
-
 class SongGame(BaseGame):
-    """لعبة أغنيه"""
-
+    """لعبة تخمين المغني من كلمات الأغنية"""
+    
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "أغنيه"
-        self.supports_hint = True
-        self.supports_reveal = True
-
+        self.game_name = "اغنيه"
+        
         self.songs = [
             {"lyrics":"رجعت لي أيام الماضي معاك","artist":"أم كلثوم"},
             {"lyrics":"قولي أحبك كي تزيد وسامتي","artist":"كاظم الساهر"},
@@ -105,87 +96,69 @@ class SongGame(BaseGame):
             {"lyrics":"استكثرك وقتي علي","artist":"عبدالمجيد عبدالله"},
             {"lyrics":"ياما حاولت الفراق وما قويت","artist":"عبدالمجيد عبدالله"}
         ]
-
+        
         random.shuffle(self.songs)
         self.used_songs = []
-
-    def start_game(self):
-        self.current_question = 0
-        self.game_active = True
-        self.previous_question = None
-        self.previous_answer = None
-        self.answered_users.clear()
-        self.used_songs = []
-        return self.get_question()
-
+    
     def get_question(self):
+        """الحصول على سؤال جديد"""
         available = [s for s in self.songs if s not in self.used_songs]
         if not available:
             self.used_songs = []
             available = self.songs.copy()
-
-        q_data = random.choice(available)
-        self.used_songs.append(q_data)
-        self.current_answer = [q_data["artist"]]
-
-        return self.build_question_flex(
-            question_text=q_data['lyrics'],
-            additional_info="من المغني"
+        
+        song = random.choice(available)
+        self.used_songs.append(song)
+        self.current_answer = [song['answer']]
+        
+        return self.build_question_message(
+            song['lyrics'],
+            "من المغني؟"
         )
-
+    
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         if not self.game_active or user_id in self.answered_users:
             return None
-
-        if self.team_mode and user_id not in self.joined_users:
-            return None
-
+        
         normalized = self.normalize_text(user_answer)
-
-        if self.can_use_hint() and normalized == "لمح":
+        
+        # التلميح
+        if self.supports_hint and normalized == "لمح":
             artist = self.current_answer[0]
-            hint = f"يبدأ بـ {artist[0]}\nعدد الحروف {len(artist)}"
-            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
-
-        if self.can_reveal_answer() and normalized == "جاوب":
-            reveal = f"المغني {self.current_answer[0]}"
-            self.previous_question = self.used_songs[-1]["lyrics"] if self.used_songs else None
+            hint = f"يبدأ بـ: {artist[0]}\nعدد الحروف: {len(artist)}"
+            return {"message": hint, "response": self.build_text_message(hint), "points": 0}
+        
+        # عرض الإجابة
+        if self.supports_reveal and normalized == "جاوب":
+            reveal = f"المغني: {self.current_answer[0]}"
+            self.previous_question = self.used_songs[-1]['lyrics'] if self.used_songs else None
             self.previous_answer = self.current_answer[0]
             self.current_question += 1
             self.answered_users.clear()
-
+            
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result["message"] = f"{reveal}\n\n{result.get('message', '')}"
                 return result
-
+            
             return {"message": reveal, "response": self.get_question(), "points": 0}
-
-        if self.team_mode and normalized in ["لمح", "جاوب"]:
-            return None
-
+        
+        # التحقق من الإجابة
         correct_normalized = self.normalize_text(self.current_answer[0])
         
         if normalized == correct_normalized:
-            total_points = 1
-
-            if self.team_mode:
-                team = self.get_user_team(user_id) or self.assign_to_team(user_id)
-                self.add_team_score(team, total_points)
-            else:
-                self.add_score(user_id, display_name, total_points)
-
-            self.previous_question = self.used_songs[-1]["lyrics"] if self.used_songs else None
+            points = self.add_score(user_id, display_name, 1)
+            
+            self.previous_question = self.used_songs[-1]['lyrics'] if self.used_songs else None
             self.previous_answer = self.current_answer[0]
-            self.answered_users.add(user_id)
             self.current_question += 1
             self.answered_users.clear()
-
+            
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["points"] = total_points
+                result["points"] = points
                 return result
-
-            return {"message": f"صحيح +{total_points}", "response": self.get_question(), "points": total_points}
-
+            
+            return {"message": f"صحيح +{points}", "response": self.get_question(), "points": points}
+        
         return None
