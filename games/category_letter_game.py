@@ -1,152 +1,104 @@
-from linebot.models import TextSendMessage, FlexSendMessage
+from games.base_game import BaseGame
 import random
-import re
-from constants import COLORS
+from typing import Dict, Any, Optional
 
-def normalize_text(text):
-    if not text:
-        return ""
-    text = text.strip().lower()
-    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '').replace('ة', 'ه').replace('ى', 'ي')
-    text = re.sub(r'[\u064B-\u065F]', '', text)
-    text = re.sub(r'\s+', '', text)
-    return text
-
-class CategoryLetterGame:
+class CategoryGame(BaseGame):
+    """لعبة الفئة والحرف"""
+    
     def __init__(self, line_bot_api):
-        self.line_bot_api = line_bot_api
+        super().__init__(line_bot_api, questions_count=5)
+        self.game_name = "فئة"
+        
         self.challenges = [
-            {"category": "المطبخ", "letter": "ق", "answers": ["قدر", "قلايه", "قهوه", "قنينه", "قباقيب"]},
-            {"category": "حيوان", "letter": "ب", "answers": ["بطه", "بقره", "ببغاء", "بومه", "بعير"]},
-            {"category": "فاكهه", "letter": "ت", "answers": ["تفاح", "توت", "تمر", "تين", "ترنج"]},
-            {"category": "خضار", "letter": "ب", "answers": ["بصل", "بطاطس", "باذنجان", "بقدونس", "بروكلي"]},
-            {"category": "بلاد", "letter": "س", "answers": ["سعوديه", "سوريا", "سودان", "سويسرا", "سويد"]},
-            {"category": "اسم ولد", "letter": "م", "answers": ["محمد", "مصطفى", "مالك", "ماجد", "معاذ"]},
-            {"category": "اسم بنت", "letter": "ر", "answers": ["ريم", "رنا", "رهف", "رغد", "رزان"]},
-            {"category": "مهنه", "letter": "ط", "answers": ["طبيب", "طباخ", "طيار", "طالب", "طحان"]},
-            {"category": "رياضه", "letter": "ك", "answers": ["كره", "كاراتيه", "كريكت", "كرلنج", "كرة سلة"]},
-            {"category": "لون", "letter": "ا", "answers": ["احمر", "ازرق", "اخضر", "اصفر", "ابيض"]}
+            {'category': 'المطبخ', 'letter': 'ق', 'answers': ['قدر', 'قلاية', 'قهوة']},
+            {'category': 'حيوان', 'letter': 'ب', 'answers': ['بطة', 'بقرة', 'ببغاء']},
+            {'category': 'فاكهة', 'letter': 'ت', 'answers': ['تفاح', 'توت', 'تمر']},
+            {'category': 'خضار', 'letter': 'ب', 'answers': ['بصل', 'بطاطس', 'باذنجان']},
+            {'category': 'بلاد', 'letter': 'س', 'answers': ['سعودية', 'سوريا', 'سودان']},
+            {'category': 'اسم ولد', 'letter': 'م', 'answers': ['محمد', 'مصطفى', 'مالك']},
+            {'category': 'اسم بنت', 'letter': 'ر', 'answers': ['ريم', 'رنا', 'رهف']},
+            {'category': 'مهنة', 'letter': 'ط', 'answers': ['طبيب', 'طباخ', 'طيار']},
+            {'category': 'رياضة', 'letter': 'ك', 'answers': ['كرة', 'كاراتيه', 'كريكت']},
+            {'category': 'لون', 'letter': 'ا', 'answers': ['احمر', 'ازرق', 'اخضر']},
         ]
+        
         self.questions = []
-        self.current_question = 0
-        self.total_questions = 5
-        self.player_scores = {}
-        self.answered_users = set()
         self.first_correct_answer = False
-
+    
     def start_game(self):
-        self.questions = random.sample(self.challenges, self.total_questions)
+        """بدء اللعبة"""
+        self.questions = random.sample(self.challenges, min(self.questions_count, len(self.challenges)))
         self.current_question = 0
-        self.player_scores = {}
+        self.scores = {}
         self.answered_users = set()
         self.first_correct_answer = False
-        return self._show_question()
-
-    def _show_question(self):
+        return self.get_question()
+    
+    def get_question(self):
+        """الحصول على سؤال جديد"""
         challenge = self.questions[self.current_question]
-        progress = f"{self.current_question + 1}/{self.total_questions}"
         self.first_correct_answer = False
         
-        return FlexSendMessage(
-            alt_text="فئه وحرف",
-            contents={
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "فئه وحرف", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "السؤال", "size": "xs", "color": COLORS['text_light'], "flex": 0}, {"type": "text", "text": progress, "size": "xs", "color": COLORS['primary'], "weight": "bold", "align": "end"}], "margin": "lg"},
-                        {"type": "separator", "margin": "md", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": f"الفئه {challenge['category']}", "size": "lg", "color": COLORS['text_dark'], "weight": "bold", "align": "center"}, {"type": "text", "text": f"الحرف {challenge['letter']}", "size": "xxl", "color": COLORS['primary'], "weight": "bold", "margin": "md", "align": "center"}], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "horizontal", "contents": [{"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1}, {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}], "spacing": "sm", "margin": "lg"}
-                    ],
-                    "backgroundColor": COLORS['card_bg'],
-                    "paddingAll": "20px"
-                }
-            }
+        return self.build_question_message(
+            f"الفئة: {challenge['category']}\nالحرف: {challenge['letter']}"
         )
-
-    def next_question(self):
-        self.current_question += 1
-        if self.current_question < self.total_questions:
-            self.answered_users = set()
-            self.first_correct_answer = False
-            return self._show_question()
-        return None
-
-    def check_answer(self, text, user_id, display_name):
-        if self.first_correct_answer:
-            return None
-            
-        if user_id in self.answered_users:
+    
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        if self.first_correct_answer or user_id in self.answered_users:
             return None
         
         challenge = self.questions[self.current_question]
-        text = text.strip()
-
-        if text.lower() in ['لمح', 'تلميح']:
+        normalized = self.normalize_text(user_answer)
+        
+        # التلميح
+        if self.supports_hint and normalized == "لمح":
             sample = challenge['answers'][0]
-            return {'response': TextSendMessage(text=f"يبدا بحرف {sample[0]}\nعدد الحروف {len(sample)}"), 'points': 0, 'correct': False}
-
-        if text.lower() in ['جاوب', 'الحل']:
+            return {'response': self.build_text_message(f"يبدأ بحرف: {sample[0]}\nعدد الحروف: {len(sample)}"), 'points': 0}
+        
+        # عرض الإجابة
+        if self.supports_reveal and normalized == "جاوب":
             answers = ' - '.join(challenge['answers'][:3])
             self.answered_users.add(user_id)
             self.first_correct_answer = True
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"بعض الاجابات\n{answers}"), 'points': 0, 'correct': False, 'next_question': True}
+            
+            if self.current_question + 1 < self.questions_count:
+                self.current_question += 1
+                self.answered_users.clear()
+                self.first_correct_answer = False
+                return {'response': self.build_text_message(f"بعض الاجابات:\n{answers}"), 'points': 0, 'next_question': True}
+            
             return self._end_game()
-
-        normalized = normalize_text(text)
-        valid_answers = [normalize_text(ans) for ans in challenge['answers']]
-
+        
+        # التحقق من الإجابة
+        valid_answers = [self.normalize_text(ans) for ans in challenge['answers']]
+        
         if normalized in valid_answers:
-            points = 1
-            self.player_scores.setdefault(user_id, {'name': display_name, 'score': 0})
-            self.player_scores[user_id]['score'] += points
-            self.answered_users.add(user_id)
+            points = self.add_score(user_id, display_name, 1)
             self.first_correct_answer = True
-
-            if self.current_question + 1 < self.total_questions:
-                return {'response': TextSendMessage(text=f"اجابة صحيحة {display_name} +{points} نقطة"), 'points': points, 'correct': True, 'won': True, 'next_question': True}
+            
+            if self.current_question + 1 < self.questions_count:
+                self.current_question += 1
+                self.answered_users.clear()
+                self.first_correct_answer = False
+                return {'response': self.build_text_message(f"اجابة صحيحة {display_name} +{points}"), 'points': points, 'next_question': True}
+            
             return self._end_game()
         
         return None
-
+    
     def _end_game(self):
-        if not self.player_scores:
-            return {'response': TextSendMessage(text="انتهت اللعبة"), 'points': 0, 'correct': False, 'won': False, 'game_over': True}
+        """إنهاء اللعبة"""
+        if not self.scores:
+            return {'response': self.build_text_message("انتهت اللعبة"), 'points': 0, 'game_over': True}
         
-        sorted_players = sorted(self.player_scores.items(), key=lambda x: x[1]['score'], reverse=True)
+        sorted_players = sorted(self.scores.items(), key=lambda x: x[1]['score'], reverse=True)
         winner = sorted_players[0][1]
         
-        players_contents = []
+        result_text = f"انتهت اللعبة\n\nالفائز: {winner['name']}\nالنقاط: {winner['score']}"
         
-        for i, p in enumerate(sorted_players[:5]):
-            rank = f"{i+1}."
-            players_contents.append({"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": rank, "size": "sm", "flex": 0}, {"type": "text", "text": p[1]['name'], "size": "sm", "color": COLORS['text_dark'], "flex": 3, "margin": "sm"}, {"type": "text", "text": f"{p[1]['score']} نقطة", "size": "sm", "color": COLORS['primary'], "weight": "bold", "align": "end", "flex": 2}], "margin": "md" if i > 0 else "sm"})
+        if len(sorted_players) > 1:
+            result_text += "\n\nالترتيب:\n"
+            for i, (uid, data) in enumerate(sorted_players[:5], 1):
+                result_text += f"{i}. {data['name']} - {data['score']}\n"
         
-        winner_card = FlexSendMessage(
-            alt_text="نتائج اللعبة",
-            contents={
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "color": COLORS['white'], "align": "center"}], "backgroundColor": COLORS['primary'], "paddingAll": "20px", "cornerRadius": "12px"},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "الفائز", "size": "sm", "color": COLORS['text_light'], "align": "center"}, {"type": "text", "text": winner['name'], "size": "xxl", "color": COLORS['primary'], "weight": "bold", "align": "center", "margin": "xs"}, {"type": "text", "text": f"{winner['score']} نقطة", "size": "lg", "color": COLORS['success'], "align": "center", "margin": "xs"}], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "النتائج", "size": "md", "color": COLORS['text_dark'], "weight": "bold"}, *players_contents], "margin": "lg"},
-                        {"type": "separator", "margin": "lg", "color": COLORS['border']},
-                        {"type": "button", "action": {"type": "message", "label": "اعادة اللعب", "text": "فئه"}, "style": "primary", "color": COLORS['primary'], "height": "sm", "margin": "lg"}
-                    ],
-                    "backgroundColor": COLORS['card_bg'],
-                    "paddingAll": "20px"
-                }
-            }
-        )
-        return {'response': winner_card, 'points': winner['score'], 'correct': True, 'won': True, 'game_over': True}
+        return {'response': self.build_text_message(result_text), 'points': winner['score'], 'game_over': True}
