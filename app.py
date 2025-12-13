@@ -3,11 +3,12 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 import logging
 import atexit
-from threading import Lock
+from threading import Thread
+from queue import Queue
 
 from database import Database
 from game_engine import GameEngine
@@ -16,10 +17,7 @@ from ui_builder import UIBuilder
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('bot.log'),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.FileHandler('bot.log'), logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
@@ -39,7 +37,27 @@ Database.init()
 game_engine = GameEngine(line_bot_api)
 ui_builder = UIBuilder()
 
-# جدولة تنظيف المستخدمين غير النشطين
+# طابور المهام الخلفية
+task_queue = Queue()
+
+def background_worker():
+    """معالج المهام الخلفية"""
+    while True:
+        try:
+            task = task_queue.get()
+            if task is None:
+                break
+            task()
+            task_queue.task_done()
+        except Exception as e:
+            logger.error(f"Background task error: {e}", exc_info=True)
+
+# بدء worker threads
+for _ in range(4):
+    t = Thread(target=background_worker, daemon=True)
+    t.start()
+
+# جدولة التنظيف
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     func=Database.cleanup_inactive_users,
@@ -52,20 +70,16 @@ scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
 def add_quick_reply(message):
-    """إضافة أزرار سريعة للرسائل"""
+    """اضافة ازرار سريعة"""
     from linebot.models import QuickReply, QuickReplyButton, MessageAction
     
     quick_reply = QuickReply(items=[
         QuickReplyButton(action=MessageAction(label="بداية", text="بداية")),
         QuickReplyButton(action=MessageAction(label="تسجيل", text="تسجيل")),
-        QuickReplyButton(action=MessageAction(label="انسحب", text="انسحب")),
         QuickReplyButton(action=MessageAction(label="العاب", text="العاب")),
-        QuickReplyButton(action=MessageAction(label="توافق", text="توافق")),
-        QuickReplyButton(action=MessageAction(label="سؤال", text="سؤال")),
-        QuickReplyButton(action=MessageAction(label="منشن", text="منشن")),
-        QuickReplyButton(action=MessageAction(label="تحدي", text="تحدي")),
-        QuickReplyButton(action=MessageAction(label="اعتراف", text="اعتراف")),
-        QuickReplyButton(action=MessageAction(label="ايقاف", text="ايقاف")),
+        QuickReplyButton(action=MessageAction(label="نقاطي", text="نقاطي")),
+        QuickReplyButton(action=MessageAction(label="الصدارة", text="الصدارة")),
+        QuickReplyButton(action=MessageAction(label="ايقاف", text="ايقاف"))
     ])
     
     if isinstance(message, (TextSendMessage, FlexSendMessage)):
@@ -74,7 +88,7 @@ def add_quick_reply(message):
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    """معالج Webhook من LINE"""
+    """معالج Webhook - يرجع فورا"""
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     
@@ -85,52 +99,51 @@ def callback():
         abort(400)
     except Exception as e:
         logger.error(f"Callback error: {e}", exc_info=True)
-        abort(500)
     
-    return 'OK'
+    return 'OK', 200
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    """معالج الرسائل الرئيسي"""
-    try:
-        text = event.message.text.strip()
-        user_id = event.source.user_id
-        group_id = getattr(event.source, 'group_id', None) or user_id
-        
-        # تحديث آخر نشاط
-        Database.update_last_activity(user_id)
-        
-        # معالجة الأوامر
-        response = process_command(text, user_id, group_id)
-        
-        if response:
-            if isinstance(response, list):
-                for msg in response:
-                    add_quick_reply(msg)
-                line_bot_api.reply_message(event.reply_token, response)
-            else:
-                line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
-    
-    except Exception as e:
-        logger.error(f"Message handling error: {e}", exc_info=True)
+    """معالج الرسائل - يضيف للطابور"""
+    def process_message():
         try:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="حدث خطأ، حاول مرة أخرى")
-            )
-        except:
-            pass
+            text = event.message.text.strip()
+            user_id = event.source.user_id
+            group_id = getattr(event.source, 'group_id', None) or user_id
+            
+            Database.update_last_activity(user_id)
+            
+            response = process_command(text, user_id, group_id)
+            
+            if response:
+                if isinstance(response, list):
+                    for msg in response:
+                        add_quick_reply(msg)
+                    line_bot_api.reply_message(event.reply_token, response)
+                else:
+                    line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
+        except Exception as e:
+            logger.error(f"Message processing error: {e}", exc_info=True)
+            try:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="حدث خطا، حاول مرة اخرى")
+                )
+            except:
+                pass
+    
+    # اضافة للطابور بدلا من المعالجة المباشرة
+    task_queue.put(process_message)
 
 def process_command(text, user_id, group_id):
-    """معالجة الأوامر والرسائل"""
+    """معالجة الاوامر"""
     text_normalized = text.lower().strip()
     
-    # التحقق من التسجيل
     user_data = Database.get_user_stats(user_id)
     is_registered = user_data is not None
     display_name = user_data['display_name'] if user_data else "مستخدم"
     
-    # أوامر أساسية
+    # اوامر اساسية
     if text_normalized in ["بداية", "start", "بدايه"]:
         return FlexSendMessage(
             alt_text="بوت الحوت",
@@ -153,10 +166,10 @@ def process_command(text, user_id, group_id):
     if text_normalized in ["تسجيل", "تغيير"]:
         return handle_registration(user_id, is_registered, display_name)
     
-    # النقاط والإحصائيات
+    # النقاط والاحصائيات
     if text_normalized in ["نقاطي", "احصائياتي"]:
         if not is_registered:
-            return TextSendMessage(text="يجب التسجيل أولا\nاكتب: تسجيل")
+            return TextSendMessage(text="يجب التسجيل اولا\nاكتب: تسجيل")
         return FlexSendMessage(
             alt_text="احصائياتك",
             contents=ui_builder.stats_card(display_name, user_data)
@@ -169,12 +182,12 @@ def process_command(text, user_id, group_id):
             contents=ui_builder.leaderboard_card(leaders)
         )
     
-    # إيقاف اللعبة
+    # ايقاف اللعبة
     if text_normalized in ["ايقاف", "stop", "إيقاف"]:
         stopped = game_engine.stop_game(group_id)
-        return TextSendMessage(text="تم إيقاف اللعبة" if stopped else "لا توجد لعبة نشطة")
+        return TextSendMessage(text="تم ايقاف اللعبة" if stopped else "لا توجد لعبة نشطة")
     
-    # معالجة الألعاب
+    # معالجة الالعاب
     game_response = game_engine.process_message(
         text=text,
         user_id=user_id,
@@ -187,13 +200,12 @@ def process_command(text, user_id, group_id):
 
 def handle_registration(user_id, is_registered, current_name):
     """معالجة التسجيل"""
-    # تخزين حالة انتظار الاسم
     game_engine.set_waiting_for_name(user_id, True)
     
     if is_registered:
-        msg = f"أنت مسجل حاليا باسم: {current_name}\n\nأدخل الاسم الجديد:"
+        msg = f"انت مسجل حاليا باسم: {current_name}\n\nادخل الاسم الجديد:"
     else:
-        msg = "أدخل اسمك للتسجيل:"
+        msg = "ادخل اسمك للتسجيل:"
     
     return TextSendMessage(text=msg)
 
