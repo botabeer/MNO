@@ -1,122 +1,130 @@
 import logging
 from typing import Dict, Optional
-from linebot.v3.messaging import TextMessage
-from config import Config
-from ui_builder import UIBuilder
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
 class GameManager:
-    def __init__(self, db):
-        self.db = db
-        self.ui = UIBuilder()
+    def __init__(self, line_bot_api):
+        self.line_bot_api = line_bot_api
         self.active_games = {}
-        self.game_sessions = {}
-        self.games = self._load_games()
+        self.withdrawn_users = {}
+        self.waiting_for_name = set()
+        
+    def set_waiting_for_name(self, user_id, waiting):
+        if waiting:
+            self.waiting_for_name.add(user_id)
+        else:
+            self.waiting_for_name.discard(user_id)
     
-    def _load_games(self):
-        games = {}
+    def is_waiting_for_name(self, user_id):
+        return user_id in self.waiting_for_name
+    
+    def stop_game(self, group_id):
+        if group_id in self.active_games:
+            del self.active_games[group_id]
+            return True
+        return False
+    
+    def add_withdrawn_user(self, group_id, user_id):
+        if group_id not in self.withdrawn_users:
+            self.withdrawn_users[group_id] = set()
+        self.withdrawn_users[group_id].add(user_id)
+    
+    def cleanup_inactive_games(self, timeout_minutes=30):
         try:
-            from games.iq_game import IqGame
-            from games.roulette_game import RouletteGame
-            from games.word_color_game import WordColorGame
-            from games.scramble_word_game import ScrambleWordGame
-            from games.fast_typing_game import FastTypingGame
-            from games.opposite_game import OppositeGame
-            from games.letters_words_game import LettersWordsGame
-            from games.song_game import SongGame
-            from games.human_animal_plant_game import HumanAnimalPlantGame
-            from games.chain_words_game import ChainWordsGame
-            from games.guess_game import GuessGame
-            from games.compatibility_game import CompatibilitySystem
-            from games.math_game import MathGame
+            now = datetime.now()
+            inactive = []
             
-            games = {
-                "ذكاء": IqGame,
-                "روليت": RouletteGame,
-                "لون": WordColorGame,
-                "ترتيب": ScrambleWordGame,
-                "اسرع": FastTypingGame,
-                "ضد": OppositeGame,
-                "تكوين": LettersWordsGame,
-                "اغنيه": SongGame,
-                "لعبة": HumanAnimalPlantGame,
-                "سلسلة": ChainWordsGame,
-                "خمن": GuessGame,
-                "توافق": CompatibilitySystem,
-                "رياضيات": MathGame
-            }
-            logger.info(f"Loaded {len(games)} games")
+            for group_id, game in self.active_games.items():
+                if hasattr(game, 'game_start_time') and game.game_start_time:
+                    elapsed = (now - game.game_start_time).total_seconds() / 60
+                    if elapsed > timeout_minutes:
+                        inactive.append(group_id)
+            
+            for group_id in inactive:
+                del self.active_games[group_id]
+                logger.info(f"Cleaned up inactive game: {group_id}")
+            
+            return len(inactive)
         except Exception as e:
-            logger.error(f"Game loading error: {e}")
-        return games
+            logger.error(f"Cleanup error: {e}")
+            return 0
     
-    def get_active_count(self) -> int:
-        return len(self.active_games)
-    
-    def get_total_games(self) -> int:
-        return len(self.games)
-    
-    def stop_game(self, context_id: str) -> Optional[str]:
-        if context_id in self.active_games:
-            game = self.active_games[context_id]
-            game_name = game.game_name
-            del self.active_games[context_id]
-            self.game_sessions.pop(context_id, None)
-            return game_name
-        return None
-    
-    def process_message(self, context_id: str, user_id: str, username: str,
-                       text: str, is_registered: bool, theme: str, source_type: str) -> Optional[Dict]:
-        normalized = Config.normalize(text)
+    def process_message(self, text, user_id, group_id, display_name, is_registered):
+        from games import (
+            SongGame, OppositeGame, ChainWordsGame, 
+            FastTypingGame, HumanAnimalPlantGame,
+            LettersWordsGame, CategoryLetterGame, CompatibilityGame
+        )
         
-        if normalized in self.games:
-            game_config = Config.get_game_config(normalized)
-            
-            if not game_config.get('no_registration') and not is_registered:
-                return {'messages': [TextMessage(text="يجب التسجيل اولا")], 'points': 0}
-            
-            if game_config.get('group_only') and source_type not in ["group", "room"]:
-                return {'messages': [TextMessage(text="للمجموعات فقط")], 'points': 0}
-            
-            GameClass = self.games[normalized]
-            game = GameClass(None)
-            
-            if hasattr(game, 'set_theme'):
-                game.set_theme(theme)
-            if hasattr(game, 'set_database'):
-                game.set_database(self.db)
-            
-            self.active_games[context_id] = game
-            
-            if not game_config.get('no_registration'):
-                session_id = self.db.create_session(user_id, normalized)
-                self.game_sessions[context_id] = {'session_id': session_id, 'user_id': user_id}
-            
-            question = game.start_game()
-            return {'messages': [question], 'points': 0}
+        text_normalized = text.lower().strip()
         
-        if context_id in self.active_games:
-            game = self.active_games[context_id]
-            result = game.check_answer(text, user_id, username)
+        game_map = {
+            "اغنيه": ("اغنيه", SongGame, True),
+            "ضد": ("ضد", OppositeGame, True),
+            "سلسله": ("سلسله", ChainWordsGame, True),
+            "اسرع": ("اسرع", FastTypingGame, True),
+            "لعبه": ("لعبه", HumanAnimalPlantGame, True),
+            "تكوين": ("تكوين", LettersWordsGame, True),
+            "فئه": ("فئه", CategoryLetterGame, True),
+            "توافق": ("توافق", CompatibilityGame, False),
+        }
+        
+        if text_normalized in game_map:
+            game_key, GameClass, requires_registration = game_map[text_normalized]
             
-            if result:
-                points = result.get('points', 0)
-                messages = []
+            if requires_registration and not is_registered:
+                from linebot.models import TextSendMessage
+                return TextSendMessage(text="يجب التسجيل أولاً. اكتب: تسجيل")
+            
+            game = GameClass(self.line_bot_api)
+            self.active_games[group_id] = game
+            
+            try:
+                response = game.start_game()
+                return response
+            except Exception as e:
+                logger.error(f"Error starting game {game_key}: {e}")
+                from linebot.models import TextSendMessage
+                return TextSendMessage(text="حدث خطأ في بدء اللعبة")
+        
+        if group_id in self.active_games:
+            game = self.active_games[group_id]
+            
+            try:
+                result = game.check_answer(text, user_id, display_name)
                 
-                if result.get('message'):
-                    messages.append(TextMessage(text=result['message']))
+                if result:
+                    responses = []
+                    
+                    if result.get('message'):
+                        from linebot.models import TextSendMessage
+                        responses.append(TextSendMessage(text=result['message']))
+                    
+                    if result.get('response'):
+                        responses.append(result['response'])
+                    
+                    if result.get('next_question'):
+                        next_q = game.get_question()
+                        if next_q:
+                            responses.append(next_q)
+                    
+                    if result.get('game_over'):
+                        del self.active_games[group_id]
+                        
+                        if is_registered and result.get('points', 0) > 0:
+                            from database import Database
+                            Database.update_user_points(
+                                user_id, 
+                                result['points'], 
+                                result.get('won', True),
+                                game.game_name
+                            )
+                    
+                    return responses if len(responses) > 1 else (responses[0] if responses else None)
                 
-                if result.get('game_over'):
-                    if context_id in self.game_sessions:
-                        session = self.game_sessions[context_id]
-                        self.db.complete_session(session['session_id'], points)
-                        del self.game_sessions[context_id]
-                    del self.active_games[context_id]
-                    if points > 0 and is_registered:
-                        self.db.record_game_stat(user_id, game.game_name, points, True)
-                elif result.get('response'):
-                    messages.append(result['response'])
-                
-                return {'messages': messages, 'points': points}
+            except Exception as e:
+                logger.error(f"Error processing game answer: {e}")
+        
         return None
