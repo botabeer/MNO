@@ -8,8 +8,6 @@ from queue import Queue
 logger = logging.getLogger(__name__)
 
 class ConnectionPool:
-    """مجموعة اتصالات قاعدة البيانات"""
-    
     def __init__(self, db_name, pool_size=10):
         self.db_name = db_name
         self.pool = Queue(maxsize=pool_size)
@@ -37,16 +35,13 @@ class ConnectionPool:
         finally:
             self.pool.put(conn)
 
-# مجموعة الاتصالات العامة
 db_pool = ConnectionPool('game_scores.db', pool_size=10)
 
 class Database:
-    """إدارة قاعدة البيانات"""
-    
     _lock = Lock()
     _leaderboard_cache = None
     _leaderboard_cache_time = 0
-    CACHE_TTL = 300  # 5 دقائق
+    CACHE_TTL = 300
     INACTIVITY_DAYS = 30
     
     @staticmethod
@@ -57,12 +52,10 @@ class Database:
     
     @staticmethod
     def init():
-        """تهيئة قاعدة البيانات"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # جدول المستخدمين
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (
                         user_id TEXT PRIMARY KEY,
@@ -75,7 +68,6 @@ class Database:
                     )
                 ''')
                 
-                # جدول سجل الألعاب
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS game_history (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,7 +80,6 @@ class Database:
                     )
                 ''')
                 
-                # الفهارس
                 cursor.execute('''
                     CREATE INDEX IF NOT EXISTS idx_users_points 
                     ON users(total_points DESC, games_played DESC)
@@ -110,7 +101,6 @@ class Database:
     
     @staticmethod
     def register_or_update_user(user_id, display_name):
-        """تسجيل أو تحديث مستخدم"""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
@@ -131,7 +121,6 @@ class Database:
     
     @staticmethod
     def update_last_activity(user_id):
-        """تحديث آخر نشاط"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -146,7 +135,6 @@ class Database:
     
     @staticmethod
     def update_user_points(user_id, points, won, game_type):
-        """تحديث نقاط المستخدم"""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
@@ -178,7 +166,6 @@ class Database:
     
     @staticmethod
     def get_user_stats(user_id):
-        """الحصول على إحصائيات المستخدم"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -202,11 +189,9 @@ class Database:
     
     @staticmethod
     def get_leaderboard(limit=20, force_refresh=False):
-        """الحصول على لوحة الصدارة"""
         from time import time
         now = time()
         
-        # استخدام الذاكرة المؤقتة
         if (not force_refresh and 
             Database._leaderboard_cache and 
             now - Database._leaderboard_cache_time < Database.CACHE_TTL):
@@ -244,7 +229,6 @@ class Database:
     
     @staticmethod
     def cleanup_inactive_users():
-        """تنظيف المستخدمين غير النشطين"""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
