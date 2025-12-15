@@ -33,7 +33,7 @@ class UIBuilder:
                         ("مساعدة", "مساعدة")
                     ]),
                     self._separator(),
-                    self._text_box("للتسجيل أو تغيير الاسم اكتب: تسجيل", "xs", "center", self.COLORS['text_light'])
+                    self._text_box("للتسجيل او تغيير الاسم اكتب: تسجيل", "xs", "center", self.COLORS['text_light'])
                 ],
                 "paddingAll": "20px"
             }
@@ -51,17 +51,17 @@ class UIBuilder:
                     self._button_row([
                         ("اغنيه", "اغنيه"),
                         ("ضد", "ضد"),
-                        ("سلسلة", "سلسلة")
+                        ("سلسلة", "سلسله")
                     ]),
                     self._button_row([
                         ("اسرع", "اسرع"),
                         ("تكوين", "تكوين"),
-                        ("فئة", "فئة")
+                        ("فئة", "فئه")
                     ]),
                     self._separator(),
                     self._text_box("العاب ترفيهية", "md", "center", self.COLORS['success']),
                     self._button_row([
-                        ("لعبة", "لعبة"),
+                        ("لعبة", "لعبه"),
                         ("توافق", "توافق")
                     ])
                 ],
