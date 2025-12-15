@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -58,26 +58,24 @@ class GameManager:
             LettersWordsGame, CategoryLetterGame, CompatibilityGame
         )
         
+        if not is_registered:
+            return None
+        
         text_normalized = text.lower().strip()
         
         game_map = {
-            "اغنيه": ("اغنيه", SongGame, True),
-            "ضد": ("ضد", OppositeGame, True),
-            "سلسله": ("سلسله", ChainWordsGame, True),
-            "اسرع": ("اسرع", FastTypingGame, True),
-            "لعبه": ("لعبه", HumanAnimalPlantGame, True),
-            "تكوين": ("تكوين", LettersWordsGame, True),
-            "فئه": ("فئه", CategoryLetterGame, True),
-            "توافق": ("توافق", CompatibilityGame, False),
+            "اغنيه": SongGame,
+            "ضد": OppositeGame,
+            "سلسله": ChainWordsGame,
+            "اسرع": FastTypingGame,
+            "لعبه": HumanAnimalPlantGame,
+            "تكوين": LettersWordsGame,
+            "فئه": CategoryLetterGame,
+            "توافق": CompatibilityGame,
         }
         
         if text_normalized in game_map:
-            game_key, GameClass, requires_registration = game_map[text_normalized]
-            
-            if requires_registration and not is_registered:
-                from linebot.models import TextSendMessage
-                return TextSendMessage(text="يجب التسجيل أولاً. اكتب: تسجيل")
-            
+            GameClass = game_map[text_normalized]
             game = GameClass(self.line_bot_api)
             self.active_games[group_id] = game
             
@@ -85,9 +83,8 @@ class GameManager:
                 response = game.start_game()
                 return response
             except Exception as e:
-                logger.error(f"Error starting game {game_key}: {e}")
-                from linebot.models import TextSendMessage
-                return TextSendMessage(text="حدث خطأ في بدء اللعبة")
+                logger.error(f"Error starting game: {e}")
+                return None
         
         if group_id in self.active_games:
             game = self.active_games[group_id]
@@ -113,7 +110,7 @@ class GameManager:
                     if result.get('game_over'):
                         del self.active_games[group_id]
                         
-                        if is_registered and result.get('points', 0) > 0:
+                        if result.get('points', 0) > 0:
                             from database import Database
                             Database.update_user_points(
                                 user_id, 
@@ -125,6 +122,6 @@ class GameManager:
                     return responses if len(responses) > 1 else (responses[0] if responses else None)
                 
             except Exception as e:
-                logger.error(f"Error processing game answer: {e}")
+                logger.error(f"Error processing answer: {e}")
         
         return None
