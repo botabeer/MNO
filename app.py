@@ -13,9 +13,6 @@ from database import Database
 from game_manager import GameManager
 from ui_builder import UIBuilder
 
-# ------------------------
-# Logging Configuration
-# ------------------------
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -26,35 +23,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ------------------------
-# Flask App
-# ------------------------
 app = Flask(__name__)
 
-# ------------------------
-# Environment Variables
-# ------------------------
 required_env = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
 for var in required_env:
     if not os.getenv(var):
         raise ValueError(f"Missing {var}")
 
-ENV_MODE = os.getenv('ENV_MODE', 'dev').lower()  # dev / prod
+ENV_MODE = os.getenv('ENV_MODE', 'dev').lower()
 DEBUG_MODE = ENV_MODE == 'dev'
 
 line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
-# ------------------------
-# Initialize DB and Game Manager
-# ------------------------
 Database.init()
 game_manager = GameManager(line_bot_api)
 ui_builder = UIBuilder()
 
-# ------------------------
-# Scheduler Jobs
-# ------------------------
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     func=Database.cleanup_inactive_users,
@@ -73,9 +58,6 @@ scheduler.add_job(
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
-# ------------------------
-# Quick Reply Helper
-# ------------------------
 def add_quick_reply(message):
     from linebot.models import QuickReply, QuickReplyButton, MessageAction
     
@@ -91,9 +73,6 @@ def add_quick_reply(message):
         message.quick_reply = quick_reply
     return message
 
-# ------------------------
-# Webhook Endpoint
-# ------------------------
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
@@ -111,9 +90,6 @@ def callback():
     
     return 'OK', 200
 
-# ------------------------
-# Message Handler
-# ------------------------
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
@@ -136,9 +112,6 @@ def handle_message(event):
     except Exception as e:
         logger.error(f"Error handling message: {e}", exc_info=True)
 
-# ------------------------
-# Command Processing
-# ------------------------
 def process_command(text, user_id, group_id):
     text_normalized = text.lower().strip()
     user_data = Database.get_user_stats(user_id)
@@ -218,9 +191,6 @@ def process_command(text, user_id, group_id):
     
     return game_response
 
-# ------------------------
-# Health Check
-# ------------------------
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
@@ -229,23 +199,14 @@ def health_check():
         'env_mode': ENV_MODE
     }), 200
 
-# ------------------------
-# Index
-# ------------------------
 @app.route('/', methods=['GET'])
 def index():
     return f"Bot Alhoot ({ENV_MODE})", 200
 
-# ------------------------
-# Run App
-# ------------------------
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 5000))
 
     if DEBUG_MODE:
-        # ------------------------
-        # Ngrok Tunnel for Dev
-        # ------------------------
         try:
             from pyngrok import ngrok
             public_url = ngrok.connect(port).public_url
