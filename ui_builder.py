@@ -1,6 +1,4 @@
 class UIBuilder:
-    """بناء واجهات LINE Flex Messages"""
-    
     COLORS = {
         'primary': '#2563EB',
         'success': '#10B981',
@@ -13,7 +11,6 @@ class UIBuilder:
     }
     
     def welcome_card(self, display_name, is_registered):
-        """بطاقة الترحيب"""
         status = "مسجل" if is_registered else "غير مسجل"
         status_color = self.COLORS['success'] if is_registered else self.COLORS['warning']
         
@@ -43,7 +40,6 @@ class UIBuilder:
         }
     
     def games_menu_card(self):
-        """قائمة الألعاب"""
         return {
             "type": "bubble",
             "body": {
@@ -65,12 +61,7 @@ class UIBuilder:
                     self._separator(),
                     self._text_box("العاب ترفيهية", "md", "center", self.COLORS['success']),
                     self._button_row([
-                        ("سؤال", "سؤال"),
-                        ("تحدي", "تحدي"),
-                        ("اعتراف", "اعتراف")
-                    ]),
-                    self._button_row([
-                        ("منشن", "منشن"),
+                        ("لعبة", "لعبة"),
                         ("توافق", "توافق")
                     ])
                 ],
@@ -79,7 +70,6 @@ class UIBuilder:
         }
     
     def help_card(self):
-        """بطاقة المساعدة"""
         return {
             "type": "bubble",
             "body": {
@@ -91,7 +81,7 @@ class UIBuilder:
                     self._separator(),
                     self._info_section("الالعاب التنافسية", "اغنيه - ضد - سلسلة - اسرع - تكوين - فئة"),
                     self._separator(),
-                    self._info_section("العاب ترفيهية", "سؤال - تحدي - اعتراف - منشن - توافق"),
+                    self._info_section("العاب ترفيهية", "لعبة - توافق"),
                     self._separator(),
                     self._info_section("اثناء اللعب", "لمح - جاوب - ايقاف"),
                     self._separator(),
@@ -102,7 +92,6 @@ class UIBuilder:
         }
     
     def stats_card(self, display_name, stats):
-        """بطاقة الإحصائيات"""
         if not stats:
             stats = {'total_points': 0, 'games_played': 0, 'wins': 0}
         
@@ -127,7 +116,6 @@ class UIBuilder:
         }
     
     def leaderboard_card(self, leaders):
-        """لوحة الصدارة"""
         leader_list = []
         
         for i, leader in enumerate(leaders[:20], 1):
@@ -153,10 +141,7 @@ class UIBuilder:
             }
         }
     
-    # مساعدات لبناء العناصر
-    
     def _header(self, text):
-        """رأس الصفحة"""
         return {
             "type": "box",
             "layout": "vertical",
@@ -175,7 +160,6 @@ class UIBuilder:
         }
     
     def _text_box(self, text, size="md", align="start", color=None):
-        """صندوق نص"""
         return {
             "type": "text",
             "text": text,
@@ -187,7 +171,6 @@ class UIBuilder:
         }
     
     def _separator(self):
-        """فاصل"""
         return {
             "type": "separator",
             "margin": "md",
@@ -195,7 +178,6 @@ class UIBuilder:
         }
     
     def _button_row(self, buttons):
-        """صف من الأزرار"""
         button_elements = []
         for label, action_text in buttons:
             button_elements.append({
@@ -219,7 +201,6 @@ class UIBuilder:
         }
     
     def _info_section(self, title, content):
-        """قسم معلومات"""
         return {
             "type": "box",
             "layout": "vertical",
@@ -244,7 +225,6 @@ class UIBuilder:
         }
     
     def _stat_row(self, label, value):
-        """صف إحصائية"""
         return {
             "type": "box",
             "layout": "baseline",
@@ -270,7 +250,6 @@ class UIBuilder:
         }
     
     def _leader_row(self, rank, name, points):
-        """صف في لوحة الصدارة"""
         return {
             "type": "box",
             "layout": "baseline",
