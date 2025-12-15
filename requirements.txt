@@ -1,10 +1,4 @@
 Flask
 line-bot-sdk
-python-dotenv
-google-generativeai
 gunicorn
-APScheduler
-redis
-pillow
-pandas
-matplotlib
+python-dotenv
