@@ -1,7 +1,7 @@
-from flask import Flask, request, abort, jsonify
+from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage
+from linebot.models import MessageEvent, TextMessage
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import os
@@ -58,35 +58,29 @@ scheduler.add_job(
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
-def add_quick_reply(message):
-    from linebot.models import QuickReply, QuickReplyButton, MessageAction
-    
-    quick_reply = QuickReply(items=[
-        QuickReplyButton(action=MessageAction(label="بداية", text="بداية")),
-        QuickReplyButton(action=MessageAction(label="العاب", text="العاب")),
-        QuickReplyButton(action=MessageAction(label="نقاطي", text="نقاطي")),
-        QuickReplyButton(action=MessageAction(label="الصدارة", text="الصدارة")),
-        QuickReplyButton(action=MessageAction(label="ايقاف", text="ايقاف"))
-    ])
-    
-    if isinstance(message, (TextSendMessage, FlexSendMessage)):
-        message.quick_reply = quick_reply
-    return message
+COMMANDS = {
+    'بداية', 'start', 'بدايه',
+    'مساعدة', 'help', 'مساعده',
+    'العاب', 'ألعاب',
+    'تسجيل', 'تغيير',
+    'نقاطي', 'احصائياتي',
+    'الصدارة', 'المتصدرين', 'الصداره',
+    'ايقاف', 'stop', 'إيقاف', 'انسحب', 'انسحاب',
+    'اغنيه', 'ضد', 'سلسله', 'اسرع', 'لعبه', 'تكوين', 'فئه', 'توافق'
+}
 
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
-    logger.info(f"Received webhook: {body}")
     
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.warning("Invalid signature. Aborting request.")
+        logger.warning("Invalid signature")
         abort(400)
     except Exception as e:
-        logger.error(f"Exception in webhook handling: {e}", exc_info=True)
-        abort(500)
+        logger.error(f"Webhook error: {e}", exc_info=True)
     
     return 'OK', 200
 
@@ -96,103 +90,115 @@ def handle_message(event):
     text = event.message.text.strip()
     group_id = getattr(event.source, 'group_id', None) or user_id
     
-    logger.info(f"Message from {user_id} (group {group_id}): {text}")
-    
     try:
-        response = process_command(text, user_id, group_id)
+        response = process_command(text, user_id, group_id, event)
         if response:
             if isinstance(response, list):
-                for msg in response:
-                    add_quick_reply(msg)
                 line_bot_api.reply_message(event.reply_token, response)
             else:
-                line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
+                line_bot_api.reply_message(event.reply_token, response)
     except LineBotApiError as e:
-        logger.error(f"LINE API Error: {e.status_code} {e.message}", exc_info=True)
+        logger.error(f"LINE API Error: {e.status_code}", exc_info=True)
     except Exception as e:
-        logger.error(f"Error handling message: {e}", exc_info=True)
+        logger.error(f"Message handling error: {e}", exc_info=True)
 
-def process_command(text, user_id, group_id):
+def process_command(text, user_id, group_id, event):
     text_normalized = text.lower().strip()
     user_data = Database.get_user_stats(user_id)
     is_registered = user_data is not None
-    display_name = user_data['display_name'] if user_data else "مستخدم"
+    display_name = user_data['display_name'] if user_data else None
     
-    if text_normalized in ["بداية", "start", "بدايه"]:
+    if text_normalized not in COMMANDS:
+        if game_manager.is_waiting_for_name(user_id):
+            name = text.strip()
+            if 2 <= len(name) <= 50:
+                Database.register_or_update_user(user_id, name)
+                game_manager.set_waiting_for_name(user_id, False)
+                return None
+            game_manager.set_waiting_for_name(user_id, False)
+            return None
+        
+        if group_id in game_manager.active_games:
+            if not is_registered:
+                return None
+            
+            game_response = game_manager.process_message(
+                text=text,
+                user_id=user_id,
+                group_id=group_id,
+                display_name=display_name,
+                is_registered=is_registered
+            )
+            return game_response
+        
+        return None
+    
+    if text_normalized in ['بداية', 'start', 'بدايه']:
         Database.update_last_activity(user_id)
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="بوت الحوت",
-            contents=ui_builder.welcome_card(display_name, is_registered)
+            contents=ui_builder.welcome_card(display_name or "مستخدم", is_registered)
         )
     
-    if text_normalized in ["مساعدة", "help", "مساعده"]:
+    if text_normalized in ['مساعدة', 'help', 'مساعده']:
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="المساعدة",
             contents=ui_builder.help_card()
         )
     
-    if text in ["العاب", "ألعاب"]:
+    if text in ['العاب', 'ألعاب']:
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="قائمة الالعاب",
             contents=ui_builder.games_menu_card()
         )
     
-    if text_normalized in ["تسجيل", "تغيير"]:
+    if text_normalized in ['تسجيل', 'تغيير']:
         game_manager.set_waiting_for_name(user_id, True)
-        if is_registered:
-            msg = f"انت مسجل حاليا باسم: {display_name}\n\nادخل الاسم الجديد:"
-        else:
-            msg = "ادخل اسمك للتسجيل:"
-        return TextSendMessage(text=msg)
+        return None
     
-    if game_manager.is_waiting_for_name(user_id):
-        name = text.strip()
-        if len(name) < 2 or len(name) > 50:
-            return TextSendMessage(text="الاسم غير صالح. يجب أن يكون بين حرفين و50 حرف.")
-        success = Database.register_or_update_user(user_id, name)
-        game_manager.set_waiting_for_name(user_id, False)
-        if success:
-            return TextSendMessage(text=f"تم التسجيل باسم: {name}")
-        return TextSendMessage(text="حدث خطأ أثناء التسجيل.")
-
-    if text_normalized in ["نقاطي", "احصائياتي"]:
+    if text_normalized in ['نقاطي', 'احصائياتي']:
         if not is_registered:
-            return TextSendMessage(text="يجب التسجيل أولاً.")
+            return None
         Database.update_last_activity(user_id)
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="احصائياتك",
             contents=ui_builder.stats_card(display_name, user_data)
         )
-
-    if text_normalized in ["الصدارة", "المتصدرين", "الصداره"]:
+    
+    if text_normalized in ['الصدارة', 'المتصدرين', 'الصداره']:
         leaders = Database.get_leaderboard(20)
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="لوحة الصدارة",
             contents=ui_builder.leaderboard_card(leaders)
         )
-
-    if text_normalized in ["ايقاف", "stop", "إيقاف", "انسحب", "انسحاب"]:
-        stopped = game_manager.stop_game(group_id)
-        if stopped:
-            game_manager.add_withdrawn_user(group_id, user_id)
-            return TextSendMessage(text="تم ايقاف اللعبة")
-        return TextSendMessage(text="لا توجد لعبة نشطة لإيقافها.")
-
-    game_response = game_manager.process_message(
-        text=text,
-        user_id=user_id,
-        group_id=group_id,
-        display_name=display_name,
-        is_registered=is_registered
-    )
     
-    if game_response is None:
-        return TextSendMessage(text="لا يمكن التعرف على الأمر. اكتب 'مساعدة' للمزيد.")
+    if text_normalized in ['ايقاف', 'stop', 'إيقاف', 'انسحب', 'انسحاب']:
+        game_manager.stop_game(group_id)
+        return None
     
-    return game_response
+    if text_normalized in ['اغنيه', 'ضد', 'سلسله', 'اسرع', 'لعبه', 'تكوين', 'فئه', 'توافق']:
+        if not is_registered:
+            return None
+        
+        game_response = game_manager.process_message(
+            text=text,
+            user_id=user_id,
+            group_id=group_id,
+            display_name=display_name,
+            is_registered=is_registered
+        )
+        return game_response
+    
+    return None
 
 @app.route('/health', methods=['GET'])
 def health_check():
+    from flask import jsonify
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
@@ -205,14 +211,13 @@ def index():
 
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 5000))
-
+    
     if DEBUG_MODE:
         try:
             from pyngrok import ngrok
             public_url = ngrok.connect(port).public_url
-            logger.info(f" * Ngrok tunnel: {public_url}/callback")
-            print(f" * Ngrok tunnel: {public_url}/callback")
+            logger.info(f"Ngrok tunnel: {public_url}/callback")
         except ImportError:
-            logger.warning("pyngrok not installed. Run 'pip install pyngrok' to use ngrok tunnel.")
-
+            logger.warning("pyngrok not installed")
+    
     app.run(host='0.0.0.0', port=port, debug=DEBUG_MODE)
