@@ -3,8 +3,6 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 
 class BaseGame:
-    """الفئة الأساسية لجميع الألعاب"""
-    
     def __init__(self, line_bot_api=None, questions_count: int = 5):
         self.line_bot_api = line_bot_api
         self.questions_count = questions_count
@@ -17,19 +15,16 @@ class BaseGame:
         self.game_active = False
         self.game_start_time: Optional[datetime] = None
         
-        # إعدادات اللعبة
         self.game_name = "لعبة"
         self.supports_hint = True
         self.supports_reveal = True
     
     def normalize_text(self, text: str) -> str:
-        """تطبيع النص العربي"""
         if not text:
             return ""
         
         text = text.strip().lower()
         
-        # تطبيع الحروف العربية
         replacements = {
             'أ': 'ا', 'إ': 'ا', 'آ': 'ا',
             'ى': 'ي', 'ة': 'ه', 'ؤ': 'و',
@@ -39,13 +34,11 @@ class BaseGame:
         for old, new in replacements.items():
             text = text.replace(old, new)
         
-        # إزالة التشكيل
         text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
         
         return text
     
     def add_score(self, user_id: str, display_name: str, points: int = 1) -> int:
-        """إضافة نقاط للاعب"""
         if user_id in self.answered_users:
             return 0
         
@@ -58,7 +51,6 @@ class BaseGame:
         return points
     
     def start_game(self):
-        """بدء اللعبة"""
         self.current_question = 0
         self.scores.clear()
         self.answered_users.clear()
@@ -70,15 +62,12 @@ class BaseGame:
         return self.get_question()
     
     def get_question(self):
-        """الحصول على السؤال - يجب تنفيذها في الفئة الفرعية"""
         raise NotImplementedError("يجب تنفيذ get_question في الفئة الفرعية")
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """التحقق من الإجابة - يجب تنفيذها في الفئة الفرعية"""
         raise NotImplementedError("يجب تنفيذ check_answer في الفئة الفرعية")
     
     def end_game(self) -> Dict[str, Any]:
-        """إنهاء اللعبة"""
         self.game_active = False
         
         if not self.scores:
@@ -88,7 +77,6 @@ class BaseGame:
                 "message": "انتهت اللعبة"
             }
         
-        # ترتيب اللاعبين
         sorted_players = sorted(
             self.scores.items(),
             key=lambda x: x[1]["score"],
@@ -97,7 +85,6 @@ class BaseGame:
         
         winner = sorted_players[0][1]
         
-        # بناء رسالة النتيجة
         message = f"انتهت اللعبة\n\nالفائز: {winner['name']}\nالنقاط: {winner['score']}"
         
         if len(sorted_players) > 1:
@@ -112,12 +99,10 @@ class BaseGame:
         }
     
     def build_text_message(self, text: str):
-        """بناء رسالة نصية"""
         from linebot.models import TextSendMessage
         return TextSendMessage(text=text)
     
     def build_question_message(self, question_text: str, additional_info: str = None):
-        """بناء رسالة السؤال"""
         progress = f"{self.current_question + 1}/{self.questions_count}"
         
         message = f"{self.game_name}\n{progress}\n\n{question_text}"
