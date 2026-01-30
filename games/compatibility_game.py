@@ -12,23 +12,21 @@ class CompatibilityGame(BaseGame):
         self.supports_reveal = False
     
     def is_valid_text(self, text: str) -> bool:
-        """التحقق من أن النص أسماء فقط"""
+        """التحقق من ان النص اسماء فقط"""
         if re.search(r"[@#0-9A-Za-z!$%^&*()_+=\[\]{};:'\"\\|,.<>/?~`]", text):
             return False
         return True
     
     def parse_names(self, text: str) -> tuple:
-        """معالجة الأسماء من النص"""
+        """معالجة الاسماء من النص"""
         text = ' '.join(text.split())
         
-        # البحث عن 'و' كفاصل
         if ' و ' in text:
             parts = text.split(' و ', 1)
             name1 = parts[0].strip()
             name2 = parts[1].strip() if len(parts) > 1 else ""
             return (name1, name2) if name1 and name2 else (None, None)
         
-        # البحث عن 'و' كلمة منفصلة
         words = text.split()
         if 'و' in words:
             idx = words.index('و')
@@ -43,13 +41,11 @@ class CompatibilityGame(BaseGame):
         n1 = self.normalize_text(name1)
         n2 = self.normalize_text(name2)
         
-        # ترتيب الأسماء لضمان نفس النتيجة
         names = sorted([n1, n2])
         combined = ''.join(names)
         
-        # حساب النسبة بناء على الأحرف
         seed = sum(ord(c) * (i + 1) for i, c in enumerate(combined))
-        percentage = (seed % 81) + 20  # نسبة بين 20-100
+        percentage = (seed % 81) + 20
         
         return percentage
     
@@ -74,7 +70,7 @@ class CompatibilityGame(BaseGame):
     def get_question(self):
         """الحصول على السؤال"""
         return self.build_text_message(
-            "أدخل اسمين بينهما (و)\nمثال: الحوت و عبير"
+            "ادخل اسمين بينهما (و)\nمثال: الحوت و عبير"
         )
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
@@ -84,16 +80,14 @@ class CompatibilityGame(BaseGame):
         text = user_answer.strip()
         name1, name2 = self.parse_names(text)
         
-        # التحقق من صحة الإدخال
         if not name1 or not name2:
             return {
                 'response': self.build_text_message(
-                    "الصيغة غير صحيحة\n\nاكتب: اسم و اسم\nمثال: الحوت و عبير"
+                    "الصيغة غير صحيحة\n\naكتب: اسم و اسم\nمثال: الحوت و عبير"
                 ),
                 'points': 0
             }
         
-        # التحقق من عدم وجود رموز
         if not self.is_valid_text(name1) or not self.is_valid_text(name2):
             return {
                 'response': self.build_text_message(
@@ -102,7 +96,6 @@ class CompatibilityGame(BaseGame):
                 'points': 0
             }
         
-        # حساب التوافق
         percentage = self.calculate_compatibility(name1, name2)
         message_text = self.get_compatibility_message(percentage)
         
