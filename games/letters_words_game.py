@@ -2,7 +2,7 @@ from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional
 
-class LettersGame(BaseGame):
+class LettersWordsGame(BaseGame):
     """لعبة تكوين كلمات من حروف"""
     
     def __init__(self, line_bot_api):
@@ -47,17 +47,15 @@ class LettersGame(BaseGame):
         
         normalized = self.normalize_text(user_answer)
         
-        # التلميح
         if self.supports_hint and normalized == "لمح":
             remaining = [w for w in self.current_answer if self.normalize_text(w) not in self.found_words]
             if remaining:
                 word = remaining[0]
-                hint = f"تبدأ بـ: {word[0]}\nعدد الحروف: {len(word)}"
+                hint = f"تبدا ب: {word[0]}\nعدد الحروف: {len(word)}"
             else:
                 hint = "لا توجد تلميحات"
             return {"message": hint, "response": self.build_text_message(hint), "points": 0}
         
-        # عرض الإجابة
         if self.supports_reveal and normalized == "جاوب":
             words = ' - '.join(self.current_answer[:5])
             self.current_question += 1
@@ -71,7 +69,6 @@ class LettersGame(BaseGame):
             
             return {"message": f"كلمات ممكنة: {words}", "response": self.get_question(), "points": 0}
         
-        # التحقق من الإجابة
         valid_words = [self.normalize_text(w) for w in self.current_answer]
         
         if normalized not in valid_words or normalized in self.found_words:
@@ -80,12 +77,10 @@ class LettersGame(BaseGame):
         self.found_words.add(normalized)
         points = 1
         
-        # تحديث النقاط فقط عند الإجابة الأولى
         if user_id not in self.answered_users:
             self.scores.setdefault(user_id, {'name': display_name, 'score': 0})
             self.scores[user_id]['score'] += points
         
-        # التحقق من إكمال العدد المطلوب
         if len(self.found_words) >= self.required_words:
             self.answered_users.add(user_id)
             self.current_question += 1
