@@ -3,7 +3,7 @@ import random
 import time
 from typing import Dict, Any, Optional
 
-class FastGame(BaseGame):
+class FastTypingGame(BaseGame):
     """لعبة الكتابة السريعة"""
     
     def __init__(self, line_bot_api):
@@ -12,13 +12,13 @@ class FastGame(BaseGame):
         self.supports_hint = False
         self.supports_reveal = False
         
-        self.round_time = 20  # ثانية
+        self.round_time = 20
         self.round_start_time = None
         
         self.phrases = [
-            'سبحان الله', 'الحمد لله', 'الله أكبر',
-            'لا إله إلا الله', 'استغفر الله',
-            'لا حول ولا قوة إلا بالله',
+            'سبحان الله', 'الحمد لله', 'الله اكبر',
+            'لا اله الا الله', 'استغفر الله',
+            'لا حول ولا قوة الا بالله',
             'رب اغفر لي', 'توكل على الله',
             'الصبر مفتاح الفرج', 'من جد وجد',
             'العلم نور', 'كن محسنا',
@@ -56,7 +56,6 @@ class FastGame(BaseGame):
         if not self.game_active:
             return None
         
-        # التحقق من انتهاء الوقت
         if self._time_expired():
             self.previous_question = self.current_answer
             self.previous_answer = self.current_answer
@@ -76,7 +75,6 @@ class FastGame(BaseGame):
         text = user_answer.strip()
         time_taken = time.time() - self.round_start_time
         
-        # التحقق من الإجابة
         if text == self.current_answer:
             points = self.add_score(user_id, display_name, 1)
             
