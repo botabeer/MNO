@@ -20,12 +20,12 @@ class OppositeGame(BaseGame):
             'قريب': ['بعيد'], 'مفتوح': ['مغلق'],
             'نهار': ['ليل'], 'شمس': ['قمر'],
             'شتاء': ['صيف'], 'شرق': ['غرب'],
-            'أبيض': ['أسود'], 'حلو': ['مر'],
+            'ابيض': ['اسود'], 'حلو': ['مر'],
             'حار': ['بارد'], 'جاف': ['رطب'],
-            'مالح': ['حلو'], 'صحيح': ['خطأ'],
+            'مالح': ['حلو'], 'صحيح': ['خطا'],
             'حي': ['ميت'], 'نور': ['ظلام'],
             'فوق': ['تحت'], 'يمين': ['يسار'],
-            'أمام': ['خلف'], 'داخل': ['خارج'],
+            'امام': ['خلف'], 'داخل': ['خارج'],
         }
         
         self.questions_list = list(self.opposites.items())
@@ -46,13 +46,11 @@ class OppositeGame(BaseGame):
         
         normalized = self.normalize_text(user_answer)
         
-        # التلميح
         if self.supports_hint and normalized == "لمح":
             answer = self.current_answer[0]
-            hint = f"تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)}"
+            hint = f"تبدا ب: {answer[0]}\nعدد الحروف: {len(answer)}"
             return {"message": hint, "response": self.build_text_message(hint), "points": 0}
         
-        # عرض الإجابة
         if self.supports_reveal and normalized == "جاوب":
             answers_text = " او ".join(self.current_answer)
             word, _ = self.questions_list[self.current_question % len(self.questions_list)]
@@ -68,7 +66,6 @@ class OppositeGame(BaseGame):
             
             return {"message": f"الاجابة: {answers_text}", "response": self.get_question(), "points": 0}
         
-        # التحقق من الإجابة
         for correct_answer in self.current_answer:
             if self.normalize_text(correct_answer) == normalized:
                 points = self.add_score(user_id, display_name, 1)
