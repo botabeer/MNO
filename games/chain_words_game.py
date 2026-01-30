@@ -2,7 +2,7 @@ from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional
 
-class ChainGame(BaseGame):
+class ChainWordsGame(BaseGame):
     """لعبة الكلمات المتسلسلة"""
     
     def __init__(self, line_bot_api):
@@ -39,7 +39,7 @@ class ChainGame(BaseGame):
         
         return self.build_question_message(
             f"الكلمة السابقة: {self.last_word}",
-            f"ابدأ بحرف: {required_letter}"
+            f"ابدا بحرف: {required_letter}"
         )
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
@@ -48,18 +48,16 @@ class ChainGame(BaseGame):
         
         normalized = self.normalize_text(user_answer)
         
-        # التحقق من أن الكلمة لم تستخدم من قبل
         if normalized in self.used_words:
             return None
         
-        # التحقق من الحرف الأول
         required_letter = self.normalize_text(self.last_word[-1])
         
         if normalized and normalized[0] == required_letter and len(normalized) >= 2:
             self.used_words.add(normalized)
             points = self.add_score(user_id, display_name, 1)
             
-            self.previous_question = f"كلمة تبدأ بـ {self.last_word[-1]}"
+            self.previous_question = f"كلمة تبدا ب {self.last_word[-1]}"
             self.previous_answer = user_answer.strip()
             self.last_word = user_answer.strip()
             self.current_question += 1
