@@ -2,8 +2,8 @@ from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional
 
-class HumanAnimalGame(BaseGame):
-    """لعبة إنسان حيوان نبات جماد بلاد"""
+class HumanAnimalPlantGame(BaseGame):
+    """لعبة انسان حيوان نبات جماد بلاد"""
     
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
@@ -11,16 +11,16 @@ class HumanAnimalGame(BaseGame):
         
         self.letters = list("ابتجحدرزسشصطعفقكلمنهوي")
         random.shuffle(self.letters)
-        self.categories = ["إنسان", "حيوان", "نبات", "جماد", "بلاد"]
+        self.categories = ["انسان", "حيوان", "نبات", "جماد", "بلاد"]
         
         self.database = {
-            "إنسان": {
-                "م": ["محمد", "مريم", "مصطفى"], "أ": ["أحمد", "أمل", "أمير"],
+            "انسان": {
+                "م": ["محمد", "مريم", "مصطفى"], "ا": ["احمد", "امل", "امير"],
                 "ع": ["علي", "عمر", "عائشة"], "ف": ["فاطمة", "فهد", "فيصل"],
                 "س": ["سارة", "سعيد", "سلمان"], "ر": ["رامي", "رنا", "رشيد"],
             },
             "حيوان": {
-                "أ": ["أسد", "أرنب"], "ج": ["جمل", "جاموس"],
+                "ا": ["اسد", "ارنب"], "ج": ["جمل", "جاموس"],
                 "ح": ["حصان", "حمار"], "خ": ["خروف"],
                 "د": ["دجاجة", "ديك"], "ف": ["فيل", "فهد"],
                 "ق": ["قرد", "قطة"], "ن": ["نمر", "نعامة"],
@@ -36,7 +36,7 @@ class HumanAnimalGame(BaseGame):
                 "ك": ["كرسي", "كتاب"], "م": ["مفتاح", "مكتب"],
             },
             "بلاد": {
-                "أ": ["أمريكا", "ألمانيا"], "ب": ["بريطانيا", "البرازيل"],
+                "ا": ["امريكا", "المانيا"], "ب": ["بريطانيا", "البرازيل"],
                 "ت": ["تركيا", "تونس"], "س": ["السعودية", "سوريا"],
                 "ع": ["عمان", "العراق"], "ف": ["فرنسا", "فلسطين"],
                 "م": ["مصر", "المغرب"], "ي": ["اليمن", "اليابان"],
@@ -56,7 +56,7 @@ class HumanAnimalGame(BaseGame):
         )
     
     def get_suggested_answer(self) -> Optional[str]:
-        """الحصول على إجابة مقترحة"""
+        """الحصول على اجابة مقترحة"""
         if self.current_category in self.database:
             if self.current_letter in self.database[self.current_category]:
                 answers = self.database[self.current_category][self.current_letter]
@@ -65,7 +65,7 @@ class HumanAnimalGame(BaseGame):
         return None
     
     def validate_answer(self, normalized_answer: str) -> bool:
-        """التحقق من صحة الإجابة"""
+        """التحقق من صحة الاجابة"""
         if not normalized_answer or len(normalized_answer) < 2:
             return False
         
@@ -81,16 +81,14 @@ class HumanAnimalGame(BaseGame):
         
         normalized = self.normalize_text(user_answer)
         
-        # التلميح
         if self.supports_hint and normalized == "لمح":
             suggested = self.get_suggested_answer()
-            hint = f"تبدأ بـ: {suggested[0]}\nعدد الحروف: {len(suggested)}" if suggested else "فكر جيدا"
+            hint = f"تبدا ب: {suggested[0]}\nعدد الحروف: {len(suggested)}" if suggested else "فكر جيدا"
             return {"message": hint, "response": self.build_text_message(hint), "points": 0}
         
-        # عرض الإجابة
         if self.supports_reveal and normalized == "جاوب":
             suggested = self.get_suggested_answer()
-            reveal = f"مثال: {suggested}" if suggested else "لا توجد إجابة ثابتة"
+            reveal = f"مثال: {suggested}" if suggested else "لا توجد اجابة ثابتة"
             self.previous_question = f"{self.current_category} حرف {self.current_letter}"
             self.previous_answer = suggested or "متعددة"
             self.current_question += 1
@@ -103,7 +101,6 @@ class HumanAnimalGame(BaseGame):
             
             return {"message": reveal, "response": self.get_question(), "points": 0}
         
-        # التحقق من الإجابة
         is_valid = self.validate_answer(normalized)
         
         if not is_valid:
