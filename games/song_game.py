@@ -3,7 +3,7 @@ import random
 from typing import Dict, Any, Optional
 
 class SongGame(BaseGame):
-    """لعبة تخمين المغني من كلمات الأغنية"""
+    """لعبة تخمين المغني من كلمات الاغنية"""
     
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
@@ -109,7 +109,7 @@ class SongGame(BaseGame):
         
         song = random.choice(available)
         self.used_songs.append(song)
-        self.current_answer = [song['answer']]
+        self.current_answer = [song['artist']]
         
         return self.build_question_message(
             song['lyrics'],
@@ -122,13 +122,11 @@ class SongGame(BaseGame):
         
         normalized = self.normalize_text(user_answer)
         
-        # التلميح
         if self.supports_hint and normalized == "لمح":
             artist = self.current_answer[0]
-            hint = f"يبدأ بـ: {artist[0]}\nعدد الحروف: {len(artist)}"
+            hint = f"يبدا ب: {artist[0]}\nعدد الحروف: {len(artist)}"
             return {"message": hint, "response": self.build_text_message(hint), "points": 0}
         
-        # عرض الإجابة
         if self.supports_reveal and normalized == "جاوب":
             reveal = f"المغني: {self.current_answer[0]}"
             self.previous_question = self.used_songs[-1]['lyrics'] if self.used_songs else None
@@ -143,7 +141,6 @@ class SongGame(BaseGame):
             
             return {"message": reveal, "response": self.get_question(), "points": 0}
         
-        # التحقق من الإجابة
         correct_normalized = self.normalize_text(self.current_answer[0])
         
         if normalized == correct_normalized:
