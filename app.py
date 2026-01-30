@@ -1,7 +1,11 @@
 from flask import Flask, request, abort
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError, LineBotApiError
-from linebot.models import MessageEvent, TextMessage
+from linebot.v3 import WebhookHandler
+from linebot.v3.exceptions import InvalidSignatureError
+from linebot.v3.messaging import (
+    Configuration, ApiClient, MessagingApi, 
+    ReplyMessageRequest, TextMessage, FlexMessage, FlexContainer
+)
+from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import os
@@ -33,12 +37,15 @@ for var in required_env:
 ENV_MODE = os.getenv('ENV_MODE', 'dev').lower()
 DEBUG_MODE = ENV_MODE == 'dev'
 
-line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
+configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
 Database.init()
-game_manager = GameManager(line_bot_api)
-ui_builder = UIBuilder()
+
+with ApiClient(configuration) as api_client:
+    line_bot_api = MessagingApi(api_client)
+    game_manager = GameManager(line_bot_api)
+    ui_builder = UIBuilder()
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(
@@ -84,7 +91,7 @@ def callback():
     
     return 'OK', 200
 
-@handler.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     user_id = event.source.user_id
     text = event.message.text.strip()
@@ -93,12 +100,18 @@ def handle_message(event):
     try:
         response = process_command(text, user_id, group_id, event)
         if response:
-            if isinstance(response, list):
-                line_bot_api.reply_message(event.reply_token, response)
-            else:
-                line_bot_api.reply_message(event.reply_token, response)
-    except LineBotApiError as e:
-        logger.error(f"LINE API Error: {e.status_code}", exc_info=True)
+            with ApiClient(configuration) as api_client:
+                api = MessagingApi(api_client)
+                if isinstance(response, list):
+                    api.reply_message(ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=response
+                    ))
+                else:
+                    api.reply_message(ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[response]
+                    ))
     except Exception as e:
         logger.error(f"Message handling error: {e}", exc_info=True)
 
@@ -114,9 +127,9 @@ def process_command(text, user_id, group_id, event):
             if 2 <= len(name) <= 50:
                 Database.register_or_update_user(user_id, name)
                 game_manager.set_waiting_for_name(user_id, False)
-                return None
+                return TextMessage(text=f"تم التسجيل باسم: {name}")
             game_manager.set_waiting_for_name(user_id, False)
-            return None
+            return TextMessage(text="الاسم يجب ان يكون بين 2-50 حرف")
         
         if group_id in game_manager.active_games:
             if not is_registered:
@@ -135,55 +148,50 @@ def process_command(text, user_id, group_id, event):
     
     if text_normalized in ['بداية', 'start', 'بدايه']:
         Database.update_last_activity(user_id)
-        from linebot.models import FlexSendMessage
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="بوت الحوت",
-            contents=ui_builder.welcome_card(display_name or "مستخدم", is_registered)
+            contents=FlexContainer.from_dict(ui_builder.welcome_card(display_name or "مستخدم", is_registered))
         )
     
     if text_normalized in ['مساعدة', 'help', 'مساعده']:
-        from linebot.models import FlexSendMessage
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="المساعدة",
-            contents=ui_builder.help_card()
+            contents=FlexContainer.from_dict(ui_builder.help_card())
         )
     
     if text in ['العاب', 'العاب']:
-        from linebot.models import FlexSendMessage
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="قائمة الالعاب",
-            contents=ui_builder.games_menu_card()
+            contents=FlexContainer.from_dict(ui_builder.games_menu_card())
         )
     
     if text_normalized in ['تسجيل', 'تغيير']:
         game_manager.set_waiting_for_name(user_id, True)
-        return None
+        return TextMessage(text="اكتب اسمك الان:")
     
     if text_normalized in ['نقاطي', 'احصائياتي']:
         if not is_registered:
-            return None
+            return TextMessage(text="يجب التسجيل اولا. اكتب: تسجيل")
         Database.update_last_activity(user_id)
-        from linebot.models import FlexSendMessage
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="احصائياتك",
-            contents=ui_builder.stats_card(display_name, user_data)
+            contents=FlexContainer.from_dict(ui_builder.stats_card(display_name, user_data))
         )
     
     if text_normalized in ['الصدارة', 'المتصدرين', 'الصداره']:
         leaders = Database.get_leaderboard(20)
-        from linebot.models import FlexSendMessage
-        return FlexSendMessage(
+        return FlexMessage(
             alt_text="لوحة الصدارة",
-            contents=ui_builder.leaderboard_card(leaders)
+            contents=FlexContainer.from_dict(ui_builder.leaderboard_card(leaders))
         )
     
     if text_normalized in ['ايقاف', 'stop', 'ايقاف', 'انسحب', 'انسحاب']:
         game_manager.stop_game(group_id)
-        return None
+        return TextMessage(text="تم ايقاف اللعبة")
     
     if text_normalized in ['اغنيه', 'ضد', 'سلسله', 'اسرع', 'لعبه', 'تكوين', 'فئه', 'توافق']:
         if not is_registered:
-            return None
+            return TextMessage(text="يجب التسجيل اولا. اكتب: تسجيل")
         
         game_response = game_manager.process_message(
             text=text,
