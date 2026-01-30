@@ -61,11 +61,11 @@ atexit.register(lambda: scheduler.shutdown())
 COMMANDS = {
     'بداية', 'start', 'بدايه',
     'مساعدة', 'help', 'مساعده',
-    'العاب', 'ألعاب',
+    'العاب', 'العاب',
     'تسجيل', 'تغيير',
     'نقاطي', 'احصائياتي',
     'الصدارة', 'المتصدرين', 'الصداره',
-    'ايقاف', 'stop', 'إيقاف', 'انسحب', 'انسحاب',
+    'ايقاف', 'stop', 'ايقاف', 'انسحب', 'انسحاب',
     'اغنيه', 'ضد', 'سلسله', 'اسرع', 'لعبه', 'تكوين', 'فئه', 'توافق'
 }
 
@@ -148,7 +148,7 @@ def process_command(text, user_id, group_id, event):
             contents=ui_builder.help_card()
         )
     
-    if text in ['العاب', 'ألعاب']:
+    if text in ['العاب', 'العاب']:
         from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="قائمة الالعاب",
@@ -177,7 +177,7 @@ def process_command(text, user_id, group_id, event):
             contents=ui_builder.leaderboard_card(leaders)
         )
     
-    if text_normalized in ['ايقاف', 'stop', 'إيقاف', 'انسحب', 'انسحاب']:
+    if text_normalized in ['ايقاف', 'stop', 'ايقاف', 'انسحب', 'انسحاب']:
         game_manager.stop_game(group_id)
         return None
     
