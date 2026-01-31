@@ -8,30 +8,28 @@ class GameManager:
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.active_games = {}
-        self.withdrawn_users = {}
         self.waiting_for_name = set()
         
     def set_waiting_for_name(self, user_id, waiting):
+        """تعيين حالة انتظار الاسم"""
         if waiting:
             self.waiting_for_name.add(user_id)
         else:
             self.waiting_for_name.discard(user_id)
     
     def is_waiting_for_name(self, user_id):
+        """التحقق من انتظار الاسم"""
         return user_id in self.waiting_for_name
     
     def stop_game(self, group_id):
+        """ايقاف اللعبة"""
         if group_id in self.active_games:
             del self.active_games[group_id]
             return True
         return False
     
-    def add_withdrawn_user(self, group_id, user_id):
-        if group_id not in self.withdrawn_users:
-            self.withdrawn_users[group_id] = set()
-        self.withdrawn_users[group_id].add(user_id)
-    
     def cleanup_inactive_games(self, timeout_minutes=30):
+        """تنظيف الالعاب غير النشطة"""
         try:
             now = datetime.now()
             inactive = []
@@ -52,10 +50,15 @@ class GameManager:
             return 0
     
     def process_message(self, text, user_id, group_id, display_name, is_registered):
+        """معالجة الرسائل والالعاب"""
+        from constants import GAME_MAP
+        
+        # استيراد ديناميكي لتجنب الاستيراد الدائري
         from games import (
             SongGame, OppositeGame, ChainWordsGame, 
             FastTypingGame, HumanAnimalPlantGame,
-            LettersWordsGame, CategoryLetterGame, CompatibilityGame
+            LettersWordsGame, CategoryLetterGame, CompatibilityGame,
+            MafiaGame, IqGame, MathGame, ScrambleGame
         )
         
         if not is_registered:
@@ -63,29 +66,39 @@ class GameManager:
         
         text_normalized = text.lower().strip()
         
-        game_map = {
-            "اغنيه": SongGame,
-            "ضد": OppositeGame,
-            "سلسله": ChainWordsGame,
-            "اسرع": FastTypingGame,
-            "لعبه": HumanAnimalPlantGame,
-            "تكوين": LettersWordsGame,
-            "فئه": CategoryLetterGame,
-            "توافق": CompatibilityGame,
+        # خريطة الالعاب
+        game_classes = {
+            'SongGame': SongGame,
+            'OppositeGame': OppositeGame,
+            'ChainWordsGame': ChainWordsGame,
+            'FastTypingGame': FastTypingGame,
+            'HumanAnimalPlantGame': HumanAnimalPlantGame,
+            'LettersWordsGame': LettersWordsGame,
+            'CategoryLetterGame': CategoryLetterGame,
+            'CompatibilityGame': CompatibilityGame,
+            'MafiaGame': MafiaGame,
+            'IqGame': IqGame,
+            'MathGame': MathGame,
+            'ScrambleGame': ScrambleGame
         }
         
-        if text_normalized in game_map:
-            GameClass = game_map[text_normalized]
-            game = GameClass(self.line_bot_api)
-            self.active_games[group_id] = game
+        # التحقق من بدء لعبة جديدة
+        if text_normalized in GAME_MAP:
+            game_class_name = GAME_MAP[text_normalized]
+            GameClass = game_classes.get(game_class_name)
             
-            try:
-                response = game.start_game()
-                return response
-            except Exception as e:
-                logger.error(f"Error starting game: {e}")
-                return None
+            if GameClass:
+                game = GameClass(self.line_bot_api)
+                self.active_games[group_id] = game
+                
+                try:
+                    response = game.start_game()
+                    return response
+                except Exception as e:
+                    logger.error(f"Error starting game: {e}")
+                    return None
         
+        # التحقق من لعبة نشطة
         if group_id in self.active_games:
             game = self.active_games[group_id]
             
@@ -96,8 +109,8 @@ class GameManager:
                     responses = []
                     
                     if result.get('message'):
-                        from linebot.models import TextSendMessage
-                        responses.append(TextSendMessage(text=result['message']))
+                        from linebot.v3.messaging import TextMessage
+                        responses.append(TextMessage(text=result['message']))
                     
                     if result.get('response'):
                         responses.append(result['response'])
