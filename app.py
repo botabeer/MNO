@@ -1,4 +1,4 @@
-from flask import Flask, request, abort
+from flask import Flask, request, abort, jsonify
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
@@ -16,6 +16,7 @@ import sys
 from database import Database
 from game_manager import GameManager
 from ui_builder import UIBuilder
+from text_games import get_random_question, get_random_challenge, get_random_confession, get_random_mention
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,7 +74,8 @@ COMMANDS = {
     'نقاطي', 'احصائياتي',
     'الصدارة', 'المتصدرين', 'الصداره',
     'ايقاف', 'stop', 'ايقاف', 'انسحب', 'انسحاب',
-    'اغنيه', 'ضد', 'سلسله', 'اسرع', 'لعبه', 'تكوين', 'فئه', 'توافق'
+    'اغنيه', 'ضد', 'سلسله', 'اسرع', 'لعبه', 'تكوين', 'فئه', 'توافق', 'مافيا', 'ذكاء', 'رياضيات', 'ترتيب',
+    'سؤال', 'سوال', 'تحدي', 'اعتراف', 'منشن'
 }
 
 @app.route("/callback", methods=['POST'])
@@ -124,12 +126,13 @@ def process_command(text, user_id, group_id, event):
     if text_normalized not in COMMANDS:
         if game_manager.is_waiting_for_name(user_id):
             name = text.strip()
-            if 2 <= len(name) <= 50:
+            # التسجيل يقبل حرف واحد + أرقام + رموز
+            if 1 <= len(name) <= 50:
                 Database.register_or_update_user(user_id, name)
                 game_manager.set_waiting_for_name(user_id, False)
                 return TextMessage(text=f"تم التسجيل باسم: {name}")
             game_manager.set_waiting_for_name(user_id, False)
-            return TextMessage(text="الاسم يجب ان يكون بين 2-50 حرف")
+            return TextMessage(text="الاسم يجب ان يكون بين 1-50 حرف")
         
         if group_id in game_manager.active_games:
             if not is_registered:
@@ -167,7 +170,7 @@ def process_command(text, user_id, group_id, event):
     
     if text_normalized in ['تسجيل', 'تغيير']:
         game_manager.set_waiting_for_name(user_id, True)
-        return TextMessage(text="اكتب اسمك الان:")
+        return TextMessage(text="اكتب اسمك الان (حرف واحد على الاقل):")
     
     if text_normalized in ['نقاطي', 'احصائياتي']:
         if not is_registered:
@@ -185,11 +188,40 @@ def process_command(text, user_id, group_id, event):
             contents=FlexContainer.from_dict(ui_builder.leaderboard_card(leaders))
         )
     
-    if text_normalized in ['ايقاف', 'stop', 'ايقاف', 'انسحب', 'انسحاب']:
+    if text_normalized in ['ايقاف', 'stop', 'ايقاف']:
         game_manager.stop_game(group_id)
         return TextMessage(text="تم ايقاف اللعبة")
     
-    if text_normalized in ['اغنيه', 'ضد', 'سلسله', 'اسرع', 'لعبه', 'تكوين', 'فئه', 'توافق']:
+    if text_normalized in ['انسحب', 'انسحاب']:
+        if not is_registered:
+            return TextMessage(text="انت غير مسجل")
+        
+        # حذف المستخدم من قاعدة البيانات (حذف النقاط والبيانات)
+        deleted = Database.delete_user(user_id)
+        if deleted:
+            return TextMessage(text="تم الانسحاب وحذف جميع نقاطك وبياناتك")
+        else:
+            return TextMessage(text="حدث خطأ في الانسحاب")
+    
+    # الألعاب النصية (بدون تسجيل)
+    if text_normalized in ['سؤال', 'سوال']:
+        question = get_random_question()
+        return TextMessage(text=question)
+    
+    if text_normalized == 'تحدي':
+        challenge = get_random_challenge()
+        return TextMessage(text=challenge)
+    
+    if text_normalized == 'اعتراف':
+        confession = get_random_confession()
+        return TextMessage(text=confession)
+    
+    if text_normalized == 'منشن':
+        mention = get_random_mention()
+        return TextMessage(text=mention)
+    
+    # الألعاب التنافسية
+    if text_normalized in ['اغنيه', 'ضد', 'سلسله', 'اسرع', 'لعبه', 'تكوين', 'فئه', 'توافق', 'مافيا', 'ذكاء', 'رياضيات', 'ترتيب']:
         if not is_registered:
             return TextMessage(text="يجب التسجيل اولا. اكتب: تسجيل")
         
@@ -206,7 +238,6 @@ def process_command(text, user_id, group_id, event):
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    from flask import jsonify
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
