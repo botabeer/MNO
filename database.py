@@ -120,6 +120,25 @@ class Database:
                 return False
     
     @staticmethod
+    def delete_user(user_id):
+        """حذف المستخدم نهائيا (الانسحاب)"""
+        with Database._lock:
+            try:
+                with Database.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute('DELETE FROM users WHERE user_id = ?', (user_id,))
+                    deleted = cursor.rowcount > 0
+                    
+                    if deleted:
+                        Database._leaderboard_cache = None
+                        logger.info(f"User deleted: {user_id}")
+                    
+                    return deleted
+            except Exception as e:
+                logger.error(f"Delete user error: {e}")
+                return False
+    
+    @staticmethod
     def update_last_activity(user_id):
         try:
             with Database.get_connection() as conn:
