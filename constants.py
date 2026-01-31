@@ -75,15 +75,21 @@ COMMANDS = {
     'stop': ['ايقاف', 'stop', 'إيقاف'],
     
     # الألعاب
-    'song': ['اغنيه'],
-    'opposite': ['ضد'],
-    'chain': ['سلسله'],
-    'fast': ['اسرع'],
-    'human_animal': ['لعبه'],
-    'letters': ['تكوين'],
-    'category': ['فئه'],
-    'compatibility': ['توافق'],
-    'mafia': ['مافيا'],
+    # خريطة الألعاب - ربط الأوامر بالكلاسات
+GAME_MAP = {
+    'اغنيه': 'SongGame',
+    'ضد': 'OppositeGame',
+    'سلسله': 'ChainWordsGame',
+    'اسرع': 'FastTypingGame',
+    'لعبه': 'HumanAnimalPlantGame',
+    'تكوين': 'LettersWordsGame',
+    'فئه': 'CategoryLetterGame',
+    'توافق': 'CompatibilityGame',
+    'مافيا': 'MafiaGame',
+    'ذكاء': 'IqGame',
+    'رياضيات': 'MathGame',
+    'ترتيب': 'ScrambleGame'
+}
     
     # ألعاب بدون تسجيل
     'question': ['سؤال', 'سوال'],
