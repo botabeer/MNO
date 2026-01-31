@@ -1,6 +1,7 @@
 from games.base_game import BaseGame
 import re
 from typing import Dict, Any, Optional
+from linebot.v3.messaging import FlexMessage, FlexContainer
 
 class CompatibilityGame(BaseGame):
     """لعبة حساب نسبة التوافق"""
@@ -69,9 +70,60 @@ class CompatibilityGame(BaseGame):
     
     def get_question(self):
         """الحصول على السؤال"""
-        return self.build_text_message(
-            "ادخل اسمين بينهما (و)\nمثال: الحوت و عبير"
-        )
+        c = self.get_theme_colors()
+        
+        contents = [
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [{
+                    "type": "text",
+                    "text": "حاسبة التوافق",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": c["white"],
+                    "align": "center"
+                }],
+                "backgroundColor": c["primary"],
+                "paddingAll": "15px",
+                "cornerRadius": "10px"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {
+                "type": "text",
+                "text": "ادخل اسمين بينهما (و)",
+                "size": "md",
+                "color": c["text"],
+                "align": "center",
+                "weight": "bold",
+                "margin": "lg"
+            },
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "مثال:", "size": "sm", "color": c["text3"]},
+                    {"type": "text", "text": "الحوت و عبير", "size": "sm", "color": c["text2"], "margin": "xs"}
+                ],
+                "backgroundColor": c["bg"],
+                "paddingAll": "12px",
+                "cornerRadius": "8px",
+                "margin": "md"
+            }
+        ]
+        
+        bubble = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": contents,
+                "paddingAll": "20px",
+                "backgroundColor": c["card"]
+            }
+        }
+        
+        return FlexMessage(alt_text="حاسبة التوافق", contents=FlexContainer.from_dict(bubble))
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         if not self.game_active:
@@ -82,29 +134,118 @@ class CompatibilityGame(BaseGame):
         
         if not name1 or not name2:
             return {
-                'response': self.build_text_message(
-                    "الصيغة غير صحيحة\n\naكتب: اسم و اسم\nمثال: الحوت و عبير"
-                ),
+                'response': self.build_text_message("الصيغة غير صحيحة\n\nاكتب: اسم و اسم\nمثال: الحوت و عبير"),
                 'points': 0
             }
         
         if not self.is_valid_text(name1) or not self.is_valid_text(name2):
             return {
-                'response': self.build_text_message(
-                    "غير مسموح بالرموز او الارقام\n\nاكتب اسمين نصيين فقط"
-                ),
+                'response': self.build_text_message("غير مسموح بالرموز او الارقام\n\nاكتب اسمين نصيين فقط"),
                 'points': 0
             }
         
         percentage = self.calculate_compatibility(name1, name2)
         message_text = self.get_compatibility_message(percentage)
         
-        result_text = f"نتيجة التوافق\n\n{name1} و {name2}\n\nالنسبة: {percentage}%\n{message_text}\n\nملاحظة: نفس النتيجة لو كتبت\n{name2} و {name1}"
+        c = self.get_theme_colors()
+        
+        # تحديد اللون حسب النسبة
+        if percentage >= 75:
+            result_color = c["success"]
+        elif percentage >= 45:
+            result_color = c["warning"]
+        else:
+            result_color = c["error"]
+        
+        contents = [
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [{
+                    "type": "text",
+                    "text": "نتيجة التوافق",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": c["white"],
+                    "align": "center"
+                }],
+                "backgroundColor": c["primary"],
+                "paddingAll": "15px",
+                "cornerRadius": "10px"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": name1, "size": "lg", "weight": "bold", "color": c["text"], "align": "center"},
+                    {"type": "text", "text": "و", "size": "sm", "color": c["text3"], "align": "center", "margin": "xs"},
+                    {"type": "text", "text": name2, "size": "lg", "weight": "bold", "color": c["text"], "align": "center", "margin": "xs"}
+                ],
+                "margin": "lg"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": f"{percentage}%", "size": "3xl", "weight": "bold", "color": result_color, "align": "center"},
+                    {"type": "text", "text": message_text, "size": "md", "color": c["text2"], "align": "center", "margin": "sm"}
+                ],
+                "margin": "lg"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "ملاحظة:", "size": "xs", "color": c["text3"]},
+                    {"type": "text", "text": f"نفس النتيجة لو كتبت\n{name2} و {name1}", "size": "xs", "color": c["text3"], "wrap": True, "margin": "xs"}
+                ],
+                "backgroundColor": c["bg"],
+                "paddingAll": "10px",
+                "cornerRadius": "8px",
+                "margin": "md"
+            },
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "اعادة", "text": "توافق"},
+                        "style": "primary",
+                        "color": c["primary"],
+                        "height": "sm"
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "البداية", "text": "بداية"},
+                        "style": "secondary",
+                        "height": "sm"
+                    }
+                ],
+                "margin": "md"
+            }
+        ]
+        
+        bubble = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": contents,
+                "paddingAll": "20px",
+                "backgroundColor": c["card"]
+            }
+        }
         
         self.game_active = False
         
         return {
-            'response': self.build_text_message(result_text),
+            'response': FlexMessage(alt_text="نتيجة التوافق", contents=FlexContainer.from_dict(bubble)),
             'points': 0,
             'game_over': True
         }
