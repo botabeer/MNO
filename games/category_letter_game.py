@@ -2,12 +2,12 @@ from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional
 
-class CategoryGame(BaseGame):
+class CategoryLetterGame(BaseGame):
     """لعبة الفئة والحرف"""
     
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "فئة"
+        self.game_name = "فئه"
         
         self.challenges = [
             {'category': 'المطبخ', 'letter': 'ق', 'answers': ['قدر', 'قلاية', 'قهوة']},
@@ -53,9 +53,9 @@ class CategoryGame(BaseGame):
         # التلميح
         if self.supports_hint and normalized == "لمح":
             sample = challenge['answers'][0]
-            return {'response': self.build_text_message(f"يبدأ بحرف: {sample[0]}\nعدد الحروف: {len(sample)}"), 'points': 0}
+            return {'response': self.build_text_message(f"يبدا بحرف: {sample[0]}\nعدد الحروف: {len(sample)}"), 'points': 0}
         
-        # عرض الإجابة
+        # عرض الاجابة
         if self.supports_reveal and normalized == "جاوب":
             answers = ' - '.join(challenge['answers'][:3])
             self.answered_users.add(user_id)
@@ -69,7 +69,7 @@ class CategoryGame(BaseGame):
             
             return self._end_game()
         
-        # التحقق من الإجابة
+        # التحقق من الاجابة
         valid_answers = [self.normalize_text(ans) for ans in challenge['answers']]
         
         if normalized in valid_answers:
@@ -87,7 +87,7 @@ class CategoryGame(BaseGame):
         return None
     
     def _end_game(self):
-        """إنهاء اللعبة"""
+        """انهاء اللعبة"""
         if not self.scores:
             return {'response': self.build_text_message("انتهت اللعبة"), 'points': 0, 'game_over': True}
         
