@@ -1,16 +1,23 @@
+# ui_builder.py - بناء الواجهات بدون ايموجي
+
 class UIBuilder:
+    """بناء واجهات Flex Message انيقة"""
+    
     COLORS = {
-        'primary': '#2563EB',
-        'success': '#10B981',
-        'warning': '#F59E0B',
-        'error': '#EF4444',
-        'text': '#1F2937',
-        'text_light': '#6B7280',
-        'border': '#E5E7EB',
-        'bg': '#F9FAFB'
+        'primary': '#6B9BD1',
+        'success': '#52C5B6',
+        'warning': '#F39C6B',
+        'error': '#E17B7B',
+        'text': '#2C3E50',
+        'text_light': '#95A5A6',
+        'border': '#E8ECEF',
+        'bg': '#F9FAFB',
+        'info': '#3498DB',
+        'white': '#FFFFFF'
     }
     
     def welcome_card(self, display_name, is_registered):
+        """بطاقة الترحيب"""
         status = "مسجل" if is_registered else "غير مسجل"
         status_color = self.COLORS['success'] if is_registered else self.COLORS['warning']
         
@@ -40,6 +47,7 @@ class UIBuilder:
         }
     
     def games_menu_card(self):
+        """قائمة الالعاب"""
         return {
             "type": "bubble",
             "body": {
@@ -58,11 +66,27 @@ class UIBuilder:
                         ("تكوين", "تكوين"),
                         ("فئة", "فئه")
                     ]),
+                    self._button_row([
+                        ("ذكاء", "ذكاء"),
+                        ("رياضيات", "رياضيات"),
+                        ("ترتيب", "ترتيب")
+                    ]),
                     self._separator(),
                     self._text_box("العاب ترفيهية", "md", "center", self.COLORS['success']),
                     self._button_row([
                         ("لعبة", "لعبه"),
-                        ("توافق", "توافق")
+                        ("توافق", "توافق"),
+                        ("مافيا", "مافيا")
+                    ]),
+                    self._separator(),
+                    self._text_box("العاب نصية", "md", "center", self.COLORS['info']),
+                    self._button_row([
+                        ("سؤال", "سؤال"),
+                        ("تحدي", "تحدي")
+                    ]),
+                    self._button_row([
+                        ("اعتراف", "اعتراف"),
+                        ("منشن", "منشن")
                     ])
                 ],
                 "paddingAll": "20px"
@@ -70,6 +94,7 @@ class UIBuilder:
         }
     
     def help_card(self):
+        """بطاقة المساعدة"""
         return {
             "type": "bubble",
             "body": {
@@ -77,11 +102,13 @@ class UIBuilder:
                 "layout": "vertical",
                 "contents": [
                     self._header("دليل الاستخدام"),
-                    self._info_section("الاوامر الاساسية", "بداية - العاب - نقاطي - الصدارة - تسجيل"),
+                    self._info_section("الاوامر الاساسية", "بداية - العاب - نقاطي - الصدارة - تسجيل - انسحب"),
                     self._separator(),
-                    self._info_section("الالعاب التنافسية", "اغنيه - ضد - سلسلة - اسرع - تكوين - فئة"),
+                    self._info_section("الالعاب التنافسية", "اغنيه - ضد - سلسلة - اسرع - تكوين - فئة - ذكاء - رياضيات - ترتيب"),
                     self._separator(),
-                    self._info_section("العاب ترفيهية", "لعبة - توافق"),
+                    self._info_section("العاب ترفيهية", "لعبة - توافق - مافيا"),
+                    self._separator(),
+                    self._info_section("العاب نصية", "سؤال - تحدي - اعتراف - منشن"),
                     self._separator(),
                     self._info_section("اثناء اللعب", "لمح - جاوب - ايقاف"),
                     self._separator(),
@@ -92,6 +119,7 @@ class UIBuilder:
         }
     
     def stats_card(self, display_name, stats):
+        """بطاقة الاحصائيات"""
         if not stats:
             stats = {'total_points': 0, 'games_played': 0, 'wins': 0}
         
@@ -116,6 +144,7 @@ class UIBuilder:
         }
     
     def leaderboard_card(self, leaders):
+        """لوحة الصدارة"""
         leader_list = []
         
         for i, leader in enumerate(leaders[:20], 1):
@@ -141,6 +170,7 @@ class UIBuilder:
             }
         }
     
+    # المساعدات
     def _header(self, text):
         return {
             "type": "box",
@@ -150,7 +180,7 @@ class UIBuilder:
                 "text": text,
                 "weight": "bold",
                 "size": "xl",
-                "color": "#FFFFFF",
+                "color": self.COLORS['white'],
                 "align": "center"
             }],
             "backgroundColor": self.COLORS['primary'],
