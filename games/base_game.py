@@ -1,11 +1,12 @@
 import re
 from typing import Dict, Any, Optional
 from datetime import datetime
+from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 
 class BaseGame:
     def __init__(self, line_bot_api=None, questions_count: int = 5):
         self.line_bot_api = line_bot_api
-        self.questions_count = 5  # ثابت 5 أسئلة دائماً
+        self.questions_count = 5
         self.current_question = 0
         self.current_answer = None
         self.previous_question = None
@@ -18,6 +19,22 @@ class BaseGame:
         self.game_name = "لعبة"
         self.supports_hint = True
         self.supports_reveal = True
+    
+    def get_theme_colors(self):
+        """الحصول على الوان الثيم"""
+        return {
+            'primary': '#6B9BD1',
+            'success': '#52C5B6',
+            'warning': '#F39C6B',
+            'error': '#E17B7B',
+            'white': '#FFFFFF',
+            'text': '#2C3E50',
+            'text2': '#7F8C8D',
+            'text3': '#95A5A6',
+            'border': '#E8ECEF',
+            'bg': '#F9FAFB',
+            'card': '#FFFFFF'
+        }
     
     def normalize_text(self, text: str) -> str:
         """تطبيع النص العربي"""
@@ -40,7 +57,7 @@ class BaseGame:
         return text
     
     def add_score(self, user_id: str, display_name: str, points: int = 1) -> int:
-        """إضافة نقاط للاعب - يمكن للاعب الإجابة مرة واحدة فقط لكل سؤال"""
+        """اضافة نقاط للاعب"""
         if user_id in self.answered_users:
             return 0
         
@@ -65,11 +82,11 @@ class BaseGame:
         return self.get_question()
     
     def get_question(self):
-        """الحصول على سؤال جديد - يجب تنفيذها في الفئة الفرعية"""
+        """الحصول على سؤال جديد"""
         raise NotImplementedError("يجب تنفيذ get_question في الفئة الفرعية")
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """التحقق من الإجابة - يجب تنفيذها في الفئة الفرعية"""
+        """التحقق من الاجابة"""
         raise NotImplementedError("يجب تنفيذ check_answer في الفئة الفرعية")
     
     def move_to_next_question(self):
@@ -83,7 +100,7 @@ class BaseGame:
         return self.get_question()
     
     def end_game(self) -> Dict[str, Any]:
-        """إنهاء اللعبة وإعلان الفائز"""
+        """انهاء اللعبة واعلان الفائز"""
         self.game_active = False
         
         if not self.scores:
@@ -92,7 +109,7 @@ class BaseGame:
                 "game_over": True,
                 "points": 0,
                 "message": message,
-                "response": self.build_text_message(message)
+                "response": self.build_winner_flex(None, [])
             }
         
         sorted_players = sorted(
@@ -104,39 +121,71 @@ class BaseGame:
         winner = sorted_players[0][1]
         winner_id = sorted_players[0][0]
         
-        message = f"انتهت اللعبة - {self.game_name}\n\n"
-        message += f"الفائز: {winner['name']}\n"
-        message += f"النقاط: {winner['score']}/{self.questions_count}\n"
-        
-        if len(sorted_players) > 1:
-            message += "\nالترتيب النهائي:\n"
-            for i, (_, data) in enumerate(sorted_players[:5], 1):
-                message += f"{i}. {data['name']} - {data['score']} نقطة\n"
-        
         return {
             "game_over": True,
             "points": winner["score"],
             "winner_id": winner_id,
-            "message": message,
-            "response": self.build_text_message(message)
+            "message": f"فاز {winner['name']} بـ {winner['score']} نقطة",
+            "response": self.build_winner_flex(winner, sorted_players)
         }
     
     def build_text_message(self, text: str):
-        """بناء رسالة نصية - Line v3"""
-        from linebot.v3.messaging import TextMessage
+        """بناء رسالة نصية"""
         return TextMessage(text=text)
     
     def build_question_message(self, question_text: str, additional_info: str = None):
-        """بناء رسالة السؤال"""
+        """بناء رسالة السؤال Flex"""
+        c = self.get_theme_colors()
         progress = f"السؤال {self.current_question + 1} من {self.questions_count}"
         
-        message = f"{self.game_name}\n"
-        message += f"{progress}\n"
-        message += f"{'=' * 25}\n\n"
-        message += f"{question_text}\n"
+        contents = [
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [{
+                    "type": "text",
+                    "text": self.game_name,
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": c["white"],
+                    "align": "center"
+                }],
+                "backgroundColor": c["primary"],
+                "paddingAll": "15px",
+                "cornerRadius": "10px"
+            },
+            {
+                "type": "box",
+                "layout": "baseline",
+                "contents": [
+                    {"type": "text", "text": f"{self.current_question + 1}", "size": "sm", "color": c["text3"], "flex": 0},
+                    {"type": "text", "text": f"من {self.questions_count}", "size": "sm", "color": c["text3"], "align": "end", "flex": 1}
+                ],
+                "margin": "md"
+            },
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {
+                "type": "text",
+                "text": question_text,
+                "size": "md",
+                "color": c["text"],
+                "wrap": True,
+                "align": "center",
+                "margin": "lg",
+                "weight": "bold"
+            }
+        ]
         
         if additional_info:
-            message += f"\nمعلومة: {additional_info}"
+            contents.append({
+                "type": "text",
+                "text": additional_info,
+                "size": "sm",
+                "color": c["text2"],
+                "wrap": True,
+                "align": "center",
+                "margin": "sm"
+            })
         
         if self.previous_question and self.previous_answer:
             prev_ans = (
@@ -144,13 +193,144 @@ class BaseGame:
                 if isinstance(self.previous_answer, str)
                 else self.previous_answer[0]
             )
-            message += f"\n\n{'=' * 25}\n"
-            message += f"السؤال السابق:\n{self.previous_question}\n"
-            message += f"الإجابة: {prev_ans}"
+            contents.append({"type": "separator", "margin": "md", "color": c["border"]})
+            contents.append({
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "السؤال السابق:", "size": "xs", "color": c["text3"]},
+                    {"type": "text", "text": self.previous_question, "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": f"الاجابة: {prev_ans}", "size": "xs", "color": c["success"], "wrap": True, "margin": "xs"}
+                ],
+                "margin": "md"
+            })
         
         if self.supports_hint and self.supports_reveal:
-            message += f"\n\n{'=' * 25}\n"
-            message += "اكتب: لمح (للتلميح)\n"
-            message += "اكتب: جاوب (لعرض الإجابة)"
+            contents.append({"type": "separator", "margin": "md", "color": c["border"]})
+            contents.append({
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "لمح", "text": "لمح"},
+                        "style": "secondary",
+                        "height": "sm"
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
+                        "style": "secondary",
+                        "height": "sm",
+                        "color": c["warning"]
+                    }
+                ],
+                "margin": "md"
+            })
         
-        return self.build_text_message(message)
+        bubble = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": contents,
+                "backgroundColor": c["card"],
+                "paddingAll": "18px"
+            }
+        }
+        
+        return FlexMessage(alt_text=self.game_name, contents=FlexContainer.from_dict(bubble))
+    
+    def build_winner_flex(self, winner, sorted_players):
+        """بناء بطاقة الفائز Flex"""
+        c = self.get_theme_colors()
+        
+        if not winner:
+            contents = [
+                {"type": "text", "text": "انتهت اللعبة", "size": "xl", "weight": "bold", "color": c["text"], "align": "center"},
+                {"type": "text", "text": "لا يوجد فائز", "size": "md", "color": c["text3"], "align": "center", "margin": "md"}
+            ]
+        else:
+            contents = [
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [{
+                        "type": "text",
+                        "text": f"نتائج {self.game_name}",
+                        "weight": "bold",
+                        "size": "xl",
+                        "color": c["white"],
+                        "align": "center"
+                    }],
+                    "backgroundColor": c["primary"],
+                    "paddingAll": "12px",
+                    "cornerRadius": "8px"
+                },
+                {
+                    "type": "text",
+                    "text": f"الفائز: {winner['name']}",
+                    "size": "lg",
+                    "weight": "bold",
+                    "align": "center",
+                    "color": c["success"],
+                    "margin": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": f"النقاط: {winner['score']}",
+                    "size": "md",
+                    "align": "center",
+                    "color": c["text"],
+                    "margin": "sm"
+                },
+                {"type": "separator", "margin": "md", "color": c["border"]}
+            ]
+            
+            for i, (uid, p) in enumerate(sorted_players[:5], 1):
+                contents.append({
+                    "type": "text",
+                    "text": f"{i}. {p['name']} - {p['score']} نقطة",
+                    "size": "xs",
+                    "color": c["text"],
+                    "margin": "sm"
+                })
+        
+        contents.append({"type": "separator", "margin": "md", "color": c["border"]})
+        contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "اعادة", "text": self.game_name},
+                    "style": "primary",
+                    "color": c["primary"],
+                    "height": "sm"
+                },
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "البداية", "text": "بداية"},
+                    "style": "secondary",
+                    "height": "sm"
+                }
+            ],
+            "margin": "md"
+        })
+        
+        bubble = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": contents,
+                "backgroundColor": c["card"],
+                "paddingAll": "16px"
+            }
+        }
+        
+        return FlexMessage(alt_text="نتائج اللعبة", contents=FlexContainer.from_dict(bubble))
