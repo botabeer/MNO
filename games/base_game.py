@@ -222,8 +222,7 @@ class BaseGame:
                         "type": "button",
                         "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
                         "style": "secondary",
-                        "height": "sm",
-                        "color": c["warning"]
+                        "height": "sm"
                     }
                 ],
                 "margin": "md"
