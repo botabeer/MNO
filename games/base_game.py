@@ -122,9 +122,9 @@ class BaseGame:
         }
     
     def build_text_message(self, text: str):
-        """بناء رسالة نصية"""
-        from linebot.models import TextSendMessage
-        return TextSendMessage(text=text)
+        """بناء رسالة نصية - Line v3"""
+        from linebot.v3.messaging import TextMessage
+        return TextMessage(text=text)
     
     def build_question_message(self, question_text: str, additional_info: str = None):
         """بناء رسالة السؤال"""
