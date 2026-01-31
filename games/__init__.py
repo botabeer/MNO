@@ -7,6 +7,9 @@ from .human_animal_plant_game import HumanAnimalPlantGame
 from .letters_words_game import LettersWordsGame
 from .category_letter_game import CategoryLetterGame
 from .mafia_game import MafiaGame
+from .iq_game import IqGame
+from .math_game import MathGame
+from .scramble_word_game import ScrambleGame
 
 __all__ = [
     'SongGame', 
@@ -17,5 +20,8 @@ __all__ = [
     'HumanAnimalPlantGame', 
     'LettersWordsGame', 
     'CategoryLetterGame', 
-    'MafiaGame'
+    'MafiaGame',
+    'IqGame',
+    'MathGame',
+    'ScrambleGame'
 ]
