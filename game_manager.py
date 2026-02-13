@@ -108,17 +108,18 @@ class GameManager:
                 if result:
                     responses = []
                     
-                    # رسالة الاجابة او التلميح موجودة في response فقط
+                    if result.get('message'):
+                        from linebot.v3.messaging import TextMessage
+                        responses.append(TextMessage(text=result['message']))
+                    
                     if result.get('response'):
                         responses.append(result['response'])
                     
-                    # السؤال التالي
                     if result.get('next_question'):
                         next_q = game.get_question()
                         if next_q:
                             responses.append(next_q)
                     
-                    # انهاء اللعبة
                     if result.get('game_over'):
                         del self.active_games[group_id]
                         
