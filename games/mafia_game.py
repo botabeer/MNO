@@ -40,9 +40,8 @@ class MafiaGame:
         self.doctor = None
         self.detective = None
         
-        # قيود الدكتور
-        self.doctor_protected = set()  # من تم حمايتهم سابقاً
-        self.doctor_self_protected = False  # هل حمى نفسه
+        # قيود الدكتور - يحمي نفسه مرة واحدة فقط أو أي اسم
+        self.doctor_used_protection = False  # هل استخدم الحماية (نفسه أو غيره)
         
         # مراحل اللعبة
         self.game_phase = "waiting"  # waiting, joining, night, day, ended
@@ -266,21 +265,8 @@ class MafiaGame:
             if pid in self.excluded_players:
                 continue  # لا يظهر المُقصَون
             
-            if pid == for_user_id:
-                continue  # لا يظهر نفسه (سيُضاف لاحقاً للدكتور فقط)
-            
             player_name = self.players[pid]
-            
-            # للدكتور: إظهار من تم حمايتهم سابقاً
-            if self.roles.get(for_user_id) == "دكتور":
-                if pid in self.doctor_protected:
-                    continue  # لا يمكن حمايته مرة أخرى
-            
             available_players.append((pid, player_name))
-        
-        # إضافة خيار حماية النفس للدكتور (مرة واحدة فقط)
-        if self.roles.get(for_user_id) == "دكتور" and not self.doctor_self_protected:
-            available_players.insert(0, (for_user_id, f"{self.players[for_user_id]} (أنت)"))
         
         contents = [
             {
@@ -314,11 +300,14 @@ class MafiaGame:
         
         # إضافة أزرار اللاعبين - كلها بنفس اللون #6B9BD1
         for player_id, player_name in available_players[:12]:
+            # تمييز نفسك للدكتور
+            label = f"{player_name} (أنت)" if player_id == for_user_id else player_name
+            
             contents.append({
                 "type": "button",
                 "action": {
                     "type": "message",
-                    "label": player_name,
+                    "label": label,
                     "text": f"اختار:{player_name}"
                 },
                 "style": "primary",
@@ -343,31 +332,184 @@ class MafiaGame:
         )
     
     def _send_role_message(self, user_id, role):
-        """إرسال رسالة خاصة بالدور + نافذة اختيار"""
+        """إرسال رسالة خاصة بالدور + شرح + نافذة اختيار"""
+        
+        role_colors = {
+            "مافيا": self.colors['mafia'],
+            "دكتور": self.colors['doctor'],
+            "محقق": self.colors['detective'],
+            "مواطن": self.colors['citizen']
+        }
+        
+        role_descriptions = {
+            "مافيا": {
+                "title": "أنت من المافيا",
+                "desc": "مهمتك: القضاء على المواطنين\n\nفي الليل:\n• اختر ضحية من القائمة التي ستصلك\n• تنسيق مع باقي أعضاء المافيا",
+                "extra": f"أعضاء المافيا الآخرون:\n" + "\n".join([
+                    f"• {self.players[p]}" for p in self.mafia_members if p != user_id
+                ]) if len(self.mafia_members) > 1 else "• أنت المافيا الوحيد"
+            },
+            "دكتور": {
+                "title": "أنت الدكتور",
+                "desc": "مهمتك: حماية المواطنين\n\nفي الليل:\n• اختر لاعب واحد لحمايته\n• يمكنك حماية نفسك أو أي شخص آخر\n• الحماية مرة واحدة فقط طوال اللعبة",
+                "extra": "⚠️ استخدم الحماية بحكمة - لديك محاولة واحدة فقط!"
+            },
+            "محقق": {
+                "title": "أنت المحقق",
+                "desc": "مهمتك: كشف المافيا\n\nفي الليل:\n• اختر لاعب للتحقق من دوره\n• ستعرف إذا كان مافيا أو مواطن\n• استخدم المعلومات في التصويت النهاري",
+                "extra": "💡 نصيحة: ركز على المشتبه بهم أولاً"
+            },
+            "مواطن": {
+                "title": "أنت مواطن",
+                "desc": "مهمتك: البقاء على قيد الحياة\n\nفي النهار:\n• صوت لطرد المشتبه به\n• استمع للنقاشات بحذر\n• اعتمد على المحقق والدكتور",
+                "extra": "💪 القوة في الوحدة - تعاونوا لكشف المافيا"
+            }
+        }
+        
+        info = role_descriptions.get(role, role_descriptions["مواطن"])
+        role_color = role_colors.get(role, self.colors['citizen'])
+        
+        # بطاقة الدور بالألوان
+        role_card_contents = [
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [{
+                    "type": "text",
+                    "text": "دورك في اللعبة",
+                    "weight": "bold",
+                    "size": "lg",
+                    "color": "#FFFFFF",
+                    "align": "center"
+                }],
+                "paddingAll": "12px",
+                "backgroundColor": self.colors['primary'],
+                "cornerRadius": "12px"
+            },
+            {"type": "separator", "margin": "lg", "color": self.colors['border']},
+            
+            # الدور مع لونه المميز
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": role,
+                        "size": "xxl",
+                        "weight": "bold",
+                        "color": role_color,
+                        "align": "center"
+                    }
+                ],
+                "backgroundColor": self.colors['card'],
+                "cornerRadius": "16px",
+                "paddingAll": "20px",
+                "borderWidth": "3px",
+                "borderColor": role_color,
+                "margin": "lg"
+            },
+            
+            # العنوان
+            {
+                "type": "text",
+                "text": info['title'],
+                "size": "md",
+                "weight": "bold",
+                "color": self.colors['text'],
+                "wrap": True,
+                "margin": "lg",
+                "align": "center"
+            },
+            
+            {"type": "separator", "margin": "md", "color": self.colors['border']},
+            
+            # الشرح التفصيلي
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": info['desc'],
+                        "size": "sm",
+                        "color": self.colors['text'],
+                        "wrap": True
+                    }
+                ],
+                "backgroundColor": "#F7FAFC",
+                "cornerRadius": "8px",
+                "paddingAll": "12px",
+                "margin": "md"
+            },
+            
+            {"type": "separator", "margin": "md", "color": self.colors['border']},
+            
+            # معلومات إضافية
+            {
+                "type": "text",
+                "text": info['extra'],
+                "size": "xs",
+                "color": self.colors['text_light'],
+                "align": "center",
+                "wrap": True,
+                "margin": "md"
+            }
+        ]
+        
+        role_message = FlexMessage(
+            alt_text=f"دورك: {role}",
+            contents=FlexContainer.from_dict({
+                "type": "bubble",
+                "size": "mega",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": role_card_contents,
+                    "paddingAll": "24px",
+                    "backgroundColor": self.colors['bg']
+                }
+            })
+        )
+        
         try:
-            # إرسال نافذة الاختيار للأدوار النشطة فقط
+            # إرسال بطاقة الدور أولاً
+            self.line_bot_api.push_message(
+                PushMessageRequest(to=user_id, messages=[role_message])
+            )
+            
+            # إرسال نافذة الاختيار للأدوار النشطة
             if role in ["مافيا", "دكتور", "محقق"]:
+                # التحقق من أن الدكتور لم يستخدم الحماية بعد
+                if role == "دكتور" and self.doctor_used_protection:
+                    # لا ترسل نافذة اختيار - لقد استخدم حمايته
+                    no_action_msg = TextMessage(text="⚠️ لقد استخدمت حمايتك بالفعل - لا يمكنك الحماية مرة أخرى")
+                    self.line_bot_api.push_message(
+                        PushMessageRequest(to=user_id, messages=[no_action_msg])
+                    )
+                    return
+                
                 if role == "مافيا":
-                    card = self._get_player_selection_card(
+                    selection_card = self._get_player_selection_card(
                         "اختر الضحية",
                         "اختر من تريد قتله الليلة",
                         user_id
                     )
                 elif role == "دكتور":
-                    card = self._get_player_selection_card(
+                    selection_card = self._get_player_selection_card(
                         "اختر من تحمي",
-                        "كل اسم مرة واحدة فقط (بما فيهم أنت)",
+                        "مرة واحدة فقط طوال اللعبة - اختر بحكمة",
                         user_id
                     )
                 else:  # محقق
-                    card = self._get_player_selection_card(
+                    selection_card = self._get_player_selection_card(
                         "اختر من تحقق منه",
                         "اختر اللاعب للتحقق من دوره",
                         user_id
                     )
                 
                 self.line_bot_api.push_message(
-                    PushMessageRequest(to=user_id, messages=[card])
+                    PushMessageRequest(to=user_id, messages=[selection_card])
                 )
         except Exception as e:
             print(f"Failed to send role message: {e}")
@@ -803,24 +945,22 @@ class MafiaGame:
                         return {'response': TextMessage(text=f"تم اختيار {selected_name}"), 'points': 0}
                     
                     elif self.roles.get(user_id) == "دكتور":
-                        # التحقق من القيود
-                        if selected_id in self.doctor_protected:
+                        # التحقق من أنه لم يستخدم الحماية بعد
+                        if self.doctor_used_protection:
                             return {
-                                'response': TextMessage(text="هذا اللاعب تم حمايته سابقاً، اختر لاعب آخر"),
-                                'points': 0
-                            }
-                        if selected_id == user_id and self.doctor_self_protected:
-                            return {
-                                'response': TextMessage(text="لقد حميت نفسك سابقاً، اختر لاعب آخر"),
+                                'response': TextMessage(text="⚠️ لقد استخدمت حمايتك بالفعل - لا يمكنك الحماية مرة أخرى"),
                                 'points': 0
                             }
                         
                         self.doctor_save = selected_id
-                        self.doctor_protected.add(selected_id)
-                        if selected_id == user_id:
-                            self.doctor_self_protected = True
+                        self.doctor_used_protection = True  # استخدم الحماية
                         self.night_actions_done.add(user_id)
-                        return {'response': TextMessage(text=f"تم الحماية"), 'points': 0}
+                        
+                        target_name = self.players[selected_id]
+                        if selected_id == user_id:
+                            return {'response': TextMessage(text=f"✅ تم حماية نفسك بنجاح"), 'points': 0}
+                        else:
+                            return {'response': TextMessage(text=f"✅ تم حماية {target_name} بنجاح"), 'points': 0}
                     
                     elif self.roles.get(user_id) == "محقق":
                         self.detective_check = selected_id
