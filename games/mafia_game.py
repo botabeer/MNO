@@ -1,4 +1,4 @@
-# games/mafia_game.py - لعبة المافيا الكاملة مع نوافذ اختيار
+# games/mafia_game.py - لعبة المافيا الكاملة مع أزرار تفاعلية
 
 from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer, PushMessageRequest
 import random
@@ -26,7 +26,7 @@ class MafiaGame:
         
         # الادوار
         self.mafia_members = set()
-        self.citizens = set()  # المواطنون
+        self.citizens = set()
         self.doctor = None
         self.detective = None
         
@@ -39,7 +39,8 @@ class MafiaGame:
         self.day_votes = {}  # تصويت النهار
         self.doctor_save = None
         self.detective_check = None
-        self.voted_users = set()  # من صوت
+        self.voted_users = set()
+        self.night_actions_done = set()  # من نفذ فعله في الليل
         
         # الالوان
         self.colors = {
@@ -68,8 +69,9 @@ class MafiaGame:
         return self._get_joining_screen()
     
     def _get_joining_screen(self):
-        """شاشة الانضمام"""
+        """شاشة الانضمام مع أزرار"""
         joined_count = len(self.players)
+        joined_names = list(self.players.values())[:5]  # أول 5 أسماء
         
         contents = [
             {
@@ -270,19 +272,82 @@ class MafiaGame:
                 "cornerRadius": "12px",
                 "paddingAll": "12px",
                 "margin": "lg"
-            },
-            
-            # التعليمات
-            {
-                "type": "text",
-                "text": "اكتب 'انضم' للانضمام\nاكتب 'ابدأ' لبدء اللعبة (بعد وصول الحد الادنى)",
-                "size": "sm",
-                "color": self.colors['text_light'],
-                "align": "center",
-                "wrap": True,
-                "margin": "lg"
             }
         ]
+        
+        # عرض أسماء المنضمين
+        if joined_names:
+            contents.append({
+                "type": "text",
+                "text": "المنضمون: " + ", ".join(joined_names),
+                "size": "xs",
+                "color": self.colors['text_light'],
+                "wrap": True,
+                "margin": "md",
+                "align": "center"
+            })
+        
+        # ملاحظة مهمة
+        contents.extend([
+            {"type": "separator", "margin": "lg", "color": self.colors['border']},
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "ملاحظة مهمة",
+                        "size": "sm",
+                        "weight": "bold",
+                        "color": self.colors['error']
+                    },
+                    {
+                        "type": "text",
+                        "text": "يجب اضافة البوت كصديق ليصلك دورك بالخاص",
+                        "size": "xs",
+                        "color": self.colors['text_light'],
+                        "wrap": True,
+                        "margin": "xs"
+                    }
+                ],
+                "backgroundColor": "#FFE5E5",
+                "cornerRadius": "8px",
+                "paddingAll": "10px",
+                "margin": "md"
+            },
+            
+            # الأزرار
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "انضم للعبة",
+                            "text": "انضم"
+                        },
+                        "style": "primary",
+                        "color": self.colors['success'],
+                        "height": "sm"
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": f"ابدأ اللعبة ({joined_count}/{self.min_players})",
+                            "text": "ابدأ"
+                        },
+                        "style": "primary",
+                        "color": self.colors['primary'],
+                        "height": "sm",
+                        "margin": "sm"
+                    }
+                ],
+                "margin": "lg"
+            }
+        ])
         
         return FlexMessage(
             alt_text="لعبة المافيا",
@@ -376,7 +441,7 @@ class MafiaGame:
         ]
         
         # اضافة ازرار اللاعبين
-        for player_id, player_name in available_players[:10]:  # اول 10 لاعبين
+        for player_id, player_name in available_players[:10]:
             contents.append({
                 "type": "button",
                 "action": {
@@ -532,30 +597,26 @@ class MafiaGame:
             )
             
             # ارسال نافذة الاختيار حسب الدور
-            if role == "مافيا":
-                selection_card = self._get_player_selection_card(
-                    "اختر الضحية",
-                    "اختر من تريد قتله الليلة",
-                    user_id
-                )
-                self.line_bot_api.push_message(
-                    PushMessageRequest(to=user_id, messages=[selection_card])
-                )
-            elif role == "دكتور":
-                selection_card = self._get_player_selection_card(
-                    "اختر من تحمي",
-                    "اختر اللاعب الذي تريد حمايته الليلة",
-                    user_id
-                )
-                self.line_bot_api.push_message(
-                    PushMessageRequest(to=user_id, messages=[selection_card])
-                )
-            elif role == "محقق":
-                selection_card = self._get_player_selection_card(
-                    "اختر من تحقق منه",
-                    "اختر اللاعب الذي تريد التحقق من دوره",
-                    user_id
-                )
+            if role in ["مافيا", "دكتور", "محقق"]:
+                if role == "مافيا":
+                    selection_card = self._get_player_selection_card(
+                        "اختر الضحية",
+                        "اختر من تريد قتله الليلة",
+                        user_id
+                    )
+                elif role == "دكتور":
+                    selection_card = self._get_player_selection_card(
+                        "اختر من تحمي",
+                        "اختر اللاعب الذي تريد حمايته الليلة",
+                        user_id
+                    )
+                else:  # محقق
+                    selection_card = self._get_player_selection_card(
+                        "اختر من تحقق منه",
+                        "اختر اللاعب الذي تريد التحقق من دوره",
+                        user_id
+                    )
+                
                 self.line_bot_api.push_message(
                     PushMessageRequest(to=user_id, messages=[selection_card])
                 )
@@ -564,7 +625,7 @@ class MafiaGame:
             print(f"Failed to send role message: {e}")
     
     def _get_night_phase(self):
-        """مرحلة الليل"""
+        """مرحلة الليل مع زر لانهاء الليل"""
         contents = [
             {
                 "type": "text",
@@ -637,12 +698,29 @@ class MafiaGame:
                 "cornerRadius": "12px",
                 "paddingAll": "12px",
                 "margin": "lg"
+            },
+            
+            # زر انهاء الليل
+            {
+                "type": "button",
+                "action": {
+                    "type": "message",
+                    "label": "انهاء الليل وبدء التصويت",
+                    "text": "انهي الليل"
+                },
+                "style": "primary",
+                "color": self.colors['warning'],
+                "height": "sm",
+                "margin": "lg"
             }
         ]
         
         # ارسال الادوار للاعبين مع نوافذ الاختيار
         for player_id in self.alive_players:
             self._send_role_message(player_id, self.roles[player_id])
+        
+        # مسح الافعال السابقة
+        self.night_actions_done.clear()
         
         return FlexMessage(
             alt_text="مرحلة الليل",
@@ -659,7 +737,27 @@ class MafiaGame:
             })
         )
     
-    def _get_day_voting_card(self):
+    def _process_night_result(self):
+        """معالجة نتيجة الليل"""
+        # اختيار المافيا (الاكثر تصويتا)
+        mafia_target = None
+        if self.night_votes:
+            mafia_target = max(self.night_votes, key=self.night_votes.get)
+        
+        # التحقق من الانقاذ
+        killed = None
+        if mafia_target and mafia_target != self.doctor_save:
+            killed = mafia_target
+            self.alive_players.discard(killed)
+            self.dead_players.add(killed)
+        
+        # مسح اصوات الليل
+        self.night_votes.clear()
+        self.doctor_save = None
+        
+        return killed
+    
+    def _get_day_voting_card(self, night_result=None):
         """نافذة التصويت النهاري - في القروب"""
         alive_list = [(pid, self.players[pid]) for pid in self.alive_players]
         
@@ -672,7 +770,41 @@ class MafiaGame:
                 "color": self.colors['warning'],
                 "align": "center"
             },
-            {"type": "separator", "margin": "lg", "color": self.colors['border']},
+            {"type": "separator", "margin": "lg", "color": self.colors['border']}
+        ]
+        
+        # نتيجة الليل
+        if night_result:
+            contents.append({
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"تم قتل: {self.players[night_result]}",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": self.colors['error'],
+                        "align": "center"
+                    }
+                ],
+                "backgroundColor": "#FFE5E5",
+                "cornerRadius": "8px",
+                "paddingAll": "12px",
+                "margin": "md"
+            })
+        else:
+            contents.append({
+                "type": "text",
+                "text": "لم يتم قتل احد الليلة",
+                "size": "sm",
+                "color": self.colors['success'],
+                "align": "center",
+                "margin": "md"
+            })
+        
+        contents.extend([
+            {"type": "separator", "margin": "md", "color": self.colors['border']},
             
             {
                 "type": "box",
@@ -712,7 +844,7 @@ class MafiaGame:
                 "color": self.colors['text'],
                 "margin": "md"
             }
-        ]
+        ])
         
         # اضافة ازرار اللاعبين
         for player_id, player_name in alive_list[:10]:
@@ -729,6 +861,24 @@ class MafiaGame:
                 "margin": "sm"
             })
         
+        # زر انهاء التصويت
+        contents.append({
+            "type": "button",
+            "action": {
+                "type": "message",
+                "label": "انهاء التصويت",
+                "text": "انهي التصويت"
+            },
+            "style": "primary",
+            "color": self.colors['primary'],
+            "height": "sm",
+            "margin": "lg"
+        })
+        
+        # مسح الاصوات السابقة
+        self.voted_users.clear()
+        self.day_votes.clear()
+        
         return FlexMessage(
             alt_text="التصويت النهاري",
             contents=FlexContainer.from_dict({
@@ -743,6 +893,17 @@ class MafiaGame:
                 }
             })
         )
+    
+    def _process_day_result(self):
+        """معالجة نتيجة التصويت النهاري"""
+        executed = None
+        if self.day_votes:
+            executed = max(self.day_votes, key=self.day_votes.get)
+            self.alive_players.discard(executed)
+            self.dead_players.add(executed)
+        
+        self.day_votes.clear()
+        return executed
     
     def _check_win_condition(self) -> Optional[str]:
         """التحقق من شرط الفوز"""
@@ -937,8 +1098,9 @@ class MafiaGame:
             if text_lower in ['انضم', 'join']:
                 if user_id not in self.players and len(self.players) < self.max_players:
                     self.players[user_id] = display_name
+                    # تحديث الشاشة
                     return {
-                        'response': TextMessage(text=f"{display_name} انضم - العدد: {len(self.players)}"),
+                        'response': self._get_joining_screen(),
                         'points': 0
                     }
             
@@ -956,6 +1118,59 @@ class MafiaGame:
                         'response': TextMessage(text=f"يحتاج {self.min_players - len(self.players)} لاعبين اضافيين"),
                         'points': 0
                     }
+        
+        # مرحلة الليل - الاختيارات
+        elif self.game_phase == "night":
+            if text.startswith("اختار:"):
+                selected_name = text.replace("اختار:", "").strip()
+                
+                # البحث عن اللاعب
+                selected_id = None
+                for pid, pname in self.players.items():
+                    if pname == selected_name and pid in self.alive_players:
+                        selected_id = pid
+                        break
+                
+                if selected_id:
+                    # تسجيل الاختيار حسب الدور
+                    if self.roles.get(user_id) == "مافيا":
+                        self.night_votes[selected_id] = self.night_votes.get(selected_id, 0) + 1
+                        self.night_actions_done.add(user_id)
+                        return {
+                            'response': TextMessage(text=f"تم اختيار {selected_name} كضحية"),
+                            'points': 0
+                        }
+                    elif self.roles.get(user_id) == "دكتور":
+                        self.doctor_save = selected_id
+                        self.night_actions_done.add(user_id)
+                        return {
+                            'response': TextMessage(text=f"تم اختيار {selected_name} للحماية"),
+                            'points': 0
+                        }
+                    elif self.roles.get(user_id) == "محقق":
+                        self.detective_check = selected_id
+                        self.night_actions_done.add(user_id)
+                        is_mafia = selected_id in self.mafia_members
+                        result = "مافيا" if is_mafia else "مواطن"
+                        return {
+                            'response': TextMessage(text=f"{selected_name} هو {result}"),
+                            'points': 0
+                        }
+            
+            elif text_lower in ['انهي الليل', 'انهاء الليل']:
+                # الانتقال لمرحلة النهار
+                self.game_phase = "day"
+                killed = self._process_night_result()
+                
+                # التحقق من الفوز
+                winner = self._check_win_condition()
+                if winner:
+                    return self.end_game()
+                
+                return {
+                    'response': self._get_day_voting_card(killed),
+                    'points': 0
+                }
         
         # مرحلة النهار - التصويت
         elif self.game_phase == "day":
@@ -987,6 +1202,29 @@ class MafiaGame:
                         'response': TextMessage(text=f"تم تسجيل صوتك ضد {voted_name}"),
                         'points': 0
                     }
+            
+            elif text_lower in ['انهي التصويت', 'انهاء التصويت']:
+                # معالجة نتيجة التصويت
+                executed = self._process_day_result()
+                
+                # التحقق من الفوز
+                winner = self._check_win_condition()
+                if winner:
+                    return self.end_game()
+                
+                # العودة لليل
+                self.game_phase = "night"
+                self.current_round += 1
+                
+                result_text = f"تم طرد {self.players[executed]}" if executed else "لم يتم طرد احد"
+                
+                return {
+                    'response': [
+                        TextMessage(text=result_text),
+                        self._get_night_phase()
+                    ],
+                    'points': 0
+                }
         
         return None
     
@@ -994,6 +1232,7 @@ class MafiaGame:
         """انهاء اللعبة"""
         winner = self._check_win_condition()
         self.game_active = False
+        self.game_phase = "ended"
         
         if not winner:
             winner = "لا احد"
